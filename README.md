@@ -44,15 +44,15 @@ Here are a few sample queries to get you started.
 
 If you want more information about a user
 ```sql
-select * from investigate where investigate.UserId = "user@YOURDOMAIN" order by investigate.CreationTime;
+select * from investigate where investigate.UserId = "user@YOURDOMAIN" order by investigate.CreationTime
 ```
 If you need more detail about a specific IP address
 ```sql
-select * from investigate where investigate.ClientIP = "127.0.0.1" order by investigate.CreationTime;
+select * from investigate where investigate.ClientIP = "127.0.0.1" order by investigate.CreationTime
 ```
 If you want to understand more about a specific file
 ```sql
-select * from SPO where SPO.SourceFileName = "FILENAME.JPG" order by SPO.CreationTime;
+select * from SPO where SPO.SourceFileName = "FILENAME.JPG" order by SPO.CreationTime
 ```
 
 # Troubleshooting
