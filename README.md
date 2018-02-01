@@ -1,4 +1,4 @@
-# Introduction
+ # Introduction
 
 This sample can be used to process notifications from the O365 Activity API directly from an Azure Function. The sample will write the information to Azure Cosmos DB but with very small changes it can be used to write to Event Hubs, Blob Storage and other Azure components. 
 
@@ -39,6 +39,8 @@ When you have enabled the webhooks you will find entries in the invocation log f
 
 # Query the data using the SQL interface in Cosmos DB
 
+You should see the COSMOS DB being populated with Records. You can use your own custom solution to query the data as needed. You can also download all the records to your own custom solution. https://docs.microsoft.com/en-us/azure/cosmos-db/
+
 Here are a few sample queries to get you started.
 
 If you want more information about a user
@@ -54,9 +56,10 @@ If you want to understand more about a specific file
 select * from SPO where SPO.SourceFileName = "FILENAME.JPG" order by SPO.CreationTime;
 ```
 
-# TroubleShooting
+# Trouble Shooting
 
 To get more information about the environment and to troubleshoot issues use the Kudu interface. https://<myfunctionapp>.scm.azurewebsites.net/ 
+
 https://docs.microsoft.com/en-us/azure/azure-functions/functions-how-to-use-azure-function-app-settings
 
 
