@@ -17,8 +17,7 @@ https://msdn.microsoft.com/en-us/office-365/get-started-with-office-365-manageme
 
 5. Select to create the function
 
-6. Use the code in ActivityFunctionApp.ps1 and modify the secrets to match your tenant and the Application created in previous step. From the Azure App you will need the Client ID, Client Secret, from your tenant you need the tenant name and GUID.
-
+6. Use the code in ActivityFunctionApp.ps1 and modify the secrets to match your tenant and the Application created in previous step. From the Azure App you will need the Client ID, Client Secret, from your tenant you need the tenant name and GUID
 7.Configure the integration of the trigger, below is the configuration I have been using to integrate the trigger. If you change the request parameter, you will have to change the corresponding lines in the code.
 
 ![Configure Integration](./FunctionApp2.png)
@@ -45,7 +44,7 @@ Here are a few sample queries to get you started.
 
 If you want more information about a user
 ```sql
-select * from investigate where investigate.UserId = "user@TENANTDOMAIN.onmicrosoft.com" order by investigate.CreationTime;
+select * from investigate where investigate.UserId = "user@YOURDOMAIN" order by investigate.CreationTime;
 ```
 If you need more detail about a specific IP address
 ```sql
@@ -56,7 +55,7 @@ If you want to understand more about a specific file
 select * from SPO where SPO.SourceFileName = "FILENAME.JPG" order by SPO.CreationTime;
 ```
 
-# Trouble Shooting
+# Troubleshooting
 
 To get more information about the environment and to troubleshoot issues use the Kudu interface. https://<myfunctionapp>.scm.azurewebsites.net/ 
 
