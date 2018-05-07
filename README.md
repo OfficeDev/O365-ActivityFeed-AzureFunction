@@ -2,7 +2,7 @@
 
 This sample can be used to process notifications from the Office 365 Activity API directly from an Azure Function. The sample will write the information to Azure Cosmos DB but with very small changes it can be used to write to Event Hubs, Blob Storage and other Azure components. The AzureADGraph is created to run as a scheduled function. It stores the state between the runs in a local file in the Azure function.
 # Addition
-The Investigation folder contains a sample that uses a Timer based function to import Office 365 Activity data to Cosmos DB. See separate blog post for more information.
+The Investigation folder contains a sample that uses a Timer based function to import Office 365 Activity data to Cosmos DB. See separate blog post for more information. https://techcommunity.microsoft.com/t5/Security-Privacy-and-Compliance/Using-the-Office-365-Management-Activity-API-and-Power-BI-for/ba-p/189086
 
 # Create and Register an App in Azure and delegate the appropriate permissions
 
