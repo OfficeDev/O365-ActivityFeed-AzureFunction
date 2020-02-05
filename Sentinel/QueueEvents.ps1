@@ -96,7 +96,7 @@ if ($pagearray.RawContentLength -gt 3) {
                                                              $message = $msgarray | convertto-json
                                                              }                     
                         
-                        $queueMessage = New-Object -TypeName Microsoft.WindowsAzure.Storage.Queue.CloudQueueMessage -ArgumentList "$message"
+                        $queueMessage = New-Object -TypeName Microsoft.Azure.Storage.Queue.CloudQueueMessage -ArgumentList "$message"
                         $myqueue.CloudQueue.AddMessage($queuemessage)
                
                 $runs -= 1
