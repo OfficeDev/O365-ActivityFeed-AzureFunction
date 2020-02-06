@@ -130,8 +130,8 @@ if (($user.workload -eq "Exchange") -or ($user.Workload -eq "MicrosoftTeams")) {
         $original = $user.ExchangeMetaData.MessageID -replace ("\<", "_") -replace ("\>", "_")
         $spousLocation = $SPUS + $original + ".eml"
         
-        #Determine SPO Geo to point to this is pointing to the US sample
-        if ($user.usageLocation -eq "US")  {$user | Add-Member -MemberType NoteProperty -Name "originalContent" -Value $spousLocation}
+        #Determine SPO Geo to point to this is pointing to the US sample, only Exchange provide full content
+        if (($user.usageLocation -eq "US") -and ($user.workload -eq "Exchange"))  {$user | Add-Member -MemberType NoteProperty -Name "originalContent" -Value $spousLocation}
 
 $exupload += $user 
 Clear-Variable -name info
