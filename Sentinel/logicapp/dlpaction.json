@@ -1,0 +1,241 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "comments": "This playbook will call and collect Exchange data associated to DLP alerts and store it in SharePoint. To get the actual MessageID you need to first setup the AzFunction",
+    "author": "Jon Nordstrom"
+  },
+
+  "parameters": {
+
+    "connections_office365_name": {
+      "defaultValue": "office365",
+      "type": "String"
+    },
+    
+      "sites_DLPcopyFunctionApp_name": {
+        "defaultValue": "Name of the function App",
+        "type": "String"
+      },
+
+      "connections_sharepointonline_name": {
+        "defaultValue": "sharepointonline",
+        "type": "String"
+      },
+
+      "workflows_DLP_Action_name": {
+        "defaultValue": "DLP_Action",
+        "type": "String"
+      }
+    },
+  "variables": {},
+  "resources": [
+    
+    {
+      "type": "Microsoft.Web/connections",
+      "apiVersion": "2016-06-01",
+      "name": "[parameters('connections_office365_name')]",
+      "location": "centralus",
+      "properties": {
+        "displayName": "DLPAlertsEU@tenant.onmicrosoft.com",
+        "customParameterValues": {},
+        "api": {
+          "id": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Web/locations/', resourceGroup().location, '/managedApis/office365')]"
+        }
+      }
+    },
+
+    {
+      "type": "Microsoft.Web/connections",
+      "apiVersion": "2016-06-01",
+      "name": "[parameters('connections_sharepointonline_name')]",
+      "location": "centralus",
+      "properties": {
+        "displayName": "spoaccount@tenant.onmicrosoft.com",
+        "customParameterValues": {},
+        "api": {
+          "id": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Web/locations/', resourceGroup().location, '/managedApis/sharepointonline')]"
+        }
+      }
+    },
+
+  
+    {
+      "type": "Microsoft.Logic/workflows",
+      "apiVersion": "2017-07-01",
+      "name": "[parameters('workflows_DLP_Action_name')]",
+      "location": "centralus",
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/connections', parameters('connections_office365_name'))]",
+        "[resourceId('Microsoft.Web/connections', parameters('connections_sharepointonline_name'))]"
+      ],
+      "tags": {
+        "LogicAppsCategory": "security"
+      },
+      "properties": {
+        "state": "Enabled",
+        "definition": {
+          "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+          "contentVersion": "1.0.0.0",
+          "parameters": {
+            "$connections": {
+              "defaultValue": {},
+              "type": "Object"
+            }
+          },
+         "triggers": {
+                        "When_a_new_email_arrives_(V3)": {
+                            "splitOn": "@triggerBody()?['value']",
+                            "type": "ApiConnectionNotification",
+                            "inputs": {
+                                "fetch": {
+                                    "method": "get",
+                                  "pathTemplate": {
+                                    "template": "/v3/Mail/OnNewEmail"
+                                  },
+                                    "queries": {
+                                        "fetchOnlyWithAttachment": false,
+                                        "folderPath": "Inbox",
+                                        "importance": "Any",
+                                        "includeAttachments": false
+                                    }
+                                },
+                
+                "host": {
+                  "connection": {
+                    "name": "@parameters('$connections')['office365_2']['connectionId']"
+                  }
+                },
+                "subscribe": {
+                  "body": {
+                    "NotificationUrl": "@{listCallbackUrl()}"
+                  },
+                  "method": "post",
+                  "pathTemplate": {
+                    "template": "/GraphMailSubscriptionPoke/$subscriptions"
+                  },
+                  "queries": {
+                    "folderPath": "Inbox"
+                  }
+                }
+              }
+            }
+          },
+          "actions": {
+            "Condition_2": {
+              "actions": {
+                "ActualID_2": {
+                  "runAfter": {},
+                  "type": "Function",
+                  "inputs": {
+                    "body": {
+                      "emailbody": "@triggerBody()?['bodyPreview']"
+                    },
+                    "function": {
+                      "id": "[resourceId('Microsoft.Web/sites/functions', parameters('sites_DLPcopyFunctionApp_name'), 'ActualID')]"
+                    }
+                  }
+                },
+                "Condition": {
+                  "actions": {
+                    "Create_file": {
+                      "runAfter": {
+                        "Export_email_(V2)": [
+                          "Succeeded"
+                        ]
+                      },
+                      "type": "ApiConnection",
+                      "inputs": {
+                        "body": "@body('Export_email_(V2)')",
+                        "host": {
+                          "connection": {
+                            "name": "@parameters('$connections')['sharepointonline_1']['connectionId']"
+                          }
+                        },
+                        "method": "post",
+                        "path": "/datasets/@{encodeURIComponent(encodeURIComponent('https://lab1945.sharepoint.com/sites/DLPDetectionsFinance'))}/files",
+                        "queries": {
+                          "folderPath": "/Records",
+                          "name": "@{body('ActualID_2')}.eml",
+                          "queryParametersSingleEncoded": true
+                        }
+                      }
+                    },
+                    "Export_email_(V2)": {
+                      "runAfter": {},
+                      "type": "ApiConnection",
+                      "inputs": {
+                        "host": {
+                          "connection": {
+                            "name": "@parameters('$connections')['office365_2']['connectionId']"
+                          }
+                        },
+                        "method": "get",
+                        "path": "/codeless/beta/me/messages/@{encodeURIComponent(triggerBody()?['id'])}/$value"
+                      }
+                    }
+                  },
+                  "runAfter": {
+                    "ActualID_2": [
+                      "Succeeded"
+                    ]
+                  },
+                  "expression": {
+                    "and": [
+                      {
+                        "not": {
+                          "endsWith": [
+                            "@body('ActualID_2')",
+                            "@@DlpNotification>"
+                          ]
+                        }
+                      }
+                    ]
+                  },
+                  "type": "If"
+                }
+              },
+              "runAfter": {},
+              "expression": {
+                "and": [
+                  {
+                    "startsWith": [
+                      "@triggerBody()?['subject']",
+                      "Rule Detected"
+                    ]
+                  },
+                  {
+                    "not": {
+                      "equals": [
+                        "@triggerBody()?['from']",
+                        "no-reply@sharepointonline.com"
+                      ]
+                    }
+                  }
+                ]
+              },
+              "type": "If"
+            }
+          },
+          "outputs": {}
+        },
+        "parameters": {
+          "$connections": {
+            "value": {
+              "office365_2": {
+                "connectionId": "[resourceId('Microsoft.Web/connections', parameters('connections_office365_name'))]",
+                "connectionName": "office365",
+                "id": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Web/locations/', resourceGroup().location, '/managedApis/sharepointonline')]"
+              },
+              "sharepointonline_1": {
+                "connectionId": "[resourceId('Microsoft.Web/connections', parameters('connections_sharepointonline_name'))]",
+                "connectionName": "sharepointonline-1",
+                "id": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Web/locations/', resourceGroup().location, '/managedApis/sharepointonline')]"
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}
