@@ -97,6 +97,8 @@ if ($queueitem.count -eq 1) {$content = $queueitem | convertfrom-json}
                           {
                             $uri = $url + "?PublisherIdentifier=" + $TenantGUID  
                             $record = Invoke-RestMethod -UseBasicParsing -Headers $headerParams -Uri $uri
+   
+   if (-not ($record)) {throw 'Failed to fetch the content blob'}
    $records += $record
                            }
 
