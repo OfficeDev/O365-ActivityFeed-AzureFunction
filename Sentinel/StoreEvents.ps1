@@ -155,12 +155,12 @@ Clear-Variable -name info
 
 #Determine which Sentinel Workspace to route the information, remember to define the variable for each workspace as an array.
 foreach ($entry in $exupload)   {
-        if ($entry.usageLocation = "US") { $usWorkspace += $entry  }
-        if ($entry.usageLocation = "")   { $usWorkspace += $entry  } 
+        if ($entry.usageLocation -eq "US") { $usWorkspace += $entry  }
+        if ($entry.usageLocation -eq "")   { $usWorkspace += $entry  } 
                                 }
 foreach ($entry in $spoupload)  {
-        if ($entry.usageLocation = "US") { $usWorkspace += $entry  }    
-        if ($entry.usageLocation = "")   { $usWorkspace += $entry  } 
+        if ($entry.usageLocation -eq "US") { $usWorkspace += $entry  }    
+        if ($entry.usageLocation -eq "")   { $usWorkspace += $entry  } 
                                 }
 
 #Upload US Workspace, to add addtional workspaces add the WorkspaceID and Workspacekey and make a new post based on those parameters
