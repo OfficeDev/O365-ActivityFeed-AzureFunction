@@ -1,9 +1,6 @@
 # Input bindings are passed in via param block.
 param([string] $Timer)
 
-#Number of events written per batch to log analytics
-$messageSize = 10000
-
 # Replace with your Log Analytics Workspace ID
 $CustomerId = $env:workspaceId
 
@@ -83,37 +80,34 @@ $tracker = "D:\home\timetracker.log" # change to location of choise this is the 
 $startTime = Get-date -format "yyyy-MM-ddTHH:mm:ss.fffZ"
 
 #After first run remark the configured date 
-#$storedTime = Get-content $Tracker
-$storedTime = "2020-03-01T11:20:35.464Z"
+$storedTime = Get-content $Tracker
+#$storedTime = "2020-03-01T11:20:35.464Z"
 
 #Run the message trace
-$messagetrace = Get-MessageTrace -EndDate $startTime  -startdate $storedTime
 
 #Store the information in loganalytics
-$messagetrace.count
-$runs = $messagetrace.Count/$messageSize
-
- if (($runs -gt 0) -and ($runs -le "1") ) {$runs=1}
- $runs
- $writeSize = $messageSize
- $i = 0
+ $pageSize = 5000 
+ $page = 1
+ $runs = 1
+              
         while ($runs -ge 1) { 
-    
-                    $pagedrecord = $messagetrace[$i..$writeSize] 
-                    $pagedjson = $pagedrecord | convertTo-Json
+                $runs
+                $messagetrace = Get-MessageTrace -EndDate $startTime  -startdate $storedTime -page $page -pagesize $pagesize
+
+           if (($runs -eq 1) -and($messagetrace)) {$storedtime = $messagetrace[0].received}
+                      
+           if ($messagetrace.count -gt 0)   {
+                    $pagedjson = $messagetrace | convertTo-Json
                     Post-LogAnalyticsData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($pagedjson)) -logType $logType                          
-                                    
-           $runs -= 1
-           $i+= $messageSize +1
-           $writeSize += $messageSize + 1 
-                        
-           Clear-Variable pagedrecord
-           Clear-Variable pagedjson
-                                   
+                                      }
+                $runs ++                      
+                $page ++
+                if ($messagetrace.count -ne 5000) { $runs = 0 }
+                                     
+                Clear-Variable messagetrace
+                                                
                                     }   
 
 #Update stored time and remove session
-$storedTime = $startTime
 out-file -FilePath $Tracker -NoNewline -InputObject (get-date $storedTime).AddMilliseconds(1).ToString("yyyy-MM-ddTHH:mm:ss.fffZ") 
 remove-PSSession $session                          
-
