@@ -121,6 +121,10 @@ Foreach ($user in $records) {
 $user.workload
 if (($user.workload -eq "Exchange") -or ($user.Workload -eq "MicrosoftTeams")) {
 
+$domain = $user.ExchangeMetaData.From.Split('@')
+
+   if ($domains -Contains $domain[1])   {
+        
         #Add the additional attributes needed to enrich the event stored in Log Analytics for Exchange
         $queryString = "https://graph.microsoft.com/v1.0/users/" + $user.ExchangeMetaData.From + "?" + "$" + "select=usageLocation,Manager,department,state"       
         $info = Invoke-RestMethod -Headers $headerParamsG -Uri $queryString -Method GET
@@ -131,12 +135,15 @@ if (($user.workload -eq "Exchange") -or ($user.Workload -eq "MicrosoftTeams")) {
         #Add link to the location of the original content !!!! Remember to add per Geo depending on Geo
         $original = $user.ExchangeMetaData.MessageID -replace ("\<", "_") -replace ("\>", "_")
         $spousLocation = $SPUS + $original + ".eml"
+        $spoSELocation = $SPUS + $original + ".eml"
         
         #Determine SPO Geo to point to this is pointing to the US sample, only Exchange provide full content
         if (($user.usageLocation -eq "US") -and ($user.workload -eq "Exchange"))  {$user | Add-Member -MemberType NoteProperty -Name "originalContent" -Value $spousLocation}
-
+        if (($user.usageLocation -eq "SE") -and ($user.workload -eq "Exchange"))  {$user | Add-Member -MemberType NoteProperty -Name "originalContent" -Value $spoSELocation}
+        Clear-Variable -name info    
+                                         }
 $exupload += $user 
-Clear-Variable -name info
+
                                     }
 
 #SharePoint and OneDrive upload data process
