@@ -102,7 +102,7 @@ $storedTime = Get-content $Tracker
                                       }
                 $runs ++                      
                 $page ++
-                if ($messagetrace.count -ne 5000) { $runs = 0 }
+                if ($messagetrace.count -ne $pageSize) { $runs = 0 }
                                      
                 Clear-Variable messagetrace
                                                 
