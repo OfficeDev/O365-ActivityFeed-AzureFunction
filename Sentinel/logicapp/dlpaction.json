@@ -225,7 +225,7 @@
               "office365_2": {
                 "connectionId": "[resourceId('Microsoft.Web/connections', parameters('connections_office365_name'))]",
                 "connectionName": "office365",
-                "id": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Web/locations/', resourceGroup().location, '/managedApis/sharepointonline')]"
+                "id": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Web/locations/', resourceGroup().location, '/managedApis/office365')]"
               },
               "sharepointonline_1": {
                 "connectionId": "[resourceId('Microsoft.Web/connections', parameters('connections_sharepointonline_name'))]",
