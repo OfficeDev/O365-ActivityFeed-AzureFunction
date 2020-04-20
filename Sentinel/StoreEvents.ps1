@@ -123,7 +123,7 @@ if (($user.workload -eq "Exchange") -or ($user.Workload -eq "MicrosoftTeams")) {
 
 $domain = $user.ExchangeMetaData.From.Split('@')
 
-   if ($domains -Contains $domain[1])   {
+   if (($env:domains).split(",") -Contains $domain[1])   {
         
         #Add the additional attributes needed to enrich the event stored in Log Analytics for Exchange
         $queryString = "https://graph.microsoft.com/v1.0/users/" + $user.ExchangeMetaData.From + "?" + "$" + "select=usageLocation,Manager,department,state"       
@@ -141,7 +141,7 @@ $domain = $user.ExchangeMetaData.From.Split('@')
         if (($user.usageLocation -eq "US") -and ($user.workload -eq "Exchange"))  {$user | Add-Member -MemberType NoteProperty -Name "originalContent" -Value $spousLocation}
         if (($user.usageLocation -eq "SE") -and ($user.workload -eq "Exchange"))  {$user | Add-Member -MemberType NoteProperty -Name "originalContent" -Value $spoSELocation}
         Clear-Variable -name info    
-                                         }
+                                                         }
 $exupload += $user 
 
                                     }
