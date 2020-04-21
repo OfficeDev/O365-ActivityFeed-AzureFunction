@@ -9,12 +9,12 @@ languages:
 - powershellcore
 extensions:
   contentType: samples
-  createdDate: 4/2/2020 3:00:56 AM
-description: "This sample can be used to create a function that ingest DLP.All logs to Sentinel"
+  createdDate: 4/21/2020 3:00:56 PM
+description: "This sample can be used to create a function that ingest DLP.All logs to Sentinel."
 ---
 
 
-# Ingesting Office 365 DLP.ALL events
+# Ingesting Office 365 DLP.ALL events to Sentinel
 
 By clicking deploy above you will deploy an Azure Function App but to get it working you will have to copy the code manually. Since it is likely that you will want to customize the code distribution yourself.
 
