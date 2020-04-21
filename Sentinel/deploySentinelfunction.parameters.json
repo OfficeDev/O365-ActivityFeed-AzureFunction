@@ -1,0 +1,51 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "appName": {
+      "value": null
+    },
+    "storageAccountType": {
+      "value": "Standard_LRS"
+    },
+    "location": {
+      "value": "[resourceGroup().location]"
+    },
+    "runtime": {
+      "value": "powershell"
+    },
+    "ClientID": {
+      "value": "Provide the client ID"
+    },
+    "ClientSecret": {
+      "value": "Provide the Client Secret"
+    },
+    "ContentTypes": {
+      "value": "DLP.ALL"
+    },
+    "customLogName": {
+      "value": "O365DLP"
+    },
+    "domains": {
+      "value": "youradditionaldomain.com,yourdomain.com,yourtenant.onmicrosoft.com"
+    },
+    "SPUS": {
+      "value": "SharePoint location for original emails if not exist use a temporary path"
+    },
+    "storageQueue": {
+      "value": "dlpqueue"
+    },
+    "tenantDomain": {
+      "value": "Yourtenant.onmicrosoft.com"
+    },
+    "TenantGuid": {
+      "value": "Your Tenant GUID"
+    },
+    "workspaceId": {
+      "value": "LogAnalytics Workspace Id"
+    },
+    "workspaceKey": {
+      "value": "LogAnalytics WorkspaceKey"
+    }
+  }
+}
