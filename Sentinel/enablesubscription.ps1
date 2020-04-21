@@ -1,5 +1,6 @@
-#Enable the Activity API Subscriptions
+param($Enablement)
 
+#Enable the Activity API Subscriptions
 $clientID = "$env:clientID"
 $clientSecret = "$env:clientSecret"
 $loginURL = "https://login.microsoftonline.com"
