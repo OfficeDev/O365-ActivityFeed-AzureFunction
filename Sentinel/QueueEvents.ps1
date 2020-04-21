@@ -18,12 +18,10 @@ $workloads = $env:contentTypes.split(",")
 $endTime = Get-date -format "yyyy-MM-ddTHH:mm:ss.fffZ"
 
 #Storage Account Settings
-$StorageAccountName = "$env:StorageAccountName"
-$StorageAccountKey = "$env:StorageAccountKey"
 $storageQueue = "$env:storageQueue"
 
 #Load the Storage Queue
-$storeAuthContext = New-AzStorageContext $StorageAccountName -StorageAccountKey $StorageAccountKey
+$storeAuthContext = New-AzStorageContext -ConnectionString $env:AzureWebJobsStorage
 $myQueue = Get-AzStorageQueue -Name $storageQueue -Context $storeAuthContext
 $messageSize = 10
 
