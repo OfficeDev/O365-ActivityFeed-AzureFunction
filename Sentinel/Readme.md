@@ -20,8 +20,11 @@ By clicking deploy above you will deploy an Azure Function App with the function
 
 ### Prerequisites
 
-You need to have an Azure Subscription, ability to create an Azure Function App. You need to have at least one Sentinel Workspace.
-You need permissions to make a new App registration. SharePoint Library where you can 
+- You need to have an Azure Subscription
+- Ability to create an Azure Function App. 
+- A Sentinel Workspace and access to the Keys
+- You need permissions to make a new App registration. 
+- SharePoint Library if you want to utilize the ability to store full email content in SharePoint.
 
 ### Installing
 
@@ -53,6 +56,10 @@ These values can be changed later on by going to configuration of the Azure Func
 8. Copy the code from https://github.com/OfficeDev/O365-ActivityFeed-AzureFunction/blob/master/Sentinel/StoreEvents.ps1 to the StoreEvents function. 
 
 At this point the function should be ready to run. 
+
+- If you want to ingest content to SharePoint please see https://github.com/OfficeDev/O365-ActivityFeed-AzureFunction/tree/master/Sentinel/logicapp 
+
+- For Reporting please see https://github.com/OfficeDev/O365-ActivityFeed-AzureFunction/tree/master/Sentinel/Report
 
 ## Running the tests
 
