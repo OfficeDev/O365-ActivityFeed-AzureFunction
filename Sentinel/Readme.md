@@ -16,7 +16,7 @@ description: "This sample can be used to create a function that ingest DLP.All l
 
 # Ingesting Office 365 DLP.ALL events to Sentinel
 
-By clicking deploy above you will deploy an Azure Function App but to get it working you will have to copy the code manually. Since it is likely that you will want to customize the code distribution yourself.
+By clicking deploy above you will deploy an Azure Function App with the functions needed to run this project. To get it to work you will have to copy the code manually to the functions. The reason being that we want you to manage the code distribution yourself.
 
 ### Prerequisites
 
