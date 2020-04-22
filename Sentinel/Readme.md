@@ -47,7 +47,7 @@ By clicking deploy above you will deploy an Azure Function App with the function
 SPUS is only used if you are going to deploy ingestion of SharePoint. (https://myTenant.sharepoint.com/sites/DLPDetectionsFinance/Records/)
 These values can be changed later on by going to configuration of the Azure Function App.
 
-5. There may be a timing issue causing an error for the Queue function. That can be safely ignored.
+5. There may be a timing issue causing an error when deploying the logic apps. If it is one of the functions it can be safely ignored.
 
 6. Copy the code from https://github.com/OfficeDev/O365-ActivityFeed-AzureFunction/blob/master/Sentinel/enablesubscription.ps1 to EnableSubscription. Run the function once and look for errors in the log. (Popup the window while running)
 
@@ -57,13 +57,27 @@ These values can be changed later on by going to configuration of the Azure Func
 
 At this point the function should be ready to run. 
 
-- If you want to ingest content to SharePoint please see https://github.com/OfficeDev/O365-ActivityFeed-AzureFunction/tree/master/Sentinel/logicapp 
+- If you want to ingest content to SharePoint please see https://github.com/OfficeDev/O365-ActivityFeed-AzureFunction/tree/master/Sentinel/logicapp, complete the step pasting the code in to ActualID in the current project. 
 
 - For Reporting please see https://github.com/OfficeDev/O365-ActivityFeed-AzureFunction/tree/master/Sentinel/Report
 
-## Running the tests
+## Multiple workspaces for Multi Geo and Microsoft Graph enrichment
+The StoreEvents.ps1 has the basic enrichment functionality. You will find it from row 110 and onward. There is a high likelihood that you want to customize this code to meet your organizations requirements.
 
-Check the logs for errors when the function is running. 
+Right now it is based on usageLocation and below usageLocation US. You will likely have another attribute that we should use for event routing.
+
+- The GRAPH <mark>queryString</mark> dictates which attributes we bring back from the Azure GRAPH. What you get back can then be used to enrich the data. You can make additional calls to the Security Graph as well.
+
+- As part of the code we are adding the SPO location so that once that component is in place you can easily access the original content through that link. Storing it in SharePoint allow for granular permissions.
+
+- When preparing the Arrays for upload to Log Analytics we simply push the data to the appropriate Workspace based on the usageLocation in this sample.
+
+There is an issue returning the manager with the v1.0 which works with the Beta endpoint. 
+To get the manager with v1.0 amend the code with
+        $querymanager = "https://graph.microsoft.com/v1.0/users/" + $user.ExchangeMetaData.From + "/manager"
+        $manager = Invoke-RestMethod -Headers $headerParamsG -Uri $querymanager
+        
+## Additional Customization
 
 For production increase the FUNCTIONS_WORKER_PROCESS_COUNT https://docs.microsoft.com/en-us/azure/azure-functions/functions-app-settings
 Specifies the maximum number of language worker processes, with a default value of 1. The maximum value allowed is 10. Function invocations are evenly distributed among language worker processes. Language worker processes are spawned every 10 seconds until the count set by FUNCTIONS_WORKER_PROCESS_COUNT is reached. 
