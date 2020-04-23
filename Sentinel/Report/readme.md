@@ -22,3 +22,4 @@ The next portion provides a view over time and the specific rules that triggered
 
 The last section of this report provides some details to DLP exceptions as well as the details on the e-mails. Right now we are only adding subject to the emails triggering the alert.
 ![Invocation Log](./img/report3.png)
+![Invocation Log](./img/report4.png)
