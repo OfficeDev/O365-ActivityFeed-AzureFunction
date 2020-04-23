@@ -4,11 +4,12 @@
 If you have more than one workspace and Geo, you will have to set this up separately if there is a requirement to keep information in Geo at rest.
 
 ## Prerequisites
-- Complete the steps to setup the ActualID function as part of the main package
+- Complete the steps to setup the ActualID function as part of the main package https://github.com/OfficeDev/O365-ActivityFeed-AzureFunction/tree/master/Sentinel
 
 ## Setup
 
 1. Ensure to setup your DLP rule to forward the full details of incidents to the mailbox used for extraction by the function. For this sample we are using DLPAlertsEU.
+
 ![Invocation Log](./img/incident1.png)
 
 2. Create a SharePoint Site Collection in Region with the appropriate retention time. Use a Records center template if you need to treat the information as records. See the SharePoint Online limits to determine if you need more than one collection per region. This will depend on your expected load and retention period. You can change the ingestion code to ingest information based on the Policy Name as an example to scale this out.
