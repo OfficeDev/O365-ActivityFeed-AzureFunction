@@ -57,6 +57,6 @@ Clear-Variable finalyaml
 
                                 }
 
+                          }
 Remove-PSSession $session
 Disconnect-AzAccount  
-                          }
