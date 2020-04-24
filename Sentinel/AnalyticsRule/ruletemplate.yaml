@@ -20,7 +20,7 @@
   "queryResultsAggregationSettings": {
     "aggregationKind": "SingleAlert"
   },
-  "displayName": "DLPPOLICY",
+  "displayName": "DLPPOLICYNAME",
   "enabled": true,
   "description": "",
   "tactics": [
