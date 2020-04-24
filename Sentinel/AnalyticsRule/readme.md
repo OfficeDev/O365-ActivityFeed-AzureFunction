@@ -12,9 +12,8 @@ description: "This sample can be used to create a function that ingest DLP.All l
 ---
 
 
-# Ingesting Office 365 DLP.ALL events to Sentinel
-
-By clicking deploy above you will deploy an Azure Function App with the functions needed to run this project. To get it to work you will have to copy the code manually to the functions. The reason being that we want you to manage the code distribution yourself.
+# Creating Sentinel Analytic Rules based on Office DLP Policies
+The script will generate new Analytic rules used for alerting in connection to Office DLP policies. If the script is run more than once it will update the existing rules.
 
 ### Prerequisites
 
