@@ -1,0 +1,58 @@
+---
+page_type: sample
+products:
+- office-365
+- Sentinel
+languages:
+- powershellcore
+extensions:
+  contentType: samples
+  createdDate: 4/24/2020 3:00:56 PM
+description: "This sample can be used to create a function that ingest DLP.All logs to Sentinel."
+---
+
+
+# Ingesting Office 365 DLP.ALL events to Sentinel
+
+By clicking deploy above you will deploy an Azure Function App with the functions needed to run this project. To get it to work you will have to copy the code manually to the functions. The reason being that we want you to manage the code distribution yourself.
+
+### Prerequisites
+
+- The script is relying on AZ.sentinel PS Module from **Wortell** https://github.com/wortell/AZSentinel
+- The RBAC permission for the user that running the **export part** of the script is at least a Sentinel **reader** https://docs.microsoft.com/en-us/azure/role-based-access-control/built-in-roles#azure-sentinel-reader
+- The RBAC permission for the user that running the **import part** of the script is a Sentinel **Contributor** https://docs.microsoft.com/en-us/azure/role-based-access-control/built-in-roles#azure-sentinel-contributor
+
+Prerequisite for using the Sentinel module https://github.com/wortell/AZSentinel#prerequisites
+
+- PowerShell Core
+- Powershell AZ Module - tested with version 2.4.0
+- PowerShell powershell-yaml Module - tested with version 0.4.0
+- Az.sentinel Module (tested with 0.64 version) by running the above command
+
+Install-Module AzSentinel -Scope CurrentUser -Force
+
+### Running the Script
+
+1. Update the paramters used in the Script to suit your environment
+2. When executing the script you will have to provide Az device login and credentials for Office 365
+3. The script extracts all Office DLP rules and associated DLP policies and create Analytic Rules in Azure Sentinel
+A policy for PCI as an example that contains both High and Low there will be two separate analytic rules one called PCI_High
+and one called PCI_Low. 
+        
+## Additional Customization
+
+If you need to customize the KQL query either modify the associated template file ruletemplate.yaml or create your own custom template.
+
+## Contributing
+
+This project welcomes contributions and suggestions.  Most contributions require you to agree to a
+Contributor License Agreement (CLA) declaring that you have the right to, and actually do, grant us
+the rights to use your contribution. For details, visit https://cla.microsoft.com.
+
+When you submit a pull request, a CLA-bot will automatically determine whether you need to provide
+a CLA and decorate the PR appropriately (e.g., label, comment). Simply follow the instructions
+provided by the bot. You will only need to do this once across all repos using our CLA.
+
+This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/).
+For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or
+contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
