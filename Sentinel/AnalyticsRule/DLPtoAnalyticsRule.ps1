@@ -39,15 +39,16 @@ if ($processedPolicies -notcontains $policy.ReportSeverityLevel,$policy.ParentPo
         #Updating with the severity and name of the Dlp Policy
 
         $policyName = $policy.ParentPolicyName + "_" + $policy.ReportSeverityLevel
-        $updateyaml1 = $dlpyaml -replace "dlppolicy", $policyName
-        $finalyaml = $updateyaml1 -replace "UpdateSeverity", $policy.ReportSeverityLevel
+        $updateyaml1 = $dlpyaml -replace "dlppolicyname", $policyName
+        $updateyaml2 = $updateyaml1 -replace "dlppolicy", $policyName
+        $finalyaml = $updateyaml2 -replace "UpdateSeverity", $policy.ReportSeverityLevel
 
             # Sending the rule to temporary storage
             $file = $filepath + $policy.ParentPolicyName + $policy.ReportSeverityLevel + ".yaml"
             $finalyaml | Out-File $file
 
              #Updating or adding new Rules to Sentinel
-             Get-Item $file  | Import-AzSentinelAlertRule -WorkspaceName $workspacename -SubscriptionID $subscriptionID
+             Get-Item $file  | Import-AzSentinelAlertRule -WorkspaceName $workspacename -SubscriptionID $subscriptionID -Confirm:$false -ErrorAction:silentlycontinue
             
           #Keep track of already processed rules by placing in array for if sentence
           $processedPolicies += $policy.ReportSeverityLevel,$policy.ParentPolicyName
