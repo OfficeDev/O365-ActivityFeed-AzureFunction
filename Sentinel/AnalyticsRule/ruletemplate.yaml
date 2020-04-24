@@ -1,0 +1,33 @@
+{
+  "severity": "UpdateSeverity",
+  "query": "O365DLP_CL\r\n| where parse_json(PolicyDetails_s)[0].PolicyName == \"DLPPOLICY\"\r\n| where parse_json(tostring(parse_json(PolicyDetails_s)[0].Rules))[0].Severity == \"UpdateSeverity\"\r\n| extend Detected = tostring(parse_json(tostring(parse_json(tostring(parse_json(tostring(parse_json(tostring(parse_json(tostring(parse_json(PolicyDetails_s)[0].Rules))[0].ConditionsMatched)).SensitiveInformation))[0].SensitiveInformationDetections)).DetectedValues)))\r\n| extend MessageId = ObjectId_s\r\n| extend linkoriginal = originalContent_s\r\n| extend AccountCustomEntity = iff(isempty(SharePointMetaData_From_s), ExchangeMetaData_From_s, SharePointMetaData_From_s) \r\n| project AccountCustomEntity , Detected, linkoriginal, ExchangeMetaData_To_s, TimeGenerated  ",
+  "queryFrequency": "PT5M",
+  "queryPeriod": "PT5M",
+  "triggerOperator": "GreaterThan",
+  "triggerThreshold": 0,
+  "suppressionDuration": "PT5H",
+  "suppressionEnabled": false,
+  "incidentConfiguration": {
+    "createIncident": true,
+    "groupingConfiguration": {
+      "enabled": true,
+      "reopenClosedIncident": false,
+      "lookbackDuration": "PT30M",
+      "entitiesMatchingMethod": "Custom",
+      "groupByEntities": "Account"
+    }
+  },
+  "queryResultsAggregationSettings": {
+    "aggregationKind": "SingleAlert"
+  },
+  "displayName": "DLPPOLICY",
+  "enabled": true,
+  "description": "",
+  "tactics": [
+    "Exfiltration"
+  ],
+  "alertRuleTemplateName": null,
+  "lastModifiedUtc": "2020-04-24T09:58:12.7703565Z",
+  "name": "fa0a5b10-925f-49bb-877d-52a195567c13",
+  "playbookName": ""
+}
