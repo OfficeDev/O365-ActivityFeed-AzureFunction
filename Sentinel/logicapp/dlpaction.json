@@ -35,7 +35,7 @@
       "type": "Microsoft.Web/connections",
       "apiVersion": "2016-06-01",
       "name": "[parameters('connections_office365_name')]",
-      "location": "centralus",
+      "location": "[resourceGroup().location]",
       "properties": {
         "displayName": "DLPAlertsEU@tenant.onmicrosoft.com",
         "customParameterValues": {},
@@ -49,7 +49,7 @@
       "type": "Microsoft.Web/connections",
       "apiVersion": "2016-06-01",
       "name": "[parameters('connections_sharepointonline_name')]",
-      "location": "centralus",
+      "location": "[resourceGroup().location]",
       "properties": {
         "displayName": "spoaccount@tenant.onmicrosoft.com",
         "customParameterValues": {},
@@ -64,7 +64,7 @@
       "type": "Microsoft.Logic/workflows",
       "apiVersion": "2017-07-01",
       "name": "[parameters('workflows_DLP_Action_name')]",
-      "location": "centralus",
+      "location": "[resourceGroup().location]",
       "dependsOn": [
         "[resourceId('Microsoft.Web/connections', parameters('connections_office365_name'))]",
         "[resourceId('Microsoft.Web/connections', parameters('connections_sharepointonline_name'))]"
