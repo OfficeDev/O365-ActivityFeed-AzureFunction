@@ -22,6 +22,7 @@ $records = @()
 $exupload = @()
 $spoupload = @()
 $usWorkspace = @()
+$tolocal = @()
 
 # Create the function to create the authorization signature
 Function Build-Signature ($customerId, $sharedKey, $date, $contentLength, $method, $contentType, $resource)
@@ -116,17 +117,25 @@ $headerParamsG  = @{'Authorization'="$($oauthG.token_type) $($oauthG.access_toke
 
 Foreach ($user in $records) {
 #Exchange and Teams upload data process
-#!!!!Note!!! the code handles internal recipients sending outbound, need amendment to handle external users sending to recipients in the organization. 
-
 $user.workload
 if (($user.workload -eq "Exchange") -or ($user.Workload -eq "MicrosoftTeams")) {
 
-$domain = $user.ExchangeMetaData.From.Split('@')
+ #Determine if the email is from external or internal if from external associate with first recipient on the to line
+    if (($env:domains).split(",") -Contains ($user.ExchangeMetaData.from.Split('@'))[1]) {$exuser = $user.ExchangeMetaData.from}
 
-   if (($env:domains).split(",") -Contains $domain[1])   {
+    if ([string]::IsNullOrEmpty($exuser)) 
+        {
+        foreach ($to in $user.ExchangeMetaData.to) {
+        if (($env:domains).split(",") -contains ($to.split('@'))[1] ) { $tolocal += $to}                                   }
+        $exuser = $tolocal[0]
+        }
+
+#Avoiding enrichment for system messages that may have slipped through
+    $systemMail = "no-reply@sharepointonline.com,noreply@email.teams.microsoft.com"
+    if (($systemMail).split(",") -notcontains $exuser) {
         
         #Add the additional attributes needed to enrich the event stored in Log Analytics for Exchange
-        $queryString = "https://graph.microsoft.com/v1.0/users/" + $user.ExchangeMetaData.From + "?" + "$" + "select=usageLocation,Manager,department,state"       
+        $queryString = "https://graph.microsoft.com/v1.0/users/" + $exuser + "?" + "$" + "select=usageLocation,Manager,department,state"       
         $info = Invoke-RestMethod -Headers $headerParamsG -Uri $queryString -Method GET
 
         #Add usage location from GRAPH Call
@@ -136,12 +145,12 @@ $domain = $user.ExchangeMetaData.From.Split('@')
         if (($user.usageLocation -eq "US") -and ($user.workload -eq "Exchange"))  {$user | Add-Member -MemberType NoteProperty -Name "originalContent" -Value $spousLocation}
         if (($user.usageLocation -eq "SE") -and ($user.workload -eq "Exchange"))  {$user | Add-Member -MemberType NoteProperty -Name "originalContent" -Value $spoSELocation}
         Clear-Variable -name info    
-                                                         }
+                                                         
     #Add link to the location of the original content !!!! Remember to add per Geo depending on Geo
     $original = $user.ExchangeMetaData.MessageID -replace ("\<", "_") -replace ("\>", "_")
     $spousLocation = $SPUS + $original + ".eml"
     $spoSELocation = $SPUS + $original + ".eml"                                                
-                                                         
+                                                         }
 $exupload += $user 
 
                                     }
@@ -163,11 +172,11 @@ Clear-Variable -name info
 #Determine which Sentinel Workspace to route the information, remember to define the variable for each workspace as an array.
 foreach ($entry in $exupload)   {
         if ($entry.usageLocation -eq "US") { $usWorkspace += $entry  }
-        if ($entry.usageLocation -eq "")   { $usWorkspace += $entry  } 
+        if ($entry.usageLocation -ne "US")   { $usWorkspace += $entry  } 
                                 }
 foreach ($entry in $spoupload)  {
         if ($entry.usageLocation -eq "US") { $usWorkspace += $entry  }    
-        if ($entry.usageLocation -eq "")   { $usWorkspace += $entry  } 
+        if ($entry.usageLocation -ne "US")   { $usWorkspace += $entry  } 
                                 }
 
 #Upload US Workspace, to add addtional workspaces add the WorkspaceID and Workspacekey and make a new post based on those parameters
