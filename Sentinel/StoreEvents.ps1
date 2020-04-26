@@ -171,5 +171,7 @@ foreach ($entry in $spoupload)  {
                                 }
 
 #Upload US Workspace, to add addtional workspaces add the WorkspaceID and Workspacekey and make a new post based on those parameters
+if ($usWorkspace) {
 $jsonus = $usWorkspace | convertTo-Json -depth 20
-Post-LogAnalyticsData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($jsonus)) -logType $logType
+Post-LogAnalyticsData -customerId $env:workspaceId -sharedKey $env:workspaceKey -body ([System.Text.Encoding]::UTF8.GetBytes($jsonus)) -logType $logType
+                  }
