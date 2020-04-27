@@ -57,6 +57,9 @@ These values can be changed later on by going to configuration of the Azure Func
 
 At this point the function should be ready to run. 
 
+- When you have ingested some DLP alerts from both SPO and Exchange you can follow these instructions for setting up Alerts https://github.com/OfficeDev/O365-ActivityFeed-AzureFunction/tree/master/Sentinel/AnalyticsRule Note they will fail
+if you haven't ingested both SPO and Exchange Alerts first.
+
 - If you want to ingest content to SharePoint please see https://github.com/OfficeDev/O365-ActivityFeed-AzureFunction/tree/master/Sentinel/logicapp, complete the step pasting the code in to ActualID in the current project. 
 
 - For Reporting please see https://github.com/OfficeDev/O365-ActivityFeed-AzureFunction/tree/master/Sentinel/Report
