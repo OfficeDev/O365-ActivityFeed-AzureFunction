@@ -18,6 +18,15 @@
         "type": "String"
       },
 
+      "SharePointURL": {
+        "defaultValue": "Example: https://contoso.sharepoint.com/sites/sitename.",
+        "type": "String"
+      },
+      "SharePointfolderPath": {
+        "defaultValue": "Example subfolder: /Records",
+        "type": "String"
+      },
+
       "connections_sharepointonline_name": {
         "defaultValue": "sharepointonline",
         "type": "String"
@@ -37,8 +46,6 @@
       "name": "[parameters('connections_office365_name')]",
       "location": "[resourceGroup().location]",
       "properties": {
-        "displayName": "DLPAlertsEU@tenant.onmicrosoft.com",
-        "customParameterValues": {},
         "api": {
           "id": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Web/locations/', resourceGroup().location, '/managedApis/office365')]"
         }
@@ -51,8 +58,6 @@
       "name": "[parameters('connections_sharepointonline_name')]",
       "location": "[resourceGroup().location]",
       "properties": {
-        "displayName": "spoaccount@tenant.onmicrosoft.com",
-        "customParameterValues": {},
         "api": {
           "id": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Web/locations/', resourceGroup().location, '/managedApis/sharepointonline')]"
         }
@@ -153,9 +158,9 @@
                           }
                         },
                         "method": "post",
-                        "path": "/datasets/@{encodeURIComponent(encodeURIComponent('https://lab1945.sharepoint.com/sites/DLPDetectionsFinance'))}/files",
-                        "queries": {
-                          "folderPath": "/Records",
+                        "path": "[concat('/datasets/@{encodeURIComponent(encodeURIComponent(''', parameters('SharePointURL'), '''))}', '/files')]",
+            "queries": {
+                          "folderPath": "[parameters('SharePointfolderPath')]",
                           "name": "@{body('ActualID_2')}.eml",
                           "queryParametersSingleEncoded": true
                         }
