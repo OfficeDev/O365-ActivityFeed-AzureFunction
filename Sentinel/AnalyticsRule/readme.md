@@ -30,6 +30,8 @@ Prerequisite for using the Sentinel module https://github.com/wortell/AZSentinel
 
 Install-Module AzSentinel -Scope CurrentUser -Force
 
+- **MUST** have ingested both SharePoint and Exchange events to Azure Sentinel.
+
 ### Running the Script
 
 1. Update the paramters used in the Script to suit your environment
