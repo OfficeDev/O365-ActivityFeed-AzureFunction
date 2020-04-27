@@ -40,7 +40,18 @@ and one called PCI_Low.
         
 ## Additional Customization
 
+If you need to troubleshoot connections to Azure Sentinel
+
+Get-Item $file | Import-AzSentinelAlertRule -WorkspaceName $workspacename -SubscriptionID $subscriptionID -Confirm:$false -ErrorAction:silentlycontinue
+
+to
+
+Get-Item $file | Import-AzSentinelAlertRule -WorkspaceName $workspacename -SubscriptionID $subscriptionID -verbose
+
+
 If you need to customize the KQL query either modify the associated template file ruletemplate.yaml or create your own custom template.
+
+
 
 ## Contributing
 
