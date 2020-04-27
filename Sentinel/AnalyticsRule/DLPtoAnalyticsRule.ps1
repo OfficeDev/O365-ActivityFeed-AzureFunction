@@ -40,7 +40,7 @@ if ($processedPolicies -notcontains $policy.ReportSeverityLevel,$policy.ParentPo
 
         $policyName = $policy.ParentPolicyName + "_" + $policy.ReportSeverityLevel
         $updateyaml1 = $dlpyaml -replace "dlppolicyname", $policyName
-        $updateyaml2 = $updateyaml1 -replace "dlppolicy", $policyName
+        $updateyaml2 = $updateyaml1 -replace "dlppolicy", $policy.ParentPolicyName
         $finalyaml = $updateyaml2 -replace "UpdateSeverity", $policy.ReportSeverityLevel
 
             # Sending the rule to temporary storage
