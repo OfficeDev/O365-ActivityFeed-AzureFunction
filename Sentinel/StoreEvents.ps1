@@ -140,20 +140,21 @@ if (($user.workload -eq "Exchange") -or ($user.Workload -eq "MicrosoftTeams")) {
         #Add usage location from GRAPH Call
         $user | Add-Member -MemberType NoteProperty -Name "usageLocation" -Value $info.usageLocation
         
-    #Add link to the location of the original content !!!! Remember to add per Geo depending on Geo
-    $original = $user.ExchangeMetaData.MessageID -replace ("\<", "_") -replace ("\>", "_")
-    $spousLocation = $SPUS + $original + ".eml"
-    $spoSELocation = $SPUS + $original + ".eml" 
-        
-        
-        #Determine SPO Geo to point to this is pointing to the US sample, only Exchange provide full content
-        if (($user.usageLocation -eq "US") -and ($user.workload -eq "Exchange"))  {$user | Add-Member -MemberType NoteProperty -Name "originalContent" -Value $spousLocation}
-        if (($user.usageLocation -ne "US") -and ($user.workload -eq "Exchange"))  {$user | Add-Member -MemberType NoteProperty -Name "originalContent" -Value $spoSELocation}
-        Clear-Variable -name info    
-                                                                                                        
+    if ($user.workload -eq "Exchange") {
+
+            #Add link to the location of the original content !!!! Remember to add per Geo depending on Geo
+            $original = $user.ExchangeMetaData.MessageID -replace ("\<", "_") -replace ("\>", "_")
+            $spousLocation = $SPUS + $user.PolicyDetails.rules.RuleName + "/" + $original + ".eml"
+            $spoSELocation = $SPUS + $user.PolicyDetails.rules.RuleName +  "/" + $original + ".eml"
+                
+                #Determine SPO Geo to point to this is pointing to the US sample, only Exchange provide full content
+                if (($user.usageLocation -eq "US") -and ($user.workload -eq "Exchange"))  {$user | Add-Member -MemberType NoteProperty -Name "originalContent" -Value $spousLocation}
+                if (($user.usageLocation -eq "SE") -and ($user.workload -eq "Exchange"))  {$user | Add-Member -MemberType NoteProperty -Name "originalContent" -Value $spoSELocation}
+   
+                                                            }   
+      Clear-Variable -name info                                                                                                         
                                                          }
 $exupload += $user 
-
                                     }
 
 #SharePoint and OneDrive upload data process
