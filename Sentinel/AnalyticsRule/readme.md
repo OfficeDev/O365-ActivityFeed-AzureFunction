@@ -23,14 +23,14 @@ The script will generate new Analytic rules used for alerting in connection to O
 
 Prerequisite for using the Sentinel module https://github.com/wortell/AZSentinel#prerequisites
 
-- PowerShell Core
-- Powershell AZ Module - tested with version 2.4.0
-- PowerShell powershell-yaml Module - tested with version 0.4.0
-- Az.sentinel Module (tested with 0.64 version) by running the above command
+* [PowerShell Core](https://github.com/PowerShell/PowerShell)
+* Powershell [AZ Module](https://www.powershellgallery.com/packages/Az) - tested with version 3.8.0
+* PowerShell [powershell-yaml Module](https://www.powershellgallery.com/packages/powershell-yaml) 0.4.1
+- Az.sentinel Module (tested with 0.6.4) with command below
 
 Install-Module AzSentinel -Scope CurrentUser -Force
 
-- **MUST** have ingested both SharePoint and Exchange events to Azure Sentinel.
+- **MUST** have ingested both SharePoint and Exchange events to Azure Sentinel or rule creation will fail with error 500.
 
 ### Running the Script
 
