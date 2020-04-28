@@ -36,8 +36,7 @@ Install-Module AzSentinel -Scope CurrentUser -Force
 
 1. Update the paramters used in the Script to suit your environment
 2. When executing the script you will have to provide Az device login and credentials for Office 365
-3. The script extracts all Office DLP rules and associated DLP policies and create Analytic Rules in Azure Sentinel
-A policy for PCI as an example that contains both High and Low there will be two separate analytic rules one called PCI_High
+3. The script extracts all Office DLP rules and associated DLP policies and create Analytic Rules in Azure Sentinel. A policy for PCI as an example, may contain both a High and a Low rule, there will be two separate analytic rules one called PCI_High
 and one called PCI_Low. 
         
 ## Additional Customization
