@@ -57,9 +57,9 @@
                     
                    "SPUS": {
                     "type": "string",  
-                    "defaultValue": "SharePoint location for original emails if not exist use a temporary path",
+                    "defaultValue": "https://tenant.sharepoint.com/sites/DLPArchive/",
                     "metadata": {
-                        "description": "Provide the Document library where you want to store the full email."
+                        "description": "Provide the Document library where you want to store the full email. IMPORTANT full path, with trailing /"
                                 }
                            },
                   
