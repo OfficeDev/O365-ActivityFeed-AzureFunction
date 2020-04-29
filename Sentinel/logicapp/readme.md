@@ -18,7 +18,7 @@ If you have more than one workspace and Geo, you will have to set this up separa
 
 4. Provide the right Resource Group, where the function app resides. You can move the function later. Provide the function app name used for ActualID (Name of the function created in the first step). If you want to change the Workflow name do so from here. Don't touch the connections for SharePoint and Exchange they can be changed later.
 
-5. The SharePoint connection should go to the Site Collection itself don't specify "Records" 
+5. The SharePoint connection should go to the Site Collection itself don't specify "Records". https://tenant.sharepoint.com/sites/DLPArchive/
 
 6. When deployed change the connections used for when email arrives and for Export email as well as for SharePoint.
 
