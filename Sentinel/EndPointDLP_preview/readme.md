@@ -14,7 +14,7 @@ description: "This sample can be used to create a function that ingest DLP.All l
 ---
 
 
-# Ingesting Office 365 DLP events to Sentinel
+# Ingesting Office 365 and Endpoint DLP events to Sentinel
 
 By clicking deploy above you will deploy an Azure Function App with the functions needed to run this project. You will have to copy the code manually to the functions. The reason being that we want you to manage the code distribution yourself.
 
@@ -52,20 +52,27 @@ These values can be changed later on by going to configuration of the Azure Func
 
 5. There may be a timing issue causing an error when deploying the logic apps. If it is one of the functions it can be safely ignored.
 
-6. Copy the code from  https://github.com/OfficeDev/O365-ActivityFeed-AzureFunction/blob/master/Sentinel/EndPointDLP_preview/enablesubscription.ps1 to EnableSubscription. Run the function once and look for errors in the log. (Popup the window while running)
+6. If you want to deploy the code by script follow these steps
+6.1 Download the endpointdlpservice.zip from this repo
+6.2 Start to connect to Azure PowerShell Connect-AzAccout
+6.2 Run Publish-AzWebApp -ResourceGroupName REPLACEWITHYOURRG -Name REPLACEWITHYOURAPPNAME -ArchivePath C:\YOURPATH\endpointdlpservice.zip
+6.3 Navigate to the Enablement Function in your function, open the function under functions, open "Code + Test" , click Test/Run, click Run
+6.4 Note if there are any errors generated in this run, you will see it in the logging window. If there is a typo or similar in your configuration files. Go back to the main window for the App and click Configuration to update.
 
-7. Copy the code from https://github.com/OfficeDev/O365-ActivityFeed-AzureFunction/blob/master/Sentinel/EndPointDLP_preview/QueueDLPEvents.ps1 and place in the Queue events function.
-
-8. Copy the code from  https://github.com/OfficeDev/O365-ActivityFeed-AzureFunction/blob/master/Sentinel/EndPointDLP_preview/StoreEndpointDLPEvents.ps1 to store the EndPoint events
-
-9. Copy the code from https://github.com/OfficeDev/O365-ActivityFeed-AzureFunction/blob/master/Sentinel/StoreEvents.ps1 to the StoreEvents function. 
+7. If you want to copy the code manually.
+7.1 Copy the code from  https://github.com/OfficeDev/O365-ActivityFeed-AzureFunction/blob/master/Sentinel/EndPointDLP_preview/enablesubscription.ps1 to EnableSubscription. Run the function once and look for errors in the log. (Popup the window while running)
+7.2 Copy the code from https://github.com/OfficeDev/O365-ActivityFeed-AzureFunction/blob/master/Sentinel/EndPointDLP_preview/QueueDLPEvents.ps1 and place in the Queue events function.
+7.3 Copy the code from  https://github.com/OfficeDev/O365-ActivityFeed-AzureFunction/blob/master/Sentinel/EndPointDLP_preview/StoreEndpointDLPEvents.ps1 to store the EndPoint events
+7.4. Copy the code from https://github.com/OfficeDev/O365-ActivityFeed-AzureFunction/blob/master/Sentinel/StoreEvents.ps1 to the StoreEvents function. 
 
 At this point the function should be ready to run. 
 
-- When you have ingested some DLP alerts from both SPO and Exchange you can follow these instructions for setting up Alerts https://github.com/OfficeDev/O365-ActivityFeed-AzureFunction/tree/master/Sentinel/EndPointDLP_preview/AnalyticsRule Note they will fail
+- When you have ingested some Endpoint DLP events you can follow these instructions for setting up Alerts https://github.com/OfficeDev/O365-ActivityFeed-AzureFunction/tree/master/Sentinel/EndPointDLP_preview/AnalyticsRule Note they will fail if you haven't ingested events first.
+
+- When you have ingested some DLP alerts from both SPO and Exchange you can follow these instructions for setting up Alerts https://github.com/OfficeDev/O365-ActivityFeed-AzureFunction/tree/master/Sentinel/AnalyticsRule Note they will fail
 if you haven't ingested events first.
 
-- If you want to ingest content to SharePoint please see https://github.com/OfficeDev/O365-ActivityFeed-AzureFunction/tree/master/Sentinel/logicapp, complete the step pasting the code in to ActualID in the current project. 
+- If you want to ingest content to SharePoint please see https://github.com/OfficeDev/O365-ActivityFeed-AzureFunction/tree/master/Sentinel/logicapp, complete the step pasting the code in to ActualID in the current project if you didn't use the automatic code deployment.
 
 - For Reporting please see https://github.com/OfficeDev/O365-ActivityFeed-AzureFunction/tree/master/Sentinel/EndPointDLP_preview/Report
 
