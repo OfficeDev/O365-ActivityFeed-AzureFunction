@@ -1,0 +1,33 @@
+{
+  "severity": "UpdateSeverity",
+  "query": "endpointdlp_CL | where PolicyMatchInfo_RuleId_g == \"ImmutableID\"\r\n| extend AccountCustomEntity = UserKey_s\r\n| extend HostCustomEntity = DeviceName_s\r\n| extend IPCustomEntity = ClientIP_s",
+  "queryFrequency": "PT5M",
+  "queryPeriod": "PT5M",
+  "triggerOperator": "GreaterThan",
+  "triggerThreshold": 0,
+  "suppressionDuration": "PT5H",
+  "suppressionEnabled": false,
+  "incidentConfiguration": {
+    "createIncident": true,
+    "groupingConfiguration": {
+      "enabled": true,
+      "reopenClosedIncident": false,
+      "lookbackDuration": "PT30M",
+      "entitiesMatchingMethod": "Custom",
+      "groupByEntities": "Account"
+    }
+  },
+  "queryResultsAggregationSettings": {
+    "aggregationKind": "SingleAlert"
+  },
+  "displayName": "DLPPOLICYName_EndPoint",
+  "enabled": true,
+  "description": "",
+  "tactics": [
+    "Exfiltration"
+  ],
+  "alertRuleTemplateName": null,
+  "lastModifiedUtc": "2020-03-12T09:58:12.7703565Z",
+  "name": "fa0a5b10-925f-49bb-877d-52a195567c13",
+  "playbookName": ""
+}
