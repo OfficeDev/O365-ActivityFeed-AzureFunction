@@ -1,0 +1,399 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+      "appName": {
+        "type": "string",
+        "metadata": {
+          "description": "The name of the function app that you wish to create."
+        }
+      },
+      "storageAccountType": {
+        "type": "string",
+        "defaultValue": "Standard_LRS",
+        "allowedValues": ["Standard_LRS", "Standard_GRS", "Standard_RAGRS"],
+        "metadata": {
+          "description": "Storage Account type"
+        }
+      },
+      "location": {
+        "type": "string",
+        "defaultValue": "[resourceGroup().location]",
+        "metadata": {
+          "description": "Location for all resources."
+        }
+      },
+      "runtime": {
+        "type": "string",
+        "defaultValue": "powershell",
+        "allowedValues": ["powershell"],
+        "metadata": {
+          "description": "The language worker runtime to load in the function app."
+                    }
+        },
+          
+                   "ClientID": {
+                    "type": "string",
+                    "defaultValue": "Provide the client ID",
+                    "metadata": {
+                        "description": "Application Client ID"
+                                }
+                           },
+                  
+                    "ClientSecret": {
+                    "type": "string",    
+                    "defaultValue": "Provide the Client Secret"
+                  },
+                  
+                    "ContentTypes": {
+                    "type": "string",    
+                    "defaultValue": "DLP.ALL"
+                  },
+                                    
+                    "domains": {
+                    "type": "string",    
+                    "defaultValue": "youradditionaldomain.com,yourdomain.com,yourtenant.onmicrosoft.com"
+                  },
+                    
+                   "SPUS": {
+                    "type": "string",  
+                    "defaultValue": "https://tenant.sharepoint.com/sites/DLPArchive/",
+                    "metadata": {
+                        "description": "Provide the Document library where you want to store the full email. IMPORTANT full path, with trailing /"
+                                }
+                           },
+                  
+                    "storageQueue": {
+                    "type": "string",
+                    "defaultValue": "dlpqueue"
+                  },
+                  
+                    "tenantDomain": {
+                    "type": "string",   
+                    "defaultValue": "Yourtenant.onmicrosoft.com"
+                  },
+                  
+                    "TenantGuid": {
+                    "type": "string",
+                    "defaultValue": "Your Tenant GUID"
+                  },
+                  
+                    "workspaceId": {
+                    "type": "string",
+                    "defaultValue": "LogAnalytics Workspace Id"
+                  },
+                  
+                    "workspaceKey": {
+                    "type": "string",
+                    "defaultValue": "LogAnalytics WorkspaceKey"
+                  }
+    
+       },
+        
+      "variables": {
+      "functionAppName": "[parameters('appName')]",
+      "hostingPlanName": "[parameters('appName')]",
+      "applicationInsightsName": "[parameters('appName')]",
+      "storageAccountName": "[concat(uniquestring(resourceGroup().id), 'azfunctions')]",
+      "storageAccountid": "[concat(resourceGroup().id,'/providers/','Microsoft.Storage/storageAccounts/', variables('storageAccountName'))]",
+      "functionWorkerRuntime": "[parameters('runtime')]",
+      "ClientID":"[parameters('ClientID')]"
+    },  
+    "resources": [
+      {
+        "type": "Microsoft.Storage/storageAccounts",
+        "name": "[variables('storageAccountName')]",
+        "apiVersion": "2016-12-01",
+        "location": "[parameters('location')]",
+        "kind": "Storage",
+        "sku": {
+          "name": "[parameters('storageAccountType')]"
+        }
+      },
+      {
+        "type": "Microsoft.Web/serverfarms",
+        "apiVersion": "2018-02-01",
+        "name": "[variables('hostingPlanName')]",
+        "location": "[parameters('location')]",
+        "sku": {
+          "name": "Y1",
+          "tier": "Dynamic"
+        },
+        "properties": {
+          "name": "[variables('hostingPlanName')]",
+          "computeMode": "Dynamic"
+        }
+      },
+      {
+        "apiVersion": "2015-08-01",
+        "type": "Microsoft.Web/sites",
+        "name": "[variables('functionAppName')]",
+        "location": "[parameters('location')]",
+        "kind": "functionapp",
+        "dependsOn": [
+          "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName'))]",
+          "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
+        ],
+        "properties": {
+          "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName'))]",
+          "siteConfig": {
+            "appSettings": [
+              {
+                "name": "AzureWebJobsStorage",
+                "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(variables('storageAccountid'),'2015-05-01-preview').key1)]"
+              },
+              {
+                "name": "WEBSITE_CONTENTAZUREFILECONNECTIONSTRING",
+                "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(variables('storageAccountid'),'2015-05-01-preview').key1)]"
+              },
+              {
+                "name": "WEBSITE_CONTENTSHARE",
+                "value": "[toLower(variables('functionAppName'))]"
+              },
+              {
+                "name": "FUNCTIONS_EXTENSION_VERSION",
+                "value": "~3"
+              },
+              {
+                "name": "APPINSIGHTS_INSTRUMENTATIONKEY",
+                "value": "[reference(resourceId('microsoft.insights/components/', variables('applicationInsightsName')), '2015-05-01').InstrumentationKey]"
+              },
+              {
+                "name": "FUNCTIONS_WORKER_RUNTIME",
+                "value": "[variables('functionWorkerRuntime')]"
+              },
+            {
+              "name": "ClientID",
+              "value": "[parameters('ClientID')]"
+            },
+            {
+              "name": "ClientSecret",
+              "value": "[parameters('ClientSecret')]"
+            },
+            {
+              "name": "ContentTypes",
+              "value": "[parameters('ContentTypes')]"
+            },
+            {
+              "name": "customLogName",
+              "value": "O365DLP"
+            },
+            {
+              "name": "domains",
+              "value": "[parameters('domains')]"
+            },
+            {
+              "name": "SPUS",
+              "value": "[parameters('SPUS')]"
+            },
+            {
+              "name": "storageQueue",
+              "value": "[parameters('storageQueue')]"
+            },
+            {
+              "name": "EndpointstorageQueue",
+              "value": "endpointqueue"
+            },
+            {
+              "name": "tenantDomain",
+              "value": "[parameters('tenantDomain')]"
+            },
+            {
+              "name": "TenantGuid",
+              "value": "[parameters('tenantGuid')]"
+            },
+            {
+              "name": "workspaceId",
+              "value": "[parameters('workspaceId')]"
+            },
+            {
+              "name": "workspaceKey",
+              "value": "[parameters('workspaceKey')]"
+            }
+
+            ]
+          }
+        }
+      },
+      {
+        "apiVersion": "2018-05-01-preview",
+        "name": "[variables('applicationInsightsName')]",
+        "type": "microsoft.insights/components",
+        "location": "[resourceGroup().location]",
+        "tags": {
+          "[concat('hidden-link:', resourceGroup().id, '/providers/Microsoft.Web/sites/', variables('applicationInsightsName'))]": "Resource"
+        },
+        "properties": {
+          "ApplicationId": "[variables('applicationInsightsName')]",
+          "Request_Source": "IbizaWebAppExtensionCreate"
+        }
+      },
+      {
+        "name": "[concat(variables('functionAppName'), '/', 'QueueDLPEvents')]",
+        "type": "Microsoft.Web/sites/functions",
+        "apiVersion": "2018-02-01",
+        "properties": {
+            "config": {
+                "bindings": [
+                    {
+                        "name": "Timer",
+                        "type": "timerTrigger",
+                        "direction": "in",
+                        "schedule": "0 */1 * * * *"
+                    }
+                ],
+                "disabled": false
+            },
+         
+            "files": {
+              "run.ps1": "#Paste the code from Queue DLP Events in to this window. https://github.com/OfficeDev/O365-ActivityFeed-AzureFunction/blob/master/Sentinel/EndPointDLP_preview/QueueDLPEvents.ps1"
+                     }
+
+        },
+        "dependsOn": [
+            "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]"
+        ]
+    },
+    {
+      "name": "[concat(variables('functionAppName'), '/', 'Enablement')]",
+      "type": "Microsoft.Web/sites/functions",
+      "apiVersion": "2018-02-01",
+      "properties": {
+          "config": {
+              "bindings": [
+                  {
+                      "name": "Enablement",
+                      "type": "timerTrigger",
+                      "direction": "in",
+                      "schedule": "0 */1 1 1 1 *"
+                  }
+              ],
+              "disabled": true
+          },
+            
+         "files": {
+          "run.ps1": "#Paste the code from enable Subscription and place it here. This function can be removed and disabled after completion. https://github.com/OfficeDev/O365-ActivityFeed-AzureFunction/blob/master/Sentinel/EndPointDLP_preview/enablesubscription.ps1"
+      }
+      },
+      "dependsOn": [
+          "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]"
+      ]
+  },
+    {
+      "name": "[concat(variables('functionAppName'), '/', 'SensitiveInfoType')]",
+      "type": "Microsoft.Web/sites/functions",
+      "apiVersion": "2018-02-01",
+      "properties": {
+          "config": {
+              "bindings": [
+                  {
+                      "name": "Enablement",
+                      "type": "timerTrigger",
+                      "direction": "in",
+                      "schedule": "0 30 9 * * *"
+                  }
+              ],
+              "disabled": true
+          },
+            
+         "files": {
+          "run.ps1": "#Paste the code from enable Subscription and place it here. This function can be removed and disabled after completion. https://github.com/OfficeDev/O365-ActivityFeed-AzureFunction/blob/master/Sentinel/EndPointDLP_preview/SensitiveInfoType.ps1"
+      }
+      },
+      "dependsOn": [
+          "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]"
+      ]
+  },
+    {
+      "name": "[concat(variables('functionAppName'), '/', 'StoreEndPointDLPEvents')]",
+      "type": "Microsoft.Web/sites/functions",
+      "apiVersion": "2018-02-01",
+      "properties": {
+          "config": {
+              "bindings": [
+                  {
+                    "name": "QueueItem",
+                    "type": "queueTrigger",
+                    "direction": "in",
+                    "queueName": "[parameters('EndpointstorageQueue')]",
+                    "connection": "AzureWebJobsStorage"
+                  }
+              ],
+              "disabled": false
+          },
+         
+         "files": {
+            "run.ps1": "#Paste the code for storing DLP events here and customize it based on your requirements. https://github.com/OfficeDev/O365-ActivityFeed-AzureFunction/blob/master/Sentinel/EndPointDLP_preview/StoreEndpointDLPEvents.ps1"
+        }
+      },
+      "dependsOn": [
+          "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]"
+      ]
+  },
+
+
+    {
+      "name": "[concat(variables('functionAppName'), '/', 'StoreDLPEvents')]",
+      "type": "Microsoft.Web/sites/functions",
+      "apiVersion": "2018-02-01",
+      "properties": {
+          "config": {
+              "bindings": [
+                  {
+                    "name": "QueueItem",
+                    "type": "queueTrigger",
+                    "direction": "in",
+                    "queueName": "[parameters('storageQueue')]",
+                    "connection": "AzureWebJobsStorage"
+                  }
+              ],
+              "disabled": false
+          },
+         
+         "files": {
+            "run.ps1": "#Paste the code for storing DLP events here and customize it based on your requirements. https://github.com/OfficeDev/O365-ActivityFeed-AzureFunction/blob/master/Sentinel/StoreEvents.ps1"
+        }
+      },
+      "dependsOn": [
+          "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]"
+      ]
+  },
+
+  {
+    "name": "[concat(variables('functionAppName'), '/', 'ActualID')]",
+    "type": "Microsoft.Web/sites/functions",
+    "apiVersion": "2018-02-01",
+    "properties": {
+        "config": {
+            "bindings": [
+                {
+                  "authLevel": "function",
+                  "type": "httpTrigger",
+                  "direction": "in",
+                  "name": "Request",
+                  "methods": [
+                    "get",
+                    "post"
+                  ]
+                },
+                {
+                  "type": "http",
+                  "direction": "out",
+                  "name": "Response"
+                }
+            ],
+            "disabled": false
+        },
+       
+       "files": {
+          "run.ps1": "#Paste the code for getting the MessageID. https://github.com/OfficeDev/O365-ActivityFeed-AzureFunction/blob/master/Sentinel/logicapp/messageid.ps1"
+      }
+    },
+    "dependsOn": [
+        "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]"
+    ]
+}
+
+      
+    ]
+  }
