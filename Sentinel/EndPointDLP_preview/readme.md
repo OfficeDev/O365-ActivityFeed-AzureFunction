@@ -30,7 +30,7 @@ By clicking deploy above you will deploy an Azure Function App with the function
 
 ### Installing
 
-1. Register a new application in Azure AD https://docs.microsoft.com/en-us/azure/active-directory/develop/quickstart-register-app
+* 1. Register a new application in Azure AD https://docs.microsoft.com/en-us/azure/active-directory/develop/quickstart-register-app
   -Microsoft GRAPH  (Application permissions)
      - Group.Read.All
      - User.Read.All
@@ -38,32 +38,32 @@ By clicking deploy above you will deploy an Azure Function App with the function
      - ActivityFeed.Read
      - ActivityFeed.ReadDlp   (Needed for detailed events)
  
- 2. Collect the identity and secret for the new App created in step 1.  For production. Store the secret in Azure Key vault https://docs.microsoft.com/en-us/azure/app-service/app-service-key-vault-references
+ * 2. Collect the identity and secret for the new App created in step 1.  For production. Store the secret in Azure Key vault https://docs.microsoft.com/en-us/azure/app-service/app-service-key-vault-references
       - clientID
       - clientSecret
       - TenantGuid
       - exuser (User account to allow for mapping to sensitive info types)
       
-3. Get the WorkSpace ID and Workspace Key for your Sentinel Workspace.
+* 3. Get the WorkSpace ID and Workspace Key for your Sentinel Workspace.
 
-4. Click on Deploy to Azure Above to start the deployment. Fill in the values for your environment. If you have an Azure Keyvault use the string something like this instead of the actual value @Microsoft.KeyVault(SecretUri=https://Myvault.vault.azure.net/secrets/MySecretKey/bd2a5f8b0f944b528af2b66da20645d4)
+* 4. Click on Deploy to Azure Above to start the deployment. Fill in the values for your environment. If you have an Azure Keyvault use the string something like this instead of the actual value @Microsoft.KeyVault(SecretUri=https://Myvault.vault.azure.net/secrets/MySecretKey/bd2a5f8b0f944b528af2b66da20645d4)
 SPUS is only used if you are going to deploy ingestion of SharePoint. (https://myTenant.sharepoint.com/sites/DLPDetectionsFinance/Records/)
 These values can be changed later on by going to configuration of the Azure Function App.
 
-5. There may be a timing issue causing an error when deploying the logic apps. If it is one of the functions it can be safely ignored.
+* 5. **Please Observe, there may be a timing issue causing an error when deploying the logic apps. If it is one of the functions it can be safely ignored.**
 
-6. If you want to deploy the code by script follow these steps
-6.1 Download the endpointdlpservice.zip from this repo
-6.2 Start to connect to Azure PowerShell Connect-AzAccout
-6.2 Run Publish-AzWebApp -ResourceGroupName REPLACEWITHYOURRG -Name REPLACEWITHYOURAPPNAME -ArchivePath C:\YOURPATH\endpointdlpservice.zip
-6.3 Navigate to the Enablement Function in your function, open the function under functions, open "Code + Test" , click Test/Run, click Run
-6.4 Note if there are any errors generated in this run, you will see it in the logging window. If there is a typo or similar in your configuration files. Go back to the main window for the App and click Configuration to update.
+* 6. **If you want to deploy the code by script follow these steps**
+  * Download the endpointdlpservice.zip from this repo
+  * Start to connect to Azure PowerShell Connect-AzAccout
+  * Run Publish-AzWebApp -ResourceGroupName REPLACEWITHYOURRG -Name REPLACEWITHYOURAPPNAME -ArchivePath C:\YOURPATH\endpointdlpservice.zip
+  * Navigate to the Enablement function in your Function App, open the function under functions, open "Code + Test" , click Test/Run, click Run
+  * Note if there are any errors generated in this run, you will see it in the logging window. If there is a typo or similar in your configuration files. Go back to the main window for the App and click Configuration to update.
 
-7. If you want to copy the code manually.
-7.1 Copy the code from  https://github.com/OfficeDev/O365-ActivityFeed-AzureFunction/blob/master/Sentinel/EndPointDLP_preview/enablesubscription.ps1 to EnableSubscription. Run the function once and look for errors in the log. (Popup the window while running)
-7.2 Copy the code from https://github.com/OfficeDev/O365-ActivityFeed-AzureFunction/blob/master/Sentinel/EndPointDLP_preview/QueueDLPEvents.ps1 and place in the Queue events function.
-7.3 Copy the code from  https://github.com/OfficeDev/O365-ActivityFeed-AzureFunction/blob/master/Sentinel/EndPointDLP_preview/StoreEndpointDLPEvents.ps1 to store the EndPoint events
-7.4. Copy the code from https://github.com/OfficeDev/O365-ActivityFeed-AzureFunction/blob/master/Sentinel/StoreEvents.ps1 to the StoreEvents function. 
+* 7. **If you want to copy the code manually.**
+  * Copy the code from  https://github.com/OfficeDev/O365-ActivityFeed-AzureFunction/blob/master/Sentinel/EndPointDLP_preview/enablesubscription.ps1 to EnableSubscription. Run the function once and look for errors in the log. (Popup the window while running)
+  * Copy the code from https://github.com/OfficeDev/O365-ActivityFeed-AzureFunction/blob/master/Sentinel/EndPointDLP_preview/QueueDLPEvents.ps1 and place in the Queue events function.
+  * Copy the code from  https://github.com/OfficeDev/O365-ActivityFeed-AzureFunction/blob/master/Sentinel/EndPointDLP_preview/StoreEndpointDLPEvents.ps1 to store the EndPoint events
+  * Copy the code from https://github.com/OfficeDev/O365-ActivityFeed-AzureFunction/blob/master/Sentinel/StoreEvents.ps1 to the StoreEvents function. 
 
 At this point the function should be ready to run. 
 
