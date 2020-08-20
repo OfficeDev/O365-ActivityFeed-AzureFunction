@@ -332,7 +332,7 @@
                     "name": "QueueItem",
                     "type": "queueTrigger",
                     "direction": "in",
-                    "queueName": "[properties('endpointstorageQueue')]",
+                    "queueName": "endpointqueue",
                     "connection": "AzureWebJobsStorage"
                   }
               ],
