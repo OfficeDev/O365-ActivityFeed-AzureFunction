@@ -47,7 +47,7 @@
                   
                     "ContentTypes": {
                     "type": "string",    
-                    "defaultValue": "DLP.ALL"
+                    "defaultValue": "DLP.ALL,Audit.General"
                   },
                                     
                     "domains": {
@@ -71,6 +71,15 @@
                     "tenantDomain": {
                     "type": "string",   
                     "defaultValue": "Yourtenant.onmicrosoft.com"
+                  },
+                     "exuser": {
+                    "type": "string",
+                    "defaultValue": "user account with permissions to read sensitive info types"
+                  },
+                  
+                    "expass": {
+                    "type": "string",
+                    "defaultValue": "password for exuser"
                   },
                   
                     "TenantGuid": {
@@ -191,12 +200,20 @@
               "value": "[parameters('storageQueue')]"
             },
             {
-              "name": "EndpointstorageQueue",
+              "name": "endpointstorageQueue",
               "value": "endpointqueue"
             },
             {
               "name": "tenantDomain",
               "value": "[parameters('tenantDomain')]"
+            },
+            {
+              "name": "exuser",
+              "value": "[parameters('exuser')]"
+            },
+            {
+              "name": "expass",
+              "value": "[parameters('expass')]"
             },
             {
               "name": "TenantGuid",
@@ -315,7 +332,7 @@
                     "name": "QueueItem",
                     "type": "queueTrigger",
                     "direction": "in",
-                    "queueName": "[parameters('EndpointstorageQueue')]",
+                    "queueName": "[parameters('endpointstorageQueue')]",
                     "connection": "AzureWebJobsStorage"
                   }
               ],
