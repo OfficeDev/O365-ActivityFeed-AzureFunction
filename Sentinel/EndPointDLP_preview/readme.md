@@ -55,7 +55,7 @@ These values can be changed later on by going to configuration of the Azure Func
 * 6. **If you want to deploy the code by script follow these steps**
   * Download the endpointdlpservice.zip from this repo
   * Start to connect to Azure PowerShell Connect-AzAccout
-  * Run Publish-AzWebApp -ResourceGroupName REPLACEWITHYOURRG -Name REPLACEWITHYOURAPPNAME -ArchivePath C:\YOURPATH\endpointdlpservice.zip
+  * Run Publish-AzWebApp -ResourceGroupName REPLACEWITHYOURRG -Name REPLACEWITHYOURAPPNAME -ArchivePath C:\YOURPATH\endpointdlpservice.zip  **Note:The names are case sensitive**
   * Navigate to the Enablement function in your Function App, open the function under functions, open "Code + Test" , click Test/Run, click Run
   * Note if there are any errors generated in this run, you will see it in the logging window. If there is a typo or similar in your configuration files. Go back to the main window for the App and click Configuration to update.
 
