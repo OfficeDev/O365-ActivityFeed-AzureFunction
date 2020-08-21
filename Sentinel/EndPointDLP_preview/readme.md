@@ -16,7 +16,7 @@ description: "This sample can be used to create a function that ingest DLP.All l
 
 # Ingesting Office 365 and Endpoint DLP events to Sentinel
 
-By clicking deploy above you will deploy an Azure Function App with the functions needed to run this project. You will have to copy the code manually to the functions. The reason being that we want you to manage the code distribution yourself.
+By clicking deploy above you will deploy an Azure Function App with the functions needed to run this project. You will have to copy the code manually to the functions or use the script option below for deployment. The reason being that we want you to manage the code distribution yourself. There currently is a bug in the API that may cause duplicates of a single endpoint event during low load conditions.
 
 ### Prerequisites
 
