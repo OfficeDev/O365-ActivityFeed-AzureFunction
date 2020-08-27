@@ -30,8 +30,6 @@ $messageSize = 10
 
 
 $Tracker = "D:\home\$workload.log" # change to location of choice this is the root.
-$endpointold = "D:\home\oldendpoint.log"
-$previousBlob = Get-content $endpointold
 $storedTime = Get-content $Tracker 
 #$StoredTime = "2020-01-27T20:00:35.464Z"
 
@@ -83,7 +81,7 @@ if ($pagearray.RawContentLength -gt 3) {
         foreach ($page in $pageArray)
         {
             $request = $page.content | convertfrom-json
-                            if ($request.contentId -ne $previousBlob) {
+
 $request
 # Setting up the paging of the Message queue adding +1 to avoid misconfiguration
  $runs = $request.Count/($messageSize +1)
@@ -110,20 +108,12 @@ $request
                 Clear-Variable message
                 Clear-Variable rawMessage
                                     }   
-                                                           }
+                                                           
                                   }
      #Updating timers on success, registering the date from the latest entry returned from the API and adding 1 millisecond to avoid overlap
      $time = $pagearray[0].Content | convertfrom-json
      $Lastentry = $time[$Time.contentcreated.Count -1].contentCreated
      if ($Lastentry -ge $storedTime) {out-file -FilePath $Tracker -NoNewline -InputObject (get-date $lastentry).AddMilliseconds(1).ToString("yyyy-MM-ddTHH:mm:ss.fffZ")} 
-
-#Funky behaviour in audit.general will likely generate duplicates, needed for EndPointDLP preview
-if ($workload -eq "audit.general") {
-     $time = $pagearray[0].Content | convertfrom-json
-     $Lastentry = $time[$Time.contentcreated.Count -1].contentCreated 
-     if ($Lastentry -ge $storedTime) {out-file -FilePath $Tracker -NoNewline -InputObject (get-date $lastentry).AddMilliseconds(0).ToString("yyyy-MM-ddTHH:mm:ss.fffZ")}  
-     if ($endpointold-ne $time.contentId) {out-file -filepath $endpointold -InputObject $time.contentId} 
-}
 
          } 
 
