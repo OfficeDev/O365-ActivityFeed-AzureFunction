@@ -28,3 +28,4 @@ New-AzStorageQueue -Name $env:endpointstorageQueue -context $storeAuthContext
 #Generates the time stamp for the ingestion
 out-file d:\home\dlp.All.log -InputObject $date
 out-file d:\home\audit.general.log -InputObject $date
+out-file d:\home\oldendpoint.log -InputObject $date
