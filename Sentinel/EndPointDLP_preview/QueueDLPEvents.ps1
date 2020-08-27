@@ -30,6 +30,8 @@ $messageSize = 10
 
 
 $Tracker = "D:\home\$workload.log" # change to location of choice this is the root.
+$endpointold = "D:\home\oldendpoint.log"
+$previousBlob = Get-content $endpointold
 $storedTime = Get-content $Tracker 
 #$StoredTime = "2020-01-27T20:00:35.464Z"
 
@@ -47,12 +49,9 @@ If ($adjustTime.TotalHours -gt 24) {
     $oauth = Invoke-RestMethod -Method Post -Uri $loginURL/$tenantdomain/oauth2/token?api-version=1.0 -Body $body 
     $headerParams  = @{'Authorization'="$($oauth.token_type) $($oauth.access_token)"}
 
-$storedTime
-$endTime
-
     #Make the request
     $rawRef = Invoke-WebRequest -Headers $headerParams -Uri "https://manage.office.com/api/v1.0/$tenantGUID/activity/feed/subscriptions/content?contenttype=$workload&startTime=$Storedtime&endTime=$endTime&PublisherIdentifier=$TenantGUID" -UseBasicParsing
- $rawRef.content
+ 
     #If more than one page is returned capture and return in pageArray
     if ($rawRef.Headers.NextPageUri) {
 
@@ -84,7 +83,7 @@ if ($pagearray.RawContentLength -gt 3) {
         foreach ($page in $pageArray)
         {
             $request = $page.content | convertfrom-json
-
+                            if ($request.contentId -ne $previousBlob) {
 $request
 # Setting up the paging of the Message queue adding +1 to avoid misconfiguration
  $runs = $request.Count/($messageSize +1)
@@ -94,7 +93,7 @@ $request
         while ($runs -ge 1) { 
     
                         $rawmessage = $request[$i..$writeSize].contenturi 
- $rawmessage                                      
+                                     
                                 foreach ($msg in $rawmessage){ 
                                                              $msgarray += @($msg) 
                                                              $message = $msgarray | convertto-json
@@ -111,7 +110,7 @@ $request
                 Clear-Variable message
                 Clear-Variable rawMessage
                                     }   
-
+                                                           }
                                   }
      #Updating timers on success, registering the date from the latest entry returned from the API and adding 1 millisecond to avoid overlap
      $time = $pagearray[0].Content | convertfrom-json
@@ -123,6 +122,7 @@ if ($workload -eq "audit.general") {
      $time = $pagearray[0].Content | convertfrom-json
      $Lastentry = $time[$Time.contentcreated.Count -1].contentCreated 
      if ($Lastentry -ge $storedTime) {out-file -FilePath $Tracker -NoNewline -InputObject (get-date $lastentry).AddMilliseconds(0).ToString("yyyy-MM-ddTHH:mm:ss.fffZ")}  
+     if ($endpointold-ne $time.contentId) {out-file -filepath $endpointold -InputObject $time.contentId} 
 }
 
          } 
