@@ -139,6 +139,11 @@ if (($user.workload -eq "Exchange") -or ($user.Workload -eq "MicrosoftTeams")) {
 
         #Add usage location from GRAPH Call
         $user | Add-Member -MemberType NoteProperty -Name "usageLocation" -Value $info.usageLocation
+         if ($info) {$user | Add-Member -MemberType NoteProperty -Name "department" -Value $info.department}
+
+        $querymanager = "https://graph.microsoft.com/v1.0/users/" + $exuser + "/manager"
+        $manager = Invoke-RestMethod -Headers $headerParamsG -Uri $querymanager
+        if ($manager) {$user | Add-Member -MemberType NoteProperty -Name "manager" -Value $manager.mail}
         
     if ($user.workload -eq "Exchange") {
 
@@ -164,6 +169,11 @@ if (($user.Workload -eq "OneDrive") -or ($user.Workload -eq "SharePoint")) {
     $queryString = $user.SharePointMetaData.From + "?$" + "select=usageLocation,Manager,department,state"
     $info = Invoke-RestMethod -Headers $headerParamsG -Uri "https://graph.microsoft.com/v1.0/users/$queryString" -Method GET
     $user | Add-Member -MemberType NoteProperty -Name "usageLocation" -Value $info.usageLocation
+     if ($info) {$user | Add-Member -MemberType NoteProperty -Name "department" -Value $info.department}
+
+        $querymanager = "https://graph.microsoft.com/v1.0/users/" + $user.SharePointMetaData.From + "/manager"
+        $manager = Invoke-RestMethod -Headers $headerParamsG -Uri $querymanager
+        if ($manager) {$user | Add-Member -MemberType NoteProperty -Name "manager" -Value $manager.mail}
 
 $spoupload += $user
 Clear-Variable -name info
