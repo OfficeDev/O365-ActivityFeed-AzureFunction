@@ -154,7 +154,7 @@ if (($user.workload -eq "Exchange") -or ($user.Workload -eq "MicrosoftTeams")) {
                 
                 #Determine SPO Geo to point to this is pointing to the US sample, only Exchange provide full content
                 if (($user.usageLocation -eq "US") -and ($user.workload -eq "Exchange"))  {$user | Add-Member -MemberType NoteProperty -Name "originalContent" -Value $spousLocation}
-                if (($user.usageLocation -eq "SE") -and ($user.workload -eq "Exchange"))  {$user | Add-Member -MemberType NoteProperty -Name "originalContent" -Value $spoSELocation}
+                if (($user.usageLocation -ne "US") -and ($user.workload -eq "Exchange"))  {$user | Add-Member -MemberType NoteProperty -Name "originalContent" -Value $spousLocation}
    
                                                             }   
       Clear-Variable -name info                                                                                                         
