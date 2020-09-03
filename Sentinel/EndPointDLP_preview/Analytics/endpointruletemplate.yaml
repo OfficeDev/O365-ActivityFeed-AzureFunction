@@ -1,8 +1,8 @@
 {
   "severity": "UpdateSeverity",
-  "query": "endpointdlp_CL | where PolicyMatchInfo_RuleId_g == \"ImmutableID\"\r\n| extend AccountCustomEntity = UserKey_s\r\n| extend HostCustomEntity = DeviceName_s\r\n| extend IPCustomEntity = ClientIP_s",
+  "query": "endpointdlp_CL \r\n| where TimeGenerated >= ago(5m) \r\n| mv-apply SensitiveInfoTypeId = todynamic(SensitiveInfoTypeData_s) on (where SensitiveInfoTypeData_s != \"\" )\r\n| extend SensitiveInfoTypeIdnew = tostring(parse_json(SensitiveInfoTypeId).SensitiveInfoTypeId)\r\n| join kind = inner \r\n ( \r\n DLPSensitivity_CL \r\n | where TimeGenerated >= ago(24h) \r\n | extend SensitiveInfoTypeIdnew = tostring(Id_g)\r\n | summarize arg_max(TimeGenerated, *) by SensitiveInfoTypeIdnew \r\n )\r\n on SensitiveInfoTypeIdnew\r\n| where PolicyMatchInfo_RuleId_g == \"ImmutableID\"\r\n| extend AccountCustomEntity = UserKey_s\r\n| extend HostCustomEntity = DeviceName_s\r\n| extend IPCustomEntity = ClientIP_s\r\n| project department_s, AccountCustomEntity, Name_s, DocumentName_s, HostCustomEntity, IPCustomEntity",
   "queryFrequency": "PT5M",
-  "queryPeriod": "PT5M",
+  "queryPeriod": "P1D",
   "triggerOperator": "GreaterThan",
   "triggerThreshold": 0,
   "suppressionDuration": "PT5H",
