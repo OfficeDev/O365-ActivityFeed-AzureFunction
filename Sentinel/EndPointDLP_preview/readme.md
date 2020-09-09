@@ -53,30 +53,31 @@ By clicking deploy above you will deploy an Azure Function App with the function
   * SPUS is only used if you are going to deploy ingestion of SharePoint. (https://myTenant.sharepoint.com/sites/DLPDetectionsFinance/Records/)
   **These values can be changed later, by going to configuration of the Azure Function App.**
 
-* 5. **Please Observe, there may be a timing issue causing an error when deploying the logic apps. If it is one of the functions it can be safely ignored.** 
+- **Please Observe, there may be a timing issue causing an error when deploying the logic apps. If it is one of the functions it can be safely ignored.** 
    
-* 6. **Deployment of the code to the function**
+* 5. **Deployment of the code to the function**
   * Download the endpointdlpservice.zip from this repo
   * Start to connect to Azure PowerShell Connect-AzAccout
   * Run Publish-AzWebApp -ResourceGroupName REPLACEWITHYOURRG -Name REPLACEWITHYOURAPPNAME -ArchivePath C:\YOURPATH\endpointdlpservice.zip  **Note:The names are case sensitive**
      
-* 7. To enable the app to automatically synch DLP policies to Sentinel run the following commands it will allow the APP to fully manage Sentinel
+* 6. To enable the app to automatically synch DLP policies to Sentinel run the following commands it will allow the APP to fully manage Sentinel
     * $id = (Get-AzADServicePrincipal -DisplayNameBeginsWith YourAPP).id
     * New-AzRoleAssignment -ResourceGroupName YOURRGWITHSENTINEL -RoleDefinitionName "Azure Sentinel Contributor" -ObjectId $id
     **You can use the UI as well under Identity of the function, the same process can be used granting access to your key vault**
        
-* 8. To initialize the variables in the app 
+* 7. To initialize the variables in the app 
   * Navigate to the Enablement function in your Function App, open the function under functions, open "Code + Test" , click Test/Run, click Run
   * Note if there are any errors generated in this run, you will see it in the logging window. If there is a typo or similar in your configuration files. Go back to the main window for the App and click Configuration to update.
   
--**The Analytics Functions will not be successful until you have ingested both SharePoint, Exchange events and in the case of Endpoint you need Endpoint events**
+- **The Analytics Functions will not be successful until you have ingested both SharePoint, Exchange events and in the case of Endpoint you need Endpoint events**
   * If the Log Analytic rules that corresponds to DLP Policies aren't created after data ingestion, run the Enablement function again. It will reset the time scope of the functions.
   * To make a manual import follow the steps outlined here https://github.com/OfficeDev/O365-ActivityFeed-AzureFunction/tree/master/Sentinel/EndPointDLP_preview/AnalyticsRule, for Exchange and SharePoint https://github.com/OfficeDev/O365-ActivityFeed-AzureFunction/tree/master/Sentinel/AnalyticsRule 
  **They will fail if you haven't ingested events first.**
    
-- If you want to ingest content to SharePoint to access full email content please see https://github.com/OfficeDev/O365-ActivityFeed-AzureFunction/tree/master/Sentinel/logicapp.
-
+- If you want to ingest original email content to SharePoint please see https://github.com/OfficeDev/O365-ActivityFeed-AzureFunction/tree/master/Sentinel/logicapp.
+  
 - To setup reporting please see https://github.com/OfficeDev/O365-ActivityFeed-AzureFunction/tree/master/Sentinel/EndPointDLP_preview/Report, https://github.com/OfficeDev/O365-ActivityFeed-AzureFunction/tree/master/Sentinel/Report
+  
   
 ## Multiple workspaces for Multi Geo and Microsoft Graph enrichment
 The StoreEvents.ps1 has the basic enrichment functionality. You will find it from row 110 and onward. There is a high likelihood that you want to customize this code to meet your organizations requirements.
