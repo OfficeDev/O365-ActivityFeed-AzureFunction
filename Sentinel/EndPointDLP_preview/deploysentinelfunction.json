@@ -95,6 +95,11 @@
                     "workspaceKey": {
                     "type": "string",
                     "defaultValue": "LogAnalytics WorkspaceKey"
+                  },
+                                    
+                    "SentinelWorkspace": {
+                    "type": "string",
+                    "defaultValue": "Sentinel Workspace Name"
                   }
     
        },
@@ -143,6 +148,9 @@
           "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName'))]",
           "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
         ],
+            "identity": {
+        "type": "SystemAssigned"
+     },
         "properties": {
           "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName'))]",
           "siteConfig": {
@@ -226,6 +234,10 @@
             {
               "name": "workspaceKey",
               "value": "[parameters('workspaceKey')]"
+            },
+            {
+              "name": "SentinelWorkspace",
+              "value": "[parameters('SentinelWorkspace')]"
             }
 
             ]
