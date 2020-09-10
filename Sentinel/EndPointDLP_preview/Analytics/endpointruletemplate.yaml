@@ -17,6 +17,9 @@
       "groupByEntities": "Account"
     }
   },
+  "eventGroupingSettings": {
+    "aggregationKind": "AlertPerResult"
+  },
   "displayName": "DLPPOLICYName_EndPoint",
   "enabled": true,
   "description": "",
