@@ -117,7 +117,7 @@ $headerParamsG  = @{'Authorization'="$($oauthG.token_type) $($oauthG.access_toke
 Foreach ($user in $records) {
 
 #EndpointDLP upload
-if ($user.Workload -eq "Endpoint")     {
+if (($user.Workload -eq "EndPoint") -and (($user.PolicyMatchInfo)))     {
 
     #Add the additional attributes needed to enrich the event stored
     $queryString = $user.UserKey + "?$" + "select=usageLocation,Manager,department,state"
