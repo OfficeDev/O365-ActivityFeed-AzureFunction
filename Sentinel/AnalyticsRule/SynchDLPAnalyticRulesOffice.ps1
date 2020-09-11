@@ -5,17 +5,28 @@ param($Timer)
 $filepath = "d:\home\"
 $dlpyamlfile = $filepath + "ruletemplate.yaml"
 
-#Last Policy update
-$lastpolicylog = 'd:\home\lastofficepolicy.log'
-$lastpolicychange = get-content $lastpolicylog
-
 #Sentinel variables
-$workspacename = "$env:SentinelWorkspace"
+$workspace = "$env:SentinelWorkspace"
+
+$context = Get-AzContext
+$profileR = [Microsoft.Azure.Commands.Common.Authentication.Abstractions.AzureRmProfileProvider]::Instance.Profile
+$profileClient = New-Object -TypeName Microsoft.Azure.Commands.ResourceManager.Common.RMProfileClient -ArgumentList ($profileR)
+$token = $profileClient.AcquireAccessToken($context.Subscription.TenantId)
+$authHeader = @{
+  'Content-Type' = 'application/json'
+  'Authorization' = 'Bearer ' + $token.AccessToken 
+               }
+
+$instance = Get-AzResource -Name $workspace -ResourceType Microsoft.OperationalInsights/workspaces
 
 $processedPolicies = @()
 $dlpyaml = Get-Content $dlpyamlfile
 
-#Use this portion if you want to automate using a Function
+#Last Policy update
+$lastpolicylog = 'd:\home\lastofficepolicy.log'
+$lastpolicychange = get-content $lastpolicylog
+
+#Exchange Credentials
 $expass = $env:expass
 $exuser = $env:exuser
 $password = ConvertTo-SecureString $expass -AsPlainText -Force
@@ -30,7 +41,12 @@ $session = New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri  h
 if ($session) {Import-PSSession $session -CommandName Get-DlpComplianceRule  -AllowClobber -DisableNameChecking}
 
 #Retreiving the DLP Policies in place 
-$policies = Get-DlpComplianceRule
+$policies = Get-DlpCompliancerule
+
+#Retreiving the Sentinel Analytic rules
+$path = $instance.ResourceId
+$urllist = "https://management.azure.com$path/providers/Microsoft.SecurityInsights/alertRules?api-version=2020-01-01"
+$rules = Invoke-RestMethod -Method "Get" -Uri $urllist -Headers $authHeader
 
 # Looping through the policies and create Analytic Rules in Sentinel
 foreach ($policy in $policies) {
@@ -40,21 +56,36 @@ if (($processedPolicies -notcontains $policy.ReportSeverityLevel,$policy.ParentP
 
         #Updating with the severity and name of the Dlp Policy
 
+         #Updating with the severity and name of the Dlp Policy
+
         $policyName = $policy.ParentPolicyName + "_" + $policy.ReportSeverityLevel
         $updateyaml1 = $dlpyaml -replace "dlppolicyname", $policyName
         $updateyaml2 = $updateyaml1 -replace "dlppolicy", $policy.ParentPolicyName
-        $finalyaml = $updateyaml2 -replace "UpdateSeverity", $policy.ReportSeverityLevel
+        $updateyaml3 = $updateyaml2 -replace "ImmutableID", $policy.ImmutableId
+        $updateyaml4 = $updateyaml3 -replace "UpdateSeverity", $policy.ReportSeverityLevel  
 
-            # Sending the rule to temporary storage
-            $file = $filepath + $policy.ParentPolicyName + $policy.ReportSeverityLevel + ".yaml"
-            $finalyaml | Out-File $file
 
-             #Updating or adding new Rules to Sentinel
-             Get-Item $file  | Import-AzSentinelAlertRule -WorkspaceName $workspacename -Confirm:$false -ErrorAction:silentlycontinue
+   $matchexisting = $rules.value | where-object  {$_.properties.displayname -eq $policyName} | select-object
+
+         if ($matchexisting) {
+               $finalyaml = $updateyaml4 -replace "ruleGUID", ($matchexisting.etag -replace '"', "")
+               $update = $matchexisting.name
+               $urlupdate = "https://management.azure.com$path/providers/Microsoft.SecurityInsights/alertRules/$update" + '?api-version=2020-01-01'
+               Invoke-RestMethod -Method "Put" -Uri $urlupdate -Headers $authHeader -body $finalyaml
+                              }
+
+         if (-not $matchexisting) {
+               $etag = New-Guid
+               $finalyaml = $updateyaml4 -replace "ruleGUID", $etag
+               $update = $matchexisting.id
+               $urlupdate = "https://management.azure.com$path/providers/Microsoft.SecurityInsights/alertRules/$etag" + '?api-version=2020-01-01'
+               Invoke-RestMethod -Method "Put" -Uri $urlupdate -Headers $authHeader -body $finalyaml
+                                  }
             
           #Keep track of already processed rules by placing in array for if sentence
           $processedPolicies += $policy.ReportSeverityLevel,$policy.ParentPolicyName
-Remove-Item $file
+
+Clear-Variable matchexisting
 Clear-Variable updateyaml1
 Clear-Variable finalyaml
 
