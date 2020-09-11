@@ -1,33 +1,37 @@
 {
-  "severity": "UpdateSeverity",
-  "query": "endpointdlp_CL \r\n| where TimeGenerated >= ago(5m) \r\n| mv-apply SensitiveInfoTypeId = todynamic(SensitiveInfoTypeData_s) on (where SensitiveInfoTypeData_s != \"\" )\r\n| extend SensitiveInfoTypeIdnew = tostring(parse_json(SensitiveInfoTypeId).SensitiveInfoTypeId)\r\n| join kind = inner \r\n ( \r\n DLPSensitivity_CL \r\n | where TimeGenerated >= ago(24h) \r\n | extend SensitiveInfoTypeIdnew = tostring(Id_g)\r\n | summarize arg_max(TimeGenerated, *) by SensitiveInfoTypeIdnew \r\n )\r\n on SensitiveInfoTypeIdnew\r\n| where PolicyMatchInfo_RuleId_g == \"ImmutableID\"\r\n| extend AccountCustomEntity = UserKey_s\r\n| extend HostCustomEntity = DeviceName_s\r\n| extend IPCustomEntity = ClientIP_s\r\n| project department_s, AccountCustomEntity, Name_s, DocumentName_s, HostCustomEntity, IPCustomEntity,Operation_s, RMSEncrypted_b, Application_s",
-  "queryFrequency": "PT5M",
-  "queryPeriod": "P1D",
-  "triggerOperator": "GreaterThan",
-  "triggerThreshold": 0,
-  "suppressionDuration": "PT5H",
-  "suppressionEnabled": false,
-  "incidentConfiguration": {
-    "createIncident": true,
-    "groupingConfiguration": {
-      "enabled": true,
-      "reopenClosedIncident": false,
-      "lookbackDuration": "PT30M",
-      "entitiesMatchingMethod": "Custom",
-      "groupByEntities": "Account"
-    }
-  },
-  "eventGroupingSettings": {
-    "aggregationKind": "AlertPerResult"
-  },
-  "displayName": "DLPPOLICYName_EndPoint",
-  "enabled": true,
-  "description": "",
-  "tactics": [
-    "Exfiltration"
-  ],
-  "alertRuleTemplateName": null,
-  "lastModifiedUtc": "2020-03-12T09:58:12.7703565Z",
-  "name": "fa0a5b10-925f-49bb-877d-52a195567c13",
-  "playbookName": ""
+  "kind": "Scheduled",
+  "etag": "\"ruleGuid\"",
+  "properties": {
+    "severity": "UpdateSeverity",
+    "query": "endpointdlp_CL \r\n| where TimeGenerated >= ago(5m) \r\n| mv-apply SensitiveInfoTypeId = todynamic(SensitiveInfoTypeData_s) on (where SensitiveInfoTypeData_s != \"\" 
+)\r\n| extend SensitiveInfoTypeIdnew = tostring(parse_json(SensitiveInfoTypeId).SensitiveInfoTypeId)\r\n| join kind = inner \r\n ( \r\n DLPSensitivity_CL \r\n | where TimeGenerated >= ago(24h) \r\n | extend SensitiveInfoTypeIdnew = tostring(Id_g)\r\n | summarize arg_max(TimeGenerated, *) by SensitiveInfoTypeIdnew \r\n )\r\n on SensitiveInfoTypeIdnew\r\n| where PolicyMatchInfo_RuleId_g == \"ImmutableID\"\r\n| extend AccountCustomEntity = UserKey_s\r\n| extend HostCustomEntity = DeviceName_s\r\n| extend IPCustomEntity = ClientIP_s\r\n| project department_s, AccountCustomEntity, Name_s, DocumentName_s, HostCustomEntity, IPCustomEntity,Operation_s, RMSEncrypted_b, Application_s",
+    "queryFrequency": "PT5M",
+    "queryPeriod": "P1D",
+    "triggerOperator": "GreaterThan",
+    "triggerThreshold": 0,
+    "suppressionDuration": "PT2H",
+    "suppressionEnabled": false,
+    "incidentConfiguration": {
+      "createIncident": true,
+      "groupingConfiguration": {
+        "enabled": true,
+        "reopenClosedIncident": false,
+        "lookbackDuration": "PT45M",
+        "entitiesMatchingMethod": "Custom",
+        "groupByEntities": [
+          "Account"
+        ]
+      }
+    },
+    "eventGroupingSettings": {
+      "aggregationKind": "AlertPerResult"
+    },
+    "displayName": "DLPPOLICYName_EndPoint",
+    "enabled": true,
+    "description": "",
+    "tactics": [
+      "Exfiltration"
+    ],
+    "alertRuleTemplateName": null
+  }
 }
