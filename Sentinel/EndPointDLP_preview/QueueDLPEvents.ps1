@@ -49,7 +49,7 @@ If ($adjustTime.TotalHours -gt 24) {
 
     #Make the request
     $rawRef = Invoke-WebRequest -Headers $headerParams -Uri "https://manage.office.com/api/v1.0/$tenantGUID/activity/feed/subscriptions/content?contenttype=$workload&startTime=$Storedtime&endTime=$endTime&PublisherIdentifier=$TenantGUID" -UseBasicParsing
- 
+         if (-not ($rawRef)) {throw 'Failed to retrieve the content Blob Url'}
     #If more than one page is returned capture and return in pageArray
     if ($rawRef.Headers.NextPageUri) {
 
