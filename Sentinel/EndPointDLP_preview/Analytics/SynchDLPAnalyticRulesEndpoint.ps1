@@ -39,7 +39,7 @@ $session = New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri  h
                   }
 
 if ($session) {Import-PSSession $session -CommandName Get-DlpComplianceRule  -AllowClobber -DisableNameChecking}
-
+  if (-not ($session)) {throw 'Failed to connect to Sentinel Workspace'}
 #Retreiving the DLP Policies in place 
 $policies = Get-DlpCompliancerule | Where-Object workload -match "endpointdevices"
 
@@ -47,7 +47,8 @@ $policies = Get-DlpCompliancerule | Where-Object workload -match "endpointdevice
 $path = $instance.ResourceId
 $urllist = "https://management.azure.com$path/providers/Microsoft.SecurityInsights/alertRules?api-version=2020-01-01"
 $rules = Invoke-RestMethod -Method "Get" -Uri $urllist -Headers $authHeader
-
+  if (-not ($rules)) {throw 'Failed to connect to Sentinel Workspace'}
+  
 # Looping through the policies and create Analytic Rules in Sentinel
 foreach ($policy in $policies) {
 
