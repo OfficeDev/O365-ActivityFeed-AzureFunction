@@ -27,7 +27,7 @@ if ($workload -eq "audit.general") {$storageQueue = "$env:endpointstorageQueue"}
 $storeAuthContext = New-AzStorageContext -ConnectionString $env:AzureWebJobsStorage
 $myQueue = Get-AzStorageQueue -Name $storageQueue -Context $storeAuthContext
 $messageSize = 10
-
+    if (-not ($myQueue)) {throw 'Failed to connect to Storage Queue'}
 
 $Tracker = "D:\home\$workload.log" # change to location of choice this is the root.
 $storedTime = Get-content $Tracker 
