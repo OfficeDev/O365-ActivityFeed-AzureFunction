@@ -1,0 +1,542 @@
+{
+  "version": "Notebook/1.0",
+  "items": [
+    {
+      "type": 9,
+      "content": {
+        "version": "KqlParameterItem/1.0",
+        "parameters": [
+          {
+            "id": "36a4172e-0e49-4884-b2a2-2281528a2ff4",
+            "version": "KqlParameterItem/1.0",
+            "name": "TimeRange",
+            "type": 4,
+            "isRequired": true,
+            "value": {
+              "durationMs": 7776000000
+            },
+            "typeSettings": {
+              "selectableValues": [
+                {
+                  "durationMs": 300000
+                },
+                {
+                  "durationMs": 900000
+                },
+                {
+                  "durationMs": 1800000
+                },
+                {
+                  "durationMs": 3600000
+                },
+                {
+                  "durationMs": 14400000
+                },
+                {
+                  "durationMs": 43200000
+                },
+                {
+                  "durationMs": 86400000
+                },
+                {
+                  "durationMs": 172800000
+                },
+                {
+                  "durationMs": 259200000
+                },
+                {
+                  "durationMs": 604800000
+                },
+                {
+                  "durationMs": 1209600000
+                },
+                {
+                  "durationMs": 2419200000
+                },
+                {
+                  "durationMs": 2592000000
+                },
+                {
+                  "durationMs": 5184000000
+                },
+                {
+                  "durationMs": 7776000000
+                }
+              ],
+              "allowCustom": true
+            }
+          },
+          {
+            "id": "4e1b6539-9788-43e2-a283-4891f33f1677",
+            "version": "KqlParameterItem/1.0",
+            "name": "Workloads",
+            "type": 2,
+            "isRequired": true,
+            "multiSelect": true,
+            "quote": "'",
+            "delimiter": ",",
+            "query": "O365DLP_CL\r\n| summarize Count = count() by Workload_s\r\n| order by Count desc, Workload_s asc\r\n| project Value = Workload_s, Label = strcat(Workload_s, ' - ', Count)",
+            "value": [
+              "value::all"
+            ],
+            "typeSettings": {
+              "additionalResourceOptions": [
+                "value::all"
+              ],
+              "selectAllValue": "All"
+            },
+            "timeContext": {
+              "durationMs": 7776000000
+            },
+            "timeContextFromParameter": "TimeRange",
+            "queryType": 0,
+            "resourceType": "microsoft.operationalinsights/workspaces"
+          },
+          {
+            "id": "e2b700d7-d218-47db-9521-52176ed43005",
+            "version": "KqlParameterItem/1.0",
+            "name": "Users",
+            "type": 2,
+            "isRequired": true,
+            "multiSelect": true,
+            "quote": "'",
+            "delimiter": ",",
+            "query": "O365DLP_CL\r\n| extend User1 = iff(isempty(SharePointMetaData_From_s), ExchangeMetaData_From_s, SharePointMetaData_From_s) \r\n| extend User = tolower(User1) \r\n| summarize Count = count() by User\r\n| order by Count desc, User asc\r\n| project Value = User, Label = strcat(User, ' - ', Count)",
+            "value": [
+              "value::all"
+            ],
+            "typeSettings": {
+              "additionalResourceOptions": [
+                "value::all"
+              ],
+              "selectAllValue": "All"
+            },
+            "timeContext": {
+              "durationMs": 0
+            },
+            "timeContextFromParameter": "TimeRange",
+            "queryType": 0,
+            "resourceType": "microsoft.operationalinsights/workspaces"
+          },
+          {
+            "id": "fee19597-ebc1-4f26-bc82-1284e9111625",
+            "version": "KqlParameterItem/1.0",
+            "name": "Policy",
+            "type": 2,
+            "multiSelect": true,
+            "quote": "'",
+            "delimiter": ",",
+            "query": "O365DLP_CL\r\n| where Workload_s in ('Exchange', 'MicrosoftTeams')\r\n| extend policy = tostring(parse_json(PolicyDetails_s)[0].PolicyName)\r\n| where policy != \"\"\r\n| summarize Count = count() by policy\r\n| order by Count desc, policy asc\r\n| project Value = policy, Label = strcat(policy, ' - ', Count)\r\n",
+            "value": [
+              "value::all"
+            ],
+            "typeSettings": {
+              "additionalResourceOptions": [
+                "value::all"
+              ],
+              "selectAllValue": "All"
+            },
+            "timeContext": {
+              "durationMs": 0
+            },
+            "timeContextFromParameter": "TimeRange",
+            "queryType": 0,
+            "resourceType": "microsoft.operationalinsights/workspaces"
+          },
+          {
+            "id": "369486e7-72aa-4594-ac79-b0aeb63763d8",
+            "version": "KqlParameterItem/1.0",
+            "name": "Department",
+            "type": 2,
+            "multiSelect": true,
+            "quote": "'",
+            "delimiter": ",",
+            "query": "O365DLP_CL\r\n| extend department = department_s\r\n| where department != \"\"\r\n| summarize Count = count() by department\r\n| order by Count desc, department asc\r\n| project Value = department, Label = strcat(department, ' - ', Count)\r\n",
+            "value": [
+              "value::all"
+            ],
+            "typeSettings": {
+              "additionalResourceOptions": [
+                "value::all"
+              ],
+              "selectAllValue": "All"
+            },
+            "timeContext": {
+              "durationMs": 0
+            },
+            "timeContextFromParameter": "TimeRange",
+            "queryType": 0,
+            "resourceType": "microsoft.operationalinsights/workspaces"
+          },
+          {
+            "id": "e2b700d7-d218-47db-9521-52176ed43005",
+            "version": "KqlParameterItem/1.0",
+            "name": "Location",
+            "type": 2,
+            "isRequired": true,
+            "multiSelect": true,
+            "quote": "'",
+            "delimiter": ",",
+            "query": "O365DLP_CL\r\n| where usageLocation_s != \"\"\r\n| summarize Count = count() by usageLocation_s\r\n| order by Count desc, usageLocation_s asc\r\n| project Value = usageLocation_s, Label = strcat(usageLocation_s, ' - ', Count)",
+            "value": [
+              "value::all"
+            ],
+            "typeSettings": {
+              "additionalResourceOptions": [
+                "value::all"
+              ],
+              "selectAllValue": "All"
+            },
+            "timeContext": {
+              "durationMs": 0
+            },
+            "timeContextFromParameter": "TimeRange",
+            "queryType": 0,
+            "resourceType": "microsoft.operationalinsights/workspaces"
+          }
+        ],
+        "style": "pills",
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces"
+      },
+      "name": "parameters - 1"
+    },
+    {
+      "type": 1,
+      "content": {
+        "json": "## **General DLP Overview**"
+      },
+      "name": "text - 0"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "let data = O365DLP_CL\r\n| where \"{Users:lable}\"==\"All\" or SharePointMetaData_From_s in ({Users})\r\n| where \"{Location:Label}\"==\"All\" or usageLocation_s in ({Location})\r\n| where \"{Location:Policy}\"==\"All\" or usageLocation_s in ({Policy})\r\n| where \"{Department:Label}\"==\"All\" or department_s in ({Department});\r\ndata\r\n| summarize Count = count() by department_s\r\n| join kind = fullouter (datatable(department_s:string)['Sales & Marketing', 'Legal']) on department_s\r\n| project department_s = iff(department_s == '', department_s1, department_s), Count = iff(department_s == '', 0, Count)\r\n| join kind = inner (data\r\n    | make-series Trend = count() default = 0 on CreationTime_t from {TimeRange:start} to {TimeRange:end} step {TimeRange:grain} by department_s)\r\n    on department_s\r\n| project-away department_s1, CreationTime_t\r\n| extend department_s = department_s\r\n| union (\r\n    data \r\n    | summarize Count = count() \r\n    | extend jkey = 1\r\n    | join kind=inner (data\r\n        | make-series Trend = count() default = 0 on CreationTime_t from {TimeRange:start} to {TimeRange:end} step {TimeRange:grain}\r\n        | extend jkey = 1) on jkey\r\n            | extend department_s = 'All', department_ss = '*'    \r\n)\r\n",
+        "size": 4,
+        "timeContext": {
+          "durationMs": 7776000000
+        },
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces",
+        "visualization": "tiles",
+        "tileSettings": {
+          "titleContent": {
+            "columnMatch": "department_s",
+            "formatter": 1,
+            "formatOptions": {}
+          },
+          "leftContent": {
+            "columnMatch": "Count",
+            "formatter": 12,
+            "formatOptions": {
+              "palette": "auto"
+            },
+            "numberFormat": {
+              "unit": 17,
+              "options": {
+                "maximumSignificantDigits": 3,
+                "maximumFractionDigits": 2
+              }
+            }
+          },
+          "secondaryContent": {
+            "columnMatch": "Trend",
+            "formatter": 9,
+            "formatOptions": {
+              "min": 0,
+              "palette": "coldHot"
+            }
+          },
+          "showBorder": false
+        }
+      },
+      "customWidth": "100",
+      "name": "query - 10"
+    },
+    {
+      "type": 1,
+      "content": {
+        "json": "## DLP Policy Overview"
+      },
+      "name": "text - 11"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "let data = O365DLP_CL\r\n| extend Department = department_s\r\n| extend manager = manager_s\r\n| extend UserId = tolower(iff(isempty(SharePointMetaData_From_s), ExchangeMetaData_From_s, SharePointMetaData_From_s)) \r\n| where Department != \"\"\r\n| where \"{Users:lable}\"==\"All\" or UserId in ({Users})\r\n| where \"{Location:Label}\"==\"All\" or usageLocation_s in ({Location})\r\n| where \"{Department:Label}\"==\"All\" or department_s in ({Department});\r\nlet appData = data\r\n| summarize TotalCount = count() by Department\r\n| join kind=inner (data\r\n    | make-series Trend = count() default = 0 on TimeGenerated in range({TimeRange:start}, {TimeRange:end}, {TimeRange:grain}) by Department\r\n    | project-away TimeGenerated) on Department\r\n| order by TotalCount desc, Department asc\r\n| project Department, TotalCount, Trend\r\n| serialize Id = row_number();\r\ndata\r\n| summarize TotalCount = count() by UserId , Department, manager, usageLocation_s\r\n| join kind=inner (data\r\n    | make-series Trend = count() default = 0 on TimeGenerated in range({TimeRange:start}, {TimeRange:end}, {TimeRange:grain}) by Department, UserId, manager, usageLocation_s\r\n    | project-away TimeGenerated) on Department, UserId, manager, usageLocation_s\r\n| order by TotalCount desc, Department asc\r\n| project Department, UserId, TotalCount, Trend, manager, usageLocation_s\r\n| serialize Id = row_number(1000000)\r\n| join kind=inner (appData) on Department\r\n| project Id, Name = UserId, Type = 'UserId', ['Department Count'] = TotalCount, Trend,  ParentId = Id1, Manager = manager, UsageLocation = usageLocation_s\r\n| union (appData \r\n    | project Id, Name = Department, Type = 'Department', ['Department Count'] = TotalCount,  Trend)\r\n| order by ['Department Count'] desc, Name asc",
+        "size": 1,
+        "showAnalytics": true,
+        "timeContext": {
+          "durationMs": 7776000000
+        },
+        "timeContextFromParameter": "TimeRange",
+        "exportParameterName": "OperationDetail",
+        "exportDefaultValue": "{ \"Name\":\"\", \"Type\":\"*\"}",
+        "showExportToExcel": true,
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces",
+        "gridSettings": {
+          "formatters": [
+            {
+              "columnMatch": "Id",
+              "formatter": 5,
+              "formatOptions": {
+                "showIcon": true
+              }
+            },
+            {
+              "columnMatch": "Operations Count",
+              "formatter": 8,
+              "formatOptions": {
+                "min": 0,
+                "palette": "orange",
+                "showIcon": true
+              }
+            },
+            {
+              "columnMatch": "Trend",
+              "formatter": 9,
+              "formatOptions": {
+                "min": 0,
+                "palette": "gray",
+                "showIcon": true
+              }
+            },
+            {
+              "columnMatch": "ParentId",
+              "formatter": 5,
+              "formatOptions": {
+                "showIcon": true
+              }
+            }
+          ],
+          "filter": true,
+          "hierarchySettings": {
+            "idColumn": "Id",
+            "parentColumn": "ParentId",
+            "treeType": 0,
+            "expanderColumn": "Name"
+          }
+        }
+      },
+      "name": "query - 3"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "let details = dynamic({OperationDetail});\r\nO365DLP_CL\r\n| extend Department = department_s\r\n| extend UserId = SharePointMetaData_From_s\r\n| where \"{Department:Label}\"==\"All\" or Department in ({Department})\r\n| where \"{Users:lable}\"==\"All\" or UserId in ({Users})\r\n| where \"{Location:Label}\"==\"All\" or usageLocation_s in ({Location})\r\n| where details.Type == '*' or (details.Type == 'Department' and Department == details.Name) or (details.Type == 'UserId' and UserId == details.Name)\r\n| summarize Amount = count() by Department, bin_at(TimeGenerated, 1d, now()) \r\n| sort by Amount ",
+        "size": 1,
+        "showAnalytics": true,
+        "title": "Policy Hits over time",
+        "timeContext": {
+          "durationMs": 7776000000
+        },
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces",
+        "visualization": "linechart"
+      },
+      "name": "query - 2"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "let details = dynamic({OperationDetail});\r\nO365DLP_CL \r\n| extend Rule = tostring(parse_json(tostring(parse_json(PolicyDetails_s)[0].Rules))[0].RuleName)\r\n| extend UserId = iff(isempty(SharePointMetaData_From_s), ExchangeMetaData_From_s, SharePointMetaData_From_s) \r\n| extend Policy = tostring(parse_json(PolicyDetails_s)[0].PolicyName)\r\n| extend Department = department_s\r\n| where \"{Department:Label}\"==\"All\" or Department in ({Department})\r\n| where \"{Users:lable}\"==\"All\" or UserId in ({Users})\r\n| where \"{Location:Label}\"==\"All\" or usageLocation_s in ({Location})\r\n| where details.Type == '*' or (details.Type == 'Department' and Department == details.Name) or (details.Type == 'UserId' and UserId == details.Name)\r\n| summarize Number = count() by Rule, UserId, Policy, TimeGenerated",
+        "size": 0,
+        "showAnalytics": true,
+        "title": "DLP Rules",
+        "timeContext": {
+          "durationMs": 7776000000
+        },
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces",
+        "visualization": "piechart"
+      },
+      "customWidth": "50",
+      "name": "query - 4"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "let details = dynamic({OperationDetail});\r\nO365DLP_CL \r\n| extend exception = ExceptionInfo_Reason_s\r\n| extend Rule = tostring(parse_json(tostring(parse_json(PolicyDetails_s)[0].Rules))[0].RuleName)\r\n| extend UserId = SharePointMetaData_From_s\r\n| extend Policy = tostring(parse_json(PolicyDetails_s)[0].PolicyName)\r\n| extend Department = department_s\r\n| where \"{Department:Label}\"==\"All\" or Department in ({Department})\r\n| where \"{Location:Label}\"==\"All\" or usageLocation_s in ({Location})\r\n| where exception != \"\"\r\n| where \"{Policy:lable}\"==\"All\" or Policy in ({Policy})\r\n| where \"{Users:lable}\"==\"All\" or UserId in ({Users})\r\n| where details.Type == '*' or (details.Type == 'Department' and Department == details.Name) or (details.Type == 'UserId' and UserId == details.Name)\r\n| summarize Number = count() by Rule",
+        "size": 0,
+        "showAnalytics": true,
+        "title": "Requested exceptions per rule",
+        "timeContext": {
+          "durationMs": 7776000000
+        },
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces",
+        "visualization": "piechart"
+      },
+      "customWidth": "50",
+      "name": "query - 5"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "let details = dynamic({OperationDetail});\r\nO365DLP_CL \r\n| extend severity = tostring(parse_json(tostring(parse_json(PolicyDetails_s)[0].Rules))[0].Severity)\r\n| extend File = SharePointMetaData_FileName_s\r\n| extend UserId = SharePointMetaData_From_s\r\n| extend Policy = tostring(parse_json(PolicyDetails_s)[0].PolicyName)\r\n| where \"{Policy:lable}\"==\"All\" or Policy in ({Policy})\r\n| where \"{Users:lable}\"==\"All\" or UserId in ({Users})\r\n| where \"{Location:Label}\"==\"All\" or usageLocation_s in ({Location})\r\n| where Policy != '' \r\n| where details.Type == '*' or (details.Type == 'Policy' and Policy == details.Name) or (details.Type == 'UserId' and UserId == details.Name)\r\n| summarize Number = count() by File, severity, UserId, Policy, bin(TimeGenerated, 1d)\r\n| order by Number, TimeGenerated",
+        "size": 1,
+        "title": "Sites details",
+        "timeContext": {
+          "durationMs": 7776000000
+        },
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces",
+        "gridSettings": {
+          "filter": true,
+          "sortBy": [
+            {
+              "itemKey": "UserId",
+              "sortOrder": 2
+            }
+          ]
+        },
+        "sortBy": [
+          {
+            "itemKey": "UserId",
+            "sortOrder": 2
+          }
+        ]
+      },
+      "customWidth": "50",
+      "name": "query - 6"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "let details = dynamic({OperationDetail});\r\nO365DLP_CL\r\n| extend severity = tostring(parse_json(tostring(parse_json(PolicyDetails_s)[0].Rules))[0].Severity)\r\n| extend exception = ExceptionInfo_Reason_s\r\n| extend Rule = tostring(parse_json(tostring(parse_json(PolicyDetails_s)[0].Rules))[0].RuleName)\r\n| extend UserId = SharePointMetaData_From_s\r\n| extend Policy = tostring(parse_json(PolicyDetails_s)[0].PolicyName)\r\n| extend Department = department_s\r\n| where exception != \"\"\r\n| where \"{Department:Label}\"==\"All\" or Department in ({Department})\r\n| where \"{Users:lable}\"==\"All\" or UserId in ({Users})\r\n| where \"{Location:Label}\"==\"All\" or usageLocation_s in ({Location})\r\n| where details.Type == '*' or (details.Type == 'Department' and Department == details.Name) or (details.Type == 'UserId' and UserId == details.Name)\r\n| summarize Number = count() by Rule , severity, exception, UserId, Policy, bin(TimeGenerated, 1d)\r\n| order by Number, TimeGenerated",
+        "size": 1,
+        "title": "DLP Exception Information",
+        "timeContext": {
+          "durationMs": 7776000000
+        },
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces",
+        "gridSettings": {
+          "filter": true
+        },
+        "sortBy": []
+      },
+      "customWidth": "50",
+      "name": "query - 7"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "let details = dynamic({OperationDetail});\r\nlet data = O365DLP_CL\r\n| extend Severity = tostring(parse_json(tostring(parse_json(PolicyDetails_s)[0].Rules))[0].Severity)\r\n| extend UserId = SharePointMetaData_From_s\r\n| extend Policy = tostring(parse_json(PolicyDetails_s)[0].PolicyName)\r\n| extend Department = department_s\r\n| where Department != \"\"\r\n| where \"{Department:Label}\"==\"All\" or Department in ({Department})\r\n| where \"{Location:Label}\"==\"All\" or usageLocation_s in ({Location})\r\n| where \"{Policy:lable}\"==\"All\" or Policy in ({Policy})\r\n| where \"{Users:lable}\"==\"All\" or UserId in ({Users})\r\n| where details.Type == '*' or (details.Type == 'Policy' and Policy == details.Name) or (details.Type == 'UserId' and UserId == details.Name)\r\n| extend PolicyName = tostring(parse_json(PolicyDetails_s)[0].PolicyName)\r\n| summarize Calls = count() by App = UserId , Request = Department, Dependency = PolicyName\r\n| extend RequestId = strcat(App, '::', Request);\r\nlet links = data\r\n| summarize Calls = sum(Calls) by App, RequestId\r\n| project SourceId = App, TargetId = RequestId, Calls, Kind = 'App -> Request'\r\n| union (data\r\n    | project SourceId = RequestId, TargetId = Dependency, Calls, Kind = 'Request -> Dependency');\r\nlet nodes = data\r\n| summarize Calls = sum(Calls) by App\r\n| project Id = App, Name = App, Calls, Kind = 'App'\r\n| union (data\r\n    | summarize Calls = sum(Calls) by RequestId, Request\r\n    | project Id = RequestId, Name = Request, Calls, Kind = 'Request')\r\n| union (data\r\n    | summarize Calls = sum(Calls) by Dependency\r\n    | project Id = Dependency, Name = Dependency, Calls, Kind = 'Dependency');\r\nnodes\r\n| union (links)",
+        "size": 2,
+        "timeContext": {
+          "durationMs": 7776000000
+        },
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces",
+        "visualization": "graph",
+        "gridSettings": {
+          "formatters": [
+            {
+              "columnMatch": "SourceFileName",
+              "formatter": 7,
+              "formatOptions": {
+                "linkTarget": "GenericDetails",
+                "linkIsContextBlade": true,
+                "showIcon": true
+              }
+            },
+            {
+              "columnMatch": "DestinationFileName",
+              "formatter": 5,
+              "formatOptions": {
+                "showIcon": true
+              }
+            },
+            {
+              "columnMatch": "DestinationFileExtension",
+              "formatter": 5,
+              "formatOptions": {
+                "showIcon": true
+              }
+            },
+            {
+              "columnMatch": "Number",
+              "formatter": 8,
+              "formatOptions": {
+                "palette": "lightBlue",
+                "showIcon": true
+              }
+            }
+          ]
+        },
+        "graphSettings": {
+          "type": 0,
+          "topContent": {
+            "columnMatch": "Name",
+            "formatter": 12,
+            "formatOptions": {
+              "palette": "blue"
+            }
+          },
+          "centerContent": {
+            "columnMatch": "Calls",
+            "formatter": 1,
+            "numberFormat": {
+              "unit": 17,
+              "options": {
+                "style": "decimal",
+                "maximumFractionDigits": 2,
+                "maximumSignificantDigits": 3
+              }
+            }
+          },
+          "nodeIdField": "Id",
+          "sourceIdField": "SourceId",
+          "targetIdField": "TargetId",
+          "graphOrientation": 3,
+          "showOrientationToggles": false,
+          "edgeSize": "Calls",
+          "nodeSize": null,
+          "staticNodeSize": 100,
+          "colorSettings": {
+            "nodeColorField": "Name",
+            "type": 1,
+            "colorPalette": "cool"
+          },
+          "hivesMargin": 5
+        },
+        "mapSettings": {
+          "locInfo": "AzureResource",
+          "sizeSettings": "Number",
+          "sizeAggregation": "Sum",
+          "legendMetric": "Number",
+          "legendAggregation": "Sum",
+          "itemColorSettings": {
+            "type": "heatmap",
+            "colorAggregation": "Sum",
+            "nodeColorField": "Number",
+            "heatmapPalette": "greenRed"
+          }
+        }
+      },
+      "name": "query - 9"
+    }
+  ],
+  "fallbackResourceIds": [
+    "/subscriptions/2c8d17d2-dc42-4271-ae51-844122530a73/resourcegroups/treysentinel/providers/microsoft.operationalinsights/workspaces/usinstance"
+  ],
+  "fromTemplateId": "sentinel-UserWorkbook",
+  "$schema": "https://github.com/Microsoft/Application-Insights-Workbooks/blob/master/schema/workbook.json"
+}
