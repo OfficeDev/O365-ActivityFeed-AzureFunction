@@ -306,7 +306,7 @@
       "type": 3,
       "content": {
         "version": "KqlItem/1.0",
-        "query": "let details = dynamic({OperationDetail});\r\nendpointdlp_CL\r\n| mv-apply SensitiveInfoTypeId = todynamic(SensitiveInfoTypeData_s) on (where SensitiveInfoTypeData_s != \"\" )\r\n| extend SensitiveInfoTypeIdnew = tostring(parse_json(SensitiveInfoTypeId).SensitiveInfoTypeId)\r\n| join kind = inner \r\n ( \r\n DLPSensitivity_CL \r\n | extend SensitiveInfoTypeIdnew = tostring(Id_g)\r\n | summarize arg_max(TimeGenerated, *) by SensitiveInfoTypeIdnew \r\n )\r\n on SensitiveInfoTypeIdnew\r\n| extend ContentType = Name_s\r\n| extend UserId = UserKey_s\r\n|extend creationTime = CreationTime_t \r\n| where \"{ContentType:lable}\"==\"All\" or ContentType in ({ContentType})\r\n| where \"{Users:lable}\"==\"All\" or UserId in ({Users})\r\n| where details.Type == '*' or (details.Type == 'ContentType' and ContentType == details.Name) or (details.Type == 'UserId' and UserId == details.Name)\r\n| summarize Amount = count() by ContentType, bin_at(creationTime, 1d, now()) \r\n| sort by Amount ",
+        "query": "let details = dynamic({OperationDetail});\r\nendpointdlp_CL\r\n| mv-apply SensitiveInfoTypeId = todynamic(SensitiveInfoTypeData_s) on (where SensitiveInfoTypeData_s != \"\" )\r\n| extend SensitiveInfoTypeIdnew = tostring(parse_json(SensitiveInfoTypeId).SensitiveInfoTypeId)\r\n| join kind = inner \r\n ( \r\n DLPSensitivity_CL \r\n | extend SensitiveInfoTypeIdnew = tostring(Id_g)\r\n | summarize arg_max(TimeGenerated, *) by SensitiveInfoTypeIdnew \r\n )\r\n on SensitiveInfoTypeIdnew\r\n| extend ContentType = Name_s\r\n| extend UserId = UserKey_s\r\n|extend creationTime = CreationTime_t \r\n| where \"{ContentType:label}\"==\"All\" or ContentType in ({ContentType})\r\n| where \"{Users:lable}\"==\"All\" or UserId in ({Users})\r\n| where \"{Operations:lable}\"==\"All\" or Operation_s in ({Operations})\r\n| where details.Type == '*' or (details.Type == 'ContentType' and ContentType == details.Name) or (details.Type == 'UserId' and UserId == details.Name)\r\n| summarize Amount = count() by ContentType, bin_at(creationTime, 1d, now()) \r\n| sort by Amount ",
         "size": 1,
         "showAnalytics": true,
         "title": "Policy Hits over time",
@@ -375,10 +375,10 @@
       "type": 3,
       "content": {
         "version": "KqlItem/1.0",
-        "query": "let data = endpointdlp_CL\r\n| mv-apply SensitiveInfoTypeId = todynamic(SensitiveInfoTypeData_s) on (where SensitiveInfoTypeData_s != \"\" )\r\n| extend SensitiveInfoTypeIdnew = tostring(parse_json(SensitiveInfoTypeId).SensitiveInfoTypeId)\r\n| join kind = inner \r\n ( \r\n DLPSensitivity_CL \r\n | extend SensitiveInfoTypeIdnew = tostring(Id_g)\r\n | summarize arg_max(TimeGenerated, *) by SensitiveInfoTypeIdnew \r\n )\r\n on SensitiveInfoTypeIdnew\r\n| extend UserId = UserKey_s\r\n| extend Operation = Operation_s\r\n| extend DocumentName = DocumentName_s\r\n| where Operation != \"\"\r\n| where \"{Operations:label}\"==\"All\" or Operation in ({Operations})\r\n| where \"{Users:lable}\"==\"All\" or UserId in ({Users});\r\nlet appData = data\r\n| summarize TotalCount = count() by Operation\r\n| join kind=inner (data\r\n    | make-series Trend = count() default = 0 on TimeGenerated in range({TimeRange:start}, {TimeRange:end}, {TimeRange:grain}) by Operation\r\n    | project-away TimeGenerated) on Operation\r\n| order by TotalCount desc, Operation asc\r\n| project Operation, TotalCount, Trend\r\n| serialize Id = row_number();\r\ndata\r\n| summarize TotalCount = count() by UserId , Operation, DocumentName\r\n| join kind=inner (data\r\n    | make-series Trend = count() default = 0 on TimeGenerated in range({TimeRange:start}, {TimeRange:end}, {TimeRange:grain}) by Operation, UserId, DocumentName\r\n    | project-away TimeGenerated) on Operation, UserId, DocumentName\r\n| order by TotalCount desc, Operation asc\r\n| project Operation, UserId, TotalCount, Trend, DocumentName\r\n| serialize Id = row_number(1000000)\r\n| join kind=inner (appData) on Operation\r\n| project Id, Name = UserId, Type = 'UserId', DocumentName, ['Operation Count'] = TotalCount, Trend,  ParentId = Id1\r\n| union (appData \r\n    | project Id, Name = Operation, Type = 'Operation', ['Operation Count'] = TotalCount,  Trend)\r\n| order by ['Operation Count'] desc, Name asc",
+        "query": "let details = dynamic({OperationDetail});\r\nlet data = endpointdlp_CL\r\n| mv-apply SensitiveInfoTypeId = todynamic(SensitiveInfoTypeData_s) on (where SensitiveInfoTypeData_s != \"\" )\r\n| extend SensitiveInfoTypeIdnew = tostring(parse_json(SensitiveInfoTypeId).SensitiveInfoTypeId)\r\n| join kind = inner \r\n ( \r\n DLPSensitivity_CL \r\n | extend SensitiveInfoTypeIdnew = tostring(Id_g)\r\n | summarize arg_max(TimeGenerated, *) by SensitiveInfoTypeIdnew \r\n )\r\n on SensitiveInfoTypeIdnew\r\n| extend UserId = UserKey_s\r\n| extend DeviceName = DeviceName_s\r\n| extend DocumentName = DocumentName_s\r\n| extend ContentType = Name_s\r\n| where DeviceName != \"\"\r\n| where \"{ContentType:label}\"==\"All\" or ContentType in ({ContentType})\r\n| where \"{Users:lable}\"==\"All\" or UserId in ({Users})\r\n| where \"{Operations:lable}\"==\"All\" or Operation_s in ({Operations});\r\nlet appData = data\r\n| summarize TotalCount = count() by DeviceName\r\n| join kind=inner (data\r\n    | make-series Trend = count() default = 0 on TimeGenerated in range({TimeRange:start}, {TimeRange:end}, {TimeRange:grain}) by DeviceName\r\n    | project-away TimeGenerated) on DeviceName\r\n| order by TotalCount desc, DeviceName asc\r\n| project DeviceName, TotalCount, Trend\r\n| serialize Id = row_number();\r\ndata\r\n| summarize TotalCount = count() by UserId , DeviceName, DocumentName, ContentType\r\n| join kind=inner (data\r\n    | make-series Trend = count() default = 0 on TimeGenerated in range({TimeRange:start}, {TimeRange:end}, {TimeRange:grain}) by DeviceName, UserId, DocumentName, ContentType\r\n    | project-away TimeGenerated) on DeviceName, UserId, DocumentName, ContentType\r\n| order by TotalCount desc, DeviceName asc\r\n| project DeviceName, UserId, TotalCount, Trend, DocumentName, ContentType\r\n| serialize Id = row_number(1000000)\r\n| join kind=inner (appData) on DeviceName\r\n| project Id, Name = UserId, Type = 'UserId', DocumentName, ['Sensitive Info'] = TotalCount, Trend,  ParentId = Id1, Policy = ContentType\r\n| union (appData \r\n    | project Id, Name = DeviceName, Type = 'DeviceName', ['Total Sensitive Info'] = TotalCount,  Trend)\r\n| order by ['Total Sensitive Info'] desc, Name asc",
         "size": 1,
         "showAnalytics": true,
-        "title": "Summary by Operation",
+        "title": "Summary by Device",
         "timeContext": {
           "durationMs": 7776000000
         },
@@ -392,34 +392,26 @@
           "formatters": [
             {
               "columnMatch": "Id",
-              "formatter": 5,
+              "formatter": 5
+            },
+            {
+              "columnMatch": "Trend",
+              "formatter": 10,
               "formatOptions": {
-                "showIcon": true
+                "min": 0,
+                "palette": "coldHot"
               }
+            },
+            {
+              "columnMatch": "ParentId",
+              "formatter": 5
             },
             {
               "columnMatch": "Operations Count",
               "formatter": 8,
               "formatOptions": {
                 "min": 0,
-                "palette": "orange",
-                "showIcon": true
-              }
-            },
-            {
-              "columnMatch": "Trend",
-              "formatter": 9,
-              "formatOptions": {
-                "min": 0,
-                "palette": "gray",
-                "showIcon": true
-              }
-            },
-            {
-              "columnMatch": "ParentId",
-              "formatter": 5,
-              "formatOptions": {
-                "showIcon": true
+                "palette": "orange"
               }
             }
           ],
@@ -432,14 +424,72 @@
           }
         }
       },
+      "customWidth": "50",
       "name": "query - 3 - Copy"
     },
     {
       "type": 3,
       "content": {
         "version": "KqlItem/1.0",
+        "query": "let details = dynamic({OperationDetail});\r\nendpointdlp_CL\r\n| mv-apply SensitiveInfoTypeId = todynamic(SensitiveInfoTypeData_s) on (where SensitiveInfoTypeData_s != \"\" )\r\n| extend SensitiveInfoTypeIdnew = tostring(parse_json(SensitiveInfoTypeId).SensitiveInfoTypeId)\r\n| extend DeviceName = DeviceName_s\r\n| join kind = inner \r\n ( \r\n DLPSensitivity_CL \r\n | extend SensitiveInfoTypeIdnew = tostring(Id_g)\r\n | summarize arg_max(TimeGenerated, *) by SensitiveInfoTypeIdnew \r\n )\r\n on SensitiveInfoTypeIdnew\r\n| extend ContentType = Name_s\r\n| extend UserId = UserKey_s\r\n|extend creationTime = CreationTime_t \r\n| where \"{ContentType:lable}\"==\"All\" or ContentType in ({ContentType})\r\n| where \"{Users:lable}\"==\"All\" or UserId in ({Users})\r\n| where \"{Operations:lable}\"==\"All\" or Operation_s in ({Operations})\r\n| where details.Type == '*' or (details.Type == 'DeviceName' and DeviceName == details.Name) or (details.Type == 'UserId' and UserId == details.Name)\r\n| summarize Number = count() by DeviceName, DocumentName_s, ContentType, TimeGenerated",
+        "size": 0,
+        "title": "Device Sensitive Information",
+        "timeContext": {
+          "durationMs": 7776000000
+        },
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces",
+        "visualization": "piechart",
+        "tileSettings": {
+          "showBorder": false,
+          "titleContent": {
+            "columnMatch": "DeviceName",
+            "formatter": 1
+          },
+          "leftContent": {
+            "columnMatch": "Number",
+            "formatter": 12,
+            "formatOptions": {
+              "palette": "auto"
+            },
+            "numberFormat": {
+              "unit": 17,
+              "options": {
+                "maximumSignificantDigits": 3,
+                "maximumFractionDigits": 2
+              }
+            }
+          }
+        },
+        "graphSettings": {
+          "type": 0,
+          "topContent": {
+            "columnMatch": "DeviceName",
+            "formatter": 1
+          },
+          "centerContent": {
+            "columnMatch": "Number",
+            "formatter": 1,
+            "numberFormat": {
+              "unit": 17,
+              "options": {
+                "maximumSignificantDigits": 3,
+                "maximumFractionDigits": 2
+              }
+            }
+          }
+        }
+      },
+      "customWidth": "50",
+      "name": "query - 12"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
         "query": "let details = dynamic({OperationDetail});\r\nlet data = endpointdlp_CL\r\n| mv-apply SensitiveInfoTypeId = todynamic(SensitiveInfoTypeData_s) on (where SensitiveInfoTypeData_s != \"\" )\r\n| extend SensitiveInfoTypeIdnew = tostring(parse_json(SensitiveInfoTypeId).SensitiveInfoTypeId)\r\n| join kind = inner \r\n ( \r\n DLPSensitivity_CL \r\n | extend SensitiveInfoTypeIdnew = tostring(Id_g)\r\n | summarize arg_max(TimeGenerated, *) by SensitiveInfoTypeIdnew \r\n )\r\n on SensitiveInfoTypeIdnew\r\n| extend ContentType = Name_s\r\n| extend UserId = UserKey_s\r\n|extend creationTime = CreationTime_t \r\n| where \"{ContentType:lable}\"==\"All\" or ContentType in ({ContentType})\r\n| where \"{Users:lable}\"==\"All\" or UserId in ({Users})\r\n| where \"{Operations:lable}\"==\"All\" or Operation_s in ({Operations})\r\n| where details.Type == '*' or (details.Type == 'ContentType' and ContentType == details.Name) or (details.Type == 'UserId' and UserId == details.Name)\r\n| summarize Calls = count() by App = UserId , Request = DocumentName_s, Dependency = ContentType\r\n| extend RequestId = strcat(App, '::', Request);\r\nlet links = data\r\n| summarize Calls = sum(Calls) by App, RequestId\r\n| project SourceId = App, TargetId = RequestId, Calls, Kind = 'App -> Request'\r\n| union (data\r\n    | project SourceId = RequestId, TargetId = Dependency, Calls, Kind = 'Request -> Dependency');\r\nlet nodes = data\r\n| summarize Calls = sum(Calls) by App\r\n| project Id = App, Name = App, Calls, Kind = 'App'\r\n| union (data\r\n    | summarize Calls = sum(Calls) by RequestId, Request\r\n    | project Id = RequestId, Name = Request, Calls, Kind = 'Request')\r\n| union (data\r\n    | summarize Calls = sum(Calls) by Dependency\r\n    | project Id = Dependency, Name = Dependency, Calls, Kind = 'Dependency');\r\nnodes\r\n| union (links)",
-        "size": 2,
+        "size": 0,
         "title": "Centered on Sensitive Content Type",
         "timeContext": {
           "durationMs": 7776000000
@@ -495,12 +545,10 @@
           "centerContent": {
             "columnMatch": "Calls",
             "formatter": 1,
-            "formatOptions": {},
             "numberFormat": {
               "unit": 17,
               "options": {
                 "style": "decimal",
-                "useGrouping": false,
                 "maximumFractionDigits": 2,
                 "maximumSignificantDigits": 3
               }
@@ -509,11 +557,13 @@
           "nodeIdField": "Id",
           "sourceIdField": "SourceId",
           "targetIdField": "TargetId",
+          "graphOrientation": 3,
+          "showOrientationToggles": false,
           "edgeSize": "Calls",
           "nodeSize": null,
           "staticNodeSize": 100,
           "colorSettings": {
-            "nodeColorField": "Kind",
+            "nodeColorField": "Name",
             "type": 1,
             "colorPalette": "cool"
           },
@@ -540,105 +590,6 @@
       "content": {
         "version": "KqlItem/1.0",
         "query": "let details = dynamic({OperationDetail});\r\nlet data = endpointdlp_CL\r\n| mv-apply SensitiveInfoTypeId = todynamic(SensitiveInfoTypeData_s) on (where SensitiveInfoTypeData_s != \"\" )\r\n| extend SensitiveInfoTypeIdnew = tostring(parse_json(SensitiveInfoTypeId).SensitiveInfoTypeId)\r\n| join kind = inner \r\n ( \r\n DLPSensitivity_CL \r\n | extend SensitiveInfoTypeIdnew = tostring(Id_g)\r\n | summarize arg_max(TimeGenerated, *) by SensitiveInfoTypeIdnew \r\n )\r\n on SensitiveInfoTypeIdnew\r\n| extend ContentType = DocumentName_s\r\n| extend UserId = Application_s\r\n|extend creationTime = CreationTime_t \r\n| where \"{ContentType:lable}\"==\"All\" or ContentType in ({ContentType})\r\n| where \"{Users:lable}\"==\"All\" or UserKey_s in ({Users})\r\n| where \"{Operations:lable}\"==\"All\" or Operation_s in ({Operations})\r\n| where details.Type == '*' or (details.Type == 'ContentType' and ContentType == details.Name) or (details.Type == 'UserId' and UserId == details.Name)\r\n| summarize Calls = count() by App = UserId , Request = Operation_s, Dependency = ContentType\r\n| extend RequestId = strcat(App, '::', Request);\r\nlet links = data\r\n| summarize Calls = sum(Calls) by App, RequestId\r\n| project SourceId = App, TargetId = RequestId, Calls, Kind = 'App -> Request'\r\n| union (data\r\n    | project SourceId = RequestId, TargetId = Dependency, Calls, Kind = 'Request -> Dependency');\r\nlet nodes = data\r\n| summarize Calls = sum(Calls) by App\r\n| project Id = App, Name = App, Calls, Kind = 'App'\r\n| union (data\r\n    | summarize Calls = sum(Calls) by RequestId, Request\r\n    | project Id = RequestId, Name = Request, Calls, Kind = 'Request')\r\n| union (data\r\n    | summarize Calls = sum(Calls) by Dependency\r\n    | project Id = Dependency, Name = Dependency, Calls, Kind = 'Dependency');\r\nnodes\r\n| union (links)",
-        "size": 2,
-        "title": "Centered on Documents",
-        "timeContext": {
-          "durationMs": 7776000000
-        },
-        "timeContextFromParameter": "TimeRange",
-        "queryType": 0,
-        "resourceType": "microsoft.operationalinsights/workspaces",
-        "visualization": "graph",
-        "gridSettings": {
-          "formatters": [
-            {
-              "columnMatch": "SourceFileName",
-              "formatter": 7,
-              "formatOptions": {
-                "linkTarget": "GenericDetails",
-                "linkIsContextBlade": true,
-                "showIcon": true
-              }
-            },
-            {
-              "columnMatch": "DestinationFileName",
-              "formatter": 5,
-              "formatOptions": {
-                "showIcon": true
-              }
-            },
-            {
-              "columnMatch": "DestinationFileExtension",
-              "formatter": 5,
-              "formatOptions": {
-                "showIcon": true
-              }
-            },
-            {
-              "columnMatch": "Number",
-              "formatter": 8,
-              "formatOptions": {
-                "palette": "lightBlue",
-                "showIcon": true
-              }
-            }
-          ]
-        },
-        "graphSettings": {
-          "type": 0,
-          "topContent": {
-            "columnMatch": "Name",
-            "formatter": 12,
-            "formatOptions": {}
-          },
-          "centerContent": {
-            "columnMatch": "Calls",
-            "formatter": 1,
-            "formatOptions": {},
-            "numberFormat": {
-              "unit": 17,
-              "options": {
-                "style": "decimal",
-                "useGrouping": false,
-                "maximumFractionDigits": 2,
-                "maximumSignificantDigits": 3
-              }
-            }
-          },
-          "nodeIdField": "Id",
-          "sourceIdField": "SourceId",
-          "targetIdField": "TargetId",
-          "edgeSize": "Calls",
-          "nodeSize": null,
-          "staticNodeSize": 100,
-          "colorSettings": {
-            "nodeColorField": "Kind",
-            "type": 1,
-            "colorPalette": "cool"
-          },
-          "hivesMargin": 5
-        },
-        "mapSettings": {
-          "locInfo": "AzureResource",
-          "sizeSettings": "Number",
-          "sizeAggregation": "Sum",
-          "legendMetric": "Number",
-          "legendAggregation": "Sum",
-          "itemColorSettings": {
-            "type": "heatmap",
-            "colorAggregation": "Sum",
-            "nodeColorField": "Number",
-            "heatmapPalette": "greenRed"
-          }
-        }
-      },
-      "name": "query - 9 - Copy"
-    },
-    {
-      "type": 3,
-      "content": {
-        "version": "KqlItem/1.0",
-        "query": "let details = dynamic({OperationDetail});\r\nlet data = endpointdlp_CL\r\n| mv-apply SensitiveInfoTypeId = todynamic(SensitiveInfoTypeData_s) on (where SensitiveInfoTypeData_s != \"\" )\r\n| extend SensitiveInfoTypeIdnew = tostring(parse_json(SensitiveInfoTypeId).SensitiveInfoTypeId)\r\n| join kind = inner \r\n ( \r\n DLPSensitivity_CL \r\n | extend SensitiveInfoTypeIdnew = tostring(Id_g)\r\n | summarize arg_max(TimeGenerated, *) by SensitiveInfoTypeIdnew \r\n )\r\n on SensitiveInfoTypeIdnew\r\n| extend ContentType = DocumentName_s\r\n| extend UserId = Application_s\r\n|extend creationTime = CreationTime_t \r\n| where \"{Document:lable}\"==\"All\" or ContentType in ({Document})\r\n| where \"{Users:lable}\"==\"All\" or UserKey_s in ({Users})\r\n| where \"{Operations:lable}\"==\"All\" or Operation_s in ({Operations})\r\n| where details.Type == '*' or (details.Type == 'ContentType' and ContentType == details.Name) or (details.Type == 'UserId' and UserId == details.Name)\r\n| summarize Calls = count() by App = UserId , Request = Operation_s, Dependency = ContentType\r\n| extend RequestId = strcat(App, '::', Request);\r\nlet links = data\r\n| summarize Calls = sum(Calls) by App, RequestId\r\n| project SourceId = App, TargetId = RequestId, Calls, Kind = 'App -> Request'\r\n| union (data\r\n    | project SourceId = RequestId, TargetId = Dependency, Calls, Kind = 'Request -> Dependency');\r\nlet nodes = data\r\n| summarize Calls = sum(Calls) by App\r\n| project Id = App, Name = App, Calls, Kind = 'App'\r\n| union (data\r\n    | summarize Calls = sum(Calls) by RequestId, Request\r\n    | project Id = RequestId, Name = Request, Calls, Kind = 'Request')\r\n| union (data\r\n    | summarize Calls = sum(Calls) by Dependency\r\n    | project Id = Dependency, Name = Dependency, Calls, Kind = 'Dependency');\r\nnodes\r\n| union (links)",
         "size": 0,
         "title": "Centered on Documents",
         "timeContext": {
@@ -687,13 +638,11 @@
           "type": 0,
           "topContent": {
             "columnMatch": "Name",
-            "formatter": 12,
-            "formatOptions": {}
+            "formatter": 12
           },
           "centerContent": {
             "columnMatch": "Calls",
             "formatter": 1,
-            "formatOptions": {},
             "numberFormat": {
               "unit": 17,
               "options": {
@@ -707,6 +656,107 @@
           "nodeIdField": "Id",
           "sourceIdField": "SourceId",
           "targetIdField": "TargetId",
+          "graphOrientation": 3,
+          "showOrientationToggles": false,
+          "edgeSize": "Calls",
+          "nodeSize": null,
+          "staticNodeSize": 100,
+          "colorSettings": {
+            "nodeColorField": "Kind",
+            "type": 1,
+            "colorPalette": "cool"
+          },
+          "hivesMargin": 5
+        },
+        "mapSettings": {
+          "locInfo": "AzureResource",
+          "sizeSettings": "Number",
+          "sizeAggregation": "Sum",
+          "legendMetric": "Number",
+          "legendAggregation": "Sum",
+          "itemColorSettings": {
+            "type": "heatmap",
+            "colorAggregation": "Sum",
+            "nodeColorField": "Number",
+            "heatmapPalette": "greenRed"
+          }
+        }
+      },
+      "name": "query - 9 - Copy"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "let details = dynamic({OperationDetail});\r\nlet data = endpointdlp_CL\r\n| mv-apply SensitiveInfoTypeId = todynamic(SensitiveInfoTypeData_s) on (where SensitiveInfoTypeData_s != \"\" )\r\n| extend SensitiveInfoTypeIdnew = tostring(parse_json(SensitiveInfoTypeId).SensitiveInfoTypeId)\r\n| join kind = inner \r\n ( \r\n DLPSensitivity_CL \r\n | extend SensitiveInfoTypeIdnew = tostring(Id_g)\r\n | summarize arg_max(TimeGenerated, *) by SensitiveInfoTypeIdnew \r\n )\r\n on SensitiveInfoTypeIdnew\r\n| extend ContentType = DocumentName_s\r\n| extend UserId = DeviceName_s\r\n|extend creationTime = CreationTime_t \r\n| where \"{Document:lable}\"==\"All\" or ContentType in ({Document})\r\n| where \"{Users:lable}\"==\"All\" or UserKey_s in ({Users})\r\n| where \"{Operations:lable}\"==\"All\" or Operation_s in ({Operations})\r\n| where details.Type == '*' or (details.Type == 'ContentType' and ContentType == details.Name) or (details.Type == 'UserId' and UserId == details.Name)\r\n| summarize Calls = count() by App = UserId , Request = Operation_s, Dependency = ContentType\r\n| extend RequestId = strcat(App, '::', Request);\r\nlet links = data\r\n| summarize Calls = sum(Calls) by App, RequestId\r\n| project SourceId = App, TargetId = RequestId, Calls, Kind = 'App -> Request'\r\n| union (data\r\n    | project SourceId = RequestId, TargetId = Dependency, Calls, Kind = 'Request -> Dependency');\r\nlet nodes = data\r\n| summarize Calls = sum(Calls) by App\r\n| project Id = App, Name = App, Calls, Kind = 'App'\r\n| union (data\r\n    | summarize Calls = sum(Calls) by RequestId, Request\r\n    | project Id = RequestId, Name = Request, Calls, Kind = 'Request')\r\n| union (data\r\n    | summarize Calls = sum(Calls) by Dependency\r\n    | project Id = Dependency, Name = Dependency, Calls, Kind = 'Dependency');\r\nnodes\r\n| union (links)",
+        "size": 3,
+        "title": "Centered on Devices",
+        "timeContext": {
+          "durationMs": 7776000000
+        },
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces",
+        "visualization": "graph",
+        "gridSettings": {
+          "formatters": [
+            {
+              "columnMatch": "SourceFileName",
+              "formatter": 7,
+              "formatOptions": {
+                "linkTarget": "GenericDetails",
+                "linkIsContextBlade": true,
+                "showIcon": true
+              }
+            },
+            {
+              "columnMatch": "DestinationFileName",
+              "formatter": 5,
+              "formatOptions": {
+                "showIcon": true
+              }
+            },
+            {
+              "columnMatch": "DestinationFileExtension",
+              "formatter": 5,
+              "formatOptions": {
+                "showIcon": true
+              }
+            },
+            {
+              "columnMatch": "Number",
+              "formatter": 8,
+              "formatOptions": {
+                "palette": "lightBlue",
+                "showIcon": true
+              }
+            }
+          ]
+        },
+        "graphSettings": {
+          "type": 0,
+          "topContent": {
+            "columnMatch": "Name",
+            "formatter": 12
+          },
+          "centerContent": {
+            "columnMatch": "Calls",
+            "formatter": 1,
+            "numberFormat": {
+              "unit": 17,
+              "options": {
+                "style": "decimal",
+                "useGrouping": false,
+                "maximumFractionDigits": 2,
+                "maximumSignificantDigits": 3
+              }
+            }
+          },
+          "nodeIdField": "Id",
+          "sourceIdField": "SourceId",
+          "targetIdField": "TargetId",
+          "graphOrientation": 3,
+          "showOrientationToggles": false,
           "edgeSize": "Calls",
           "nodeSize": null,
           "staticNodeSize": 100,
@@ -735,7 +785,7 @@
     }
   ],
   "fallbackResourceIds": [
-    "/subscriptions/50b33ed9-10e5-428c-aa07-e6567a968ff4/resourcegroups/mip/providers/microsoft.operationalinsights/workspaces/dlp-siem"
+    "/subscriptions/2c8d17d2-dc42-4271-ae51-844122530a73/resourcegroups/treysentinel/providers/microsoft.operationalinsights/workspaces/usinstance"
   ],
   "fromTemplateId": "sentinel-UserWorkbook",
   "$schema": "https://github.com/Microsoft/Application-Insights-Workbooks/blob/master/schema/workbook.json"
