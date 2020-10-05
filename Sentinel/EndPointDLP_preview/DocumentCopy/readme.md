@@ -12,15 +12,18 @@ If you have more than one workspace and Geo, you will have to set this up separa
 
 ## Setup
 
-1. Use [Azure Storage Explorer](https://azure.microsoft.com/en-us/features/storage-explorer/) to add an additional container.
+1. Use [Azure Storage Explorer](https://azure.microsoft.com/en-us/features/storage-explorer/) to add an additional container.  
 
-2. Create the container ![Create Container](./img/img1.png)
+2. Create the container  
+![Create Container](./img/img1.png)  
 
-3. Create the Virtual Directory ![Create Virtual Directory](./img/img2.png)
+3. Create the Virtual Directory  
+![Create Virtual Directory](./img/img2.png)  
 
-4. Generate the SAS token![Generate SAS Token](./img/img3.png)
+4. Generate the SAS token  
+![Generate SAS Token](./img/img3.png)  
 
-5. The SAS token should only have Write permissions nothing elese extend the life time as appropriate in this case it is until 2022 ![Generate SAS Token](./img/img4.png) 
+5. The SAS token should only have Write permissions nothing elese extend the life time as appropriate in this case it is until 2022 ![Generate SAS Token](./img/img4.png)   
 
 6. Update the endpointscr.ps1 with the SAS token url, remember to modify the url to contain /endpoint/documents/$($name) default will be someblob.blob.core.windows.net/endpoint?....
 
