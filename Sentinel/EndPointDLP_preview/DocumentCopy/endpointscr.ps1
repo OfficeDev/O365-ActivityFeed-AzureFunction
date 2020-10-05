@@ -2,6 +2,9 @@ $info = @{}
 $storedtime = Get-Content "$env:TEMP\endpointtime.log"  
 $now = (get-date).ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
 
+#The target URL wit SAS Token, consider using Azure Key vault and rotate the token. This is poc code.
+$uri = "https://sampleblob.blob.core.windows.net/endpoint/documents/$($name)? SAS Token"
+
 if ($storedtime -eq $null) {
     (get-date $now).AddHours(-24) | Out-File "$env:TEMP\endpointtime.log"
     $storedtime = Get-Content "$env:TEMP\endpointtime.log" 
@@ -14,9 +17,6 @@ $file = $copypath
 #Get the File-Name without path
 $name = $policy + "--" + $eventlog[0].System.Computer + "-" + ((Get-Item $file).Name)
 $name
-
-#The target URL wit SAS Token, consider using Azure Key vault 
-$uri = "https://sampleblob.blob.core.windows.net/endpoint/documents/$($name)? SAS Token"
 
 #Define required Headers
 $headers = @{'x-ms-blob-type' = 'BlockBlob'}
