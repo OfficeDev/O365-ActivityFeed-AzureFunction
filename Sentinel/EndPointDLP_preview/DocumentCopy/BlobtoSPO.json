@@ -1,0 +1,256 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+  "metadata": {
+    "comments": "This playbook will call and collect Endpoint data associated to DLP alerts and store it in SharePoint.",
+    "author": "Jon Nordstrom"
+  },    
+
+
+
+	"parameters": {
+
+        "workflows_CopyEndPoint_name": {
+            "defaultValue": "CopyEndPoint",
+            "type": "String"
+        },
+
+      "username": {
+        "defaultValue": "eudlpuser@tenant.onmicrosoft.com",
+        "type": "String"
+      },
+
+      "SharePointURL": {
+        "defaultValue": "Example: https://contoso.sharepoint.com/sites/sitename.",
+        "type": "String"
+      },
+
+        "connections_BlobConnection_externalid": {
+            "defaultValue": "azureblob-1",
+            "type": "String"
+        },
+        "connections_sharepointonline_2_externalid": {
+            "defaultValue": "sharepointonline",
+            "type": "String"
+        }
+    },
+    "variables": {},
+    "resources": [
+        
+{
+      "type": "Microsoft.Web/connections",
+      "apiVersion": "2016-06-01",
+      "name": "[parameters('connections_BlobConnection_externalid')]",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "displayName": "[parameters('username')]",
+        "customParameterValues": {},
+        "api": {
+          "id": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Web/locations/', resourceGroup().location, '/managedApis/azureblob')]"
+                  
+        }
+      }
+    },
+
+    {
+      "type": "Microsoft.Web/connections",
+      "apiVersion": "2016-06-01",
+      "name": "[parameters('connections_sharepointonline_2_externalid')]",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "displayName": "[parameters('username')]",
+        "customParameterValues": {},
+        "api": {
+          "id": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Web/locations/', resourceGroup().location, '/managedApis/sharepointonline')]"
+          
+        }
+      }
+    },
+
+
+
+	{
+            "type": "Microsoft.Logic/workflows",
+            "apiVersion": "2017-07-01",
+            "name": "[parameters('workflows_CopyEndPoint_name')]",
+            "location": "eastus",
+            "properties": {
+                "state": "Enabled",
+                "definition": {
+                    "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+                    "contentVersion": "1.0.0.0",
+                    "parameters": {
+                        "$connections": {
+                            "defaultValue": {},
+                            "type": "Object"
+                        }
+                    },
+                    "triggers": {
+                        "When_a_blob_is_added_or_modified_(properties_only)": {
+                            "recurrence": {
+                                "frequency": "Minute",
+                                "interval": 1
+                            },
+                            "splitOn": "@triggerBody()",
+                            "metadata": {
+                                "JTJmdGVzdDEyMyUyZmxvZ3MlMmY=": "/endpoint/document/"
+                            },
+                            "type": "ApiConnection",
+                            "inputs": {
+                                "host": {
+                                    "connection": {
+                                        "name": "@parameters('$connections')['azureblob']['connectionId']"
+                                    }
+                                },
+                                "method": "get",
+                                "path": "/datasets/default/triggers/batch/onupdatedfile",
+                                "queries": {
+                                    "folderId": "JTJmdGVzdDEyMyUyZmxvZ3MlMmY=",
+                                    "maxFileCount": 10
+                                }
+                            }
+                        }
+                    },
+                    "actions": {
+                        "For_each": {
+                            "foreach": "@body('List_blobs')?['value']",
+                            "actions": {
+                                "Compose": {
+                                    "runAfter": {
+                                        "Get_blob_content_2": [
+                                            "Succeeded"
+                                        ]
+                                    },
+                                    "type": "Compose",
+                                    "inputs": "@split(first(split(items('For_each')?['DisplayName'],'.')),'--')"
+                                },
+                                "Compose_2": {
+                                    "runAfter": {
+                                        "Compose": [
+                                            "Succeeded"
+                                        ]
+                                    },
+                                    "type": "Compose",
+                                    "inputs": "@split(first(split(outputs('Compose')[0],'.')),':')"
+                                },
+                                "Compose_4": {
+                                    "runAfter": {
+                                        "Compose_2": [
+                                            "Succeeded"
+                                        ]
+                                    },
+                                    "type": "Compose",
+                                    "inputs": "@outputs('Compose_2')[1]"
+                                },
+                                "Create_file": {
+                                    "runAfter": {
+                                        "Compose_4": [
+                                            "Succeeded"
+                                        ]
+                                    },
+                                    "type": "ApiConnection",
+                                    "inputs": {
+                                        "body": "@body('Get_blob_content_2')",
+                                        "host": {
+                                            "connection": {
+                                                "name": "@parameters('$connections')['sharepointonline']['connectionId']"
+                                            }
+                                        },
+                                        "method": "post",
+                                        "path": "[concat('/datasets/@{encodeURIComponent(encodeURIComponent(''', parameters('SharePointURL'), '''))}', '/files')]",
+                                        "queries": {
+                                            "folderPath": "/Shared Documents/@{outputs('Compose_4')}",
+                                            "name": "@items('For_each')?['DisplayName']",
+                                            "queryParametersSingleEncoded": true
+                                        }
+                                    },
+                                    "runtimeConfiguration": {
+                                        "contentTransfer": {
+                                            "transferMode": "Chunked"
+                                        }
+                                    }
+                                },
+                                "Delete_blob": {
+                                    "runAfter": {
+                                        "Create_file": [
+                                            "Succeeded"
+                                        ]
+                                    },
+                                    "type": "ApiConnection",
+                                    "inputs": {
+                                        "host": {
+                                            "connection": {
+                                                "name": "@parameters('$connections')['azureblob']['connectionId']"
+                                            }
+                                        },
+                                        "method": "delete",
+                                        "path": "/datasets/default/files/@{encodeURIComponent(encodeURIComponent(items('For_each')?['Path']))}"
+                                    }
+                                },
+                                "Get_blob_content_2": {
+                                    "runAfter": {},
+                                    "type": "ApiConnection",
+                                    "inputs": {
+                                        "host": {
+                                            "connection": {
+                                                "name": "@parameters('$connections')['azureblob']['connectionId']"
+                                            }
+                                        },
+                                        "method": "get",
+                                        "path": "/datasets/default/files/@{encodeURIComponent(encodeURIComponent(items('For_each')?['FileLocator']))}/content",
+                                        "queries": {
+                                            "inferContentType": true
+                                        }
+                                    }
+                                }
+                            },
+                            "runAfter": {
+                                "List_blobs": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "Foreach"
+                        },
+                        "List_blobs": {
+                            "runAfter": {},
+                            "metadata": {
+                                "JTJmdGVzdDEyMyUyZmxvZ3MlMmY=": "/endpoint/document/"
+                            },
+                            "type": "ApiConnection",
+                            "inputs": {
+                                "host": {
+                                    "connection": {
+                                        "name": "@parameters('$connections')['azureblob']['connectionId']"
+                                    }
+                                },
+                                "method": "get",
+                                "path": "/datasets/default/foldersV2/@{encodeURIComponent(encodeURIComponent('JTJmdGVzdDEyMyUyZmxvZ3MlMmY='))}",
+                                "queries": {
+                                    "nextPageMarker": "",
+                                    "useFlatListing": false
+                                }
+                            }
+                        }
+                    },
+                    "outputs": {}
+                },
+                "parameters": {
+                    "$connections": {
+                        "value": {
+                            "azureblob": {
+				"connectionId": "[resourceId('Microsoft.Web/connections', parameters('connections_BlobConnection_externalid'))]",
+                                "connectionName": "azureblob-1",
+				"id": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Web/locations/', resourceGroup().location, '/managedApis/azureblob')]"
+                            },
+                            "sharepointonline": {
+				"connectionId": "[resourceId('Microsoft.Web/connections', parameters('connections_sharepointonline_2_externalid'))]",
+                                "connectionName": "sharepointonline-2",
+                                "id": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Web/locations/', resourceGroup().location, '/managedApis/sharepointonline')]"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    ]
+}
