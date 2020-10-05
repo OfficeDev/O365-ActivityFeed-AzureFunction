@@ -16,15 +16,15 @@ If you have more than one workspace and Geo, you will have to set this up separa
 
 2. Create the container ![Create Container](./img/img1.png)
 
-3. ![Create Virtual Directory](./img/img2.png)
+3. Create the Virtual Directory ![Create Virtual Directory](./img/img2.png)
 
-4. ![Generate SAS Token](./img/img3.png)
+4. Generate the SAS token![Generate SAS Token](./img/img3.png)
 
-5. The SAS token should only have Write permissions nothing elese extend the life time as appropriate in this case it is until 2022 ![Generate SAS Token](./img/img4.png)
+5. The SAS token should only have Write permissions nothing elese extend the life time as appropriate in this case it is until 2022 ![Generate SAS Token](./img/img4.png) 
 
 6. Update the endpointscr.ps1 with the SAS token url, remember to modify the url to contain /endpoint/documents/$($name) default will be someblob.blob.core.windows.net/endpoint?....
 
-7. Test the script on a single computer, note that only AccessByUnallowedApp, Print, FileCopiedToRemovableMedia, AccessByUnallowedApp, FileCopiedToNetworkShare will generate a copy. You can add other events by modifying line 34.
+7. Test the script on a single computer, note that only AccessByUnallowedApp, Print, FileCopiedToRemovableMedia, AccessByUnallowedApp, FileCopiedToNetworkShare will generate a copy. You can add or remove events by modifying line 34.
 
 8. Deploy the script to run on a schedule with Task Scheduler or similar.
 
