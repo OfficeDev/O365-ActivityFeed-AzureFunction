@@ -13,7 +13,9 @@ $file = $copypath
 
 #Get the File-Name without path
 $name = $policy + "--" + $eventlog[0].System.Computer + "-" + ((Get-Item $file).Name)
-$name
+
+Copy-Item $file $env:Temp
+$upload = $env:Temp + "\" + ((Get-Item $file).Name)
 
 #The target URL wit SAS Token, consider using Azure Key vault and rotate the token. This is poc code.
 $uri = "https://sampleblob.blob.core.windows.net/endpoint/documents/$($name)? SAS Token"
@@ -22,10 +24,11 @@ $uri = "https://sampleblob.blob.core.windows.net/endpoint/documents/$($name)? SA
 $headers = @{'x-ms-blob-type' = 'BlockBlob'}
 
 #Upload File...
-$response = Invoke-WebRequest -Uri $uri -Method Put -Headers $headers -InFile $file 
+$response = Invoke-WebRequest -Uri $uri -Method Put -Headers $headers -InFile $upload 
    $StatusCode = $Response.StatusCode
     if ($StatusCode -eq '201') {$now | Out-file "$env:Temp\endpointtime.log"}
-                                          }
+Remove-Item $upload            
+                }
 
 #Get the eventlog$eventlog and then resolve the actual path to pass to the upload function
 $eventlog =Get-WinEvent -LogName "Microsoft-Windows-Windows Defender/Operational" |  %{([xml]$_.ToXml()).Event} | Where-Object {(($_.EventData.data."#text" -contains "AccessByUnallowedApp") -or ($_.EventData.Data."#text" -contains "FileCopiedToRemovableMedia") -or ($_.EventData.data."#text" -contains "FileUploadedToCloud") -or ($_.EventData.data."#text" -contains "Print") -or ($_.EventData.data."#text" -contains "FileCopiedToNetworkShare"))}
