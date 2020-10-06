@@ -59,6 +59,6 @@ If you have more than one workspace and Geo, you will have to set this up separa
      - On trigger it will copy the Blob content to SharePoint Online
      - Remove the copy in the Azure Blob container  
           	
-- **The Azure function used to enrich events to Azure Sentinel will add a link to the content that can be used to access it in SPO.**
+- **The Azure function used to enrich events to Azure Sentinel will add a link to the content. The link points to SPO.**
 
 
