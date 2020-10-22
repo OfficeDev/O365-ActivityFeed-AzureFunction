@@ -41,7 +41,7 @@ If you have more than one workspace and Geo, you will have to set this up separa
 
 13. Update the function Store endpointDLPevents after line 129 add. Note that you can add the SPO site as a variable
 
-     $origpath = "https://tenant.sharepoint.com/sites/DLPArchive/" + $user.PolicyMatchInfo.RuleId + "/" + $user.PolicyMatchInfo.policyid + "_" +  $user.PolicyMatchInfo.RuleId + "--" + $user.devicename + "-" + $user.DocumentName
+     $origpath = "https://tenant.sharepoint.com/sites/DLPArchive/" + $user.PolicyMatchInfo.RuleId + "/" + $user.PolicyMatchInfo.policyid + "_" +  $user.PolicyMatchInfo.RuleId + "--" + $user.devicename + "-" + (get-date $user.creationtime).tostring("yyyy-MM-ddTHH:mm:ss") + "-" + $user.DocumentName
     $user | Add-Member -MemberType NoteProperty -Name "originialContent" -value $origpath
 
 ### More information
