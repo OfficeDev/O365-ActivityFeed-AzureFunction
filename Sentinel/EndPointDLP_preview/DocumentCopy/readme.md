@@ -29,7 +29,7 @@ If you have more than one workspace and Geo, you will have to set this up separa
 
 7. Test the script on a single computer, note that only AccessByUnallowedApp, Print, FileCopiedToRemovableMedia, AccessByUnallowedApp, FileCopiedToNetworkShare will generate a copy. You can add or remove events by modifying line 34.
 
-8. Deploy the script to run on a schedule with Task Scheduler or similar. https://docs.microsoft.com/en-us/archive/blogs/wincat/trigger-a-powershell-script-from-a-windows-event
+8. Deploy the script to run on a schedule with Task Scheduler or similar. See the endpointdeploy.ps1 as example. https://docs.microsoft.com/en-us/archive/blogs/wincat/trigger-a-powershell-script-from-a-windows-event
 
 9. Create a SharePoint Site Collection in Region with the appropriate retention time. Use a Records center template if you need to treat the information as records. See the SharePoint Online limits to determine if you need more than one collection per region. This will depend on your expected load and retention period. You can change the ingestion code to ingest information based on the Policy Name as an example to scale this out. **Create a Library named "Records"** in the newly created Site Collection.
 
