@@ -100,6 +100,8 @@ To get the manager with v1.0 amend the code with
 For production increase the FUNCTIONS_WORKER_PROCESS_COUNT https://docs.microsoft.com/en-us/azure/azure-functions/functions-app-settings
 Specifies the maximum number of language worker processes, with a default value of 1. The maximum value allowed is 10. Function invocations are evenly distributed among language worker processes. Language worker processes are spawned every 10 seconds until the count set by FUNCTIONS_WORKER_PROCESS_COUNT is reached. 
 
+The default function timeout is 5 minutes in the consumption plan, consider to increase it to 10 minutes depending on load. https://docs.microsoft.com/en-us/azure/azure-functions/functions-host-json#functiontimeout
+
 ## Contributing
 
 This project welcomes contributions and suggestions.  Most contributions require you to agree to a
