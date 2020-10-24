@@ -72,6 +72,15 @@
                     "type": "string",   
                     "defaultValue": "Yourtenant.onmicrosoft.com"
                   },
+                     "exuser": {
+                    "type": "string",
+                    "defaultValue": "user account with permissions to read sensitive info types"
+                  },
+                  
+                    "expass": {
+                    "type": "string",
+                    "defaultValue": "password for exuser"
+                  },
                   
                     "TenantGuid": {
                     "type": "string",
@@ -86,6 +95,11 @@
                     "workspaceKey": {
                     "type": "string",
                     "defaultValue": "LogAnalytics WorkspaceKey"
+                  },
+                                    
+                    "SentinelWorkspace": {
+                    "type": "string",
+                    "defaultValue": "Sentinel Workspace Name"
                   }
     
        },
@@ -134,6 +148,9 @@
           "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName'))]",
           "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
         ],
+            "identity": {
+        "type": "SystemAssigned"
+     },
         "properties": {
           "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName'))]",
           "siteConfig": {
@@ -191,8 +208,20 @@
               "value": "[parameters('storageQueue')]"
             },
             {
+              "name": "endpointstorageQueue",
+              "value": "endpointqueue"
+            },
+            {
               "name": "tenantDomain",
               "value": "[parameters('tenantDomain')]"
+            },
+            {
+              "name": "exuser",
+              "value": "[parameters('exuser')]"
+            },
+            {
+              "name": "expass",
+              "value": "[parameters('expass')]"
             },
             {
               "name": "TenantGuid",
@@ -205,6 +234,10 @@
             {
               "name": "workspaceKey",
               "value": "[parameters('workspaceKey')]"
+            },
+            {
+              "name": "SentinelWorkspace",
+              "value": "[parameters('SentinelWorkspace')]"
             }
 
             ]
@@ -242,7 +275,7 @@
             },
          
             "files": {
-              "run.ps1": "#Paste the code from Queue DLP Events in to this window. https://github.com/OfficeDev/O365-ActivityFeed-AzureFunction/blob/master/Sentinel/QueueEvents.ps1"
+              "run.ps1": "#Paste the code from Queue DLP Events in to this window. https://github.com/OfficeDev/O365-ActivityFeed-AzureFunction/blob/master/Sentinel/EndPointDLP_preview/QueueDLPEvents.ps1"
                      }
 
         },
@@ -268,14 +301,66 @@
           },
             
          "files": {
-          "run.ps1": "#Paste the code from enable Subscription and place it here. This function can be removed and disabled after completion. https://github.com/OfficeDev/O365-ActivityFeed-AzureFunction/blob/master/Sentinel/enablesubscription.ps1 "
+          "run.ps1": "#Paste the code from enable Subscription and place it here. This function can be removed and disabled after completion. https://github.com/OfficeDev/O365-ActivityFeed-AzureFunction/blob/master/Sentinel/EndPointDLP_preview/enablesubscription.ps1"
       }
       },
       "dependsOn": [
           "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]"
       ]
   },
-   
+    {
+      "name": "[concat(variables('functionAppName'), '/', 'SensitiveInfoType')]",
+      "type": "Microsoft.Web/sites/functions",
+      "apiVersion": "2018-02-01",
+      "properties": {
+          "config": {
+              "bindings": [
+                  {
+                      "name": "Timer",
+                      "type": "timerTrigger",
+                      "direction": "in",
+                      "schedule": "0 30 9 * * *"
+                  }
+              ],
+              "disabled": true
+          },
+            
+         "files": {
+          "run.ps1": "#Paste the code from enable Subscription and place it here. This function can be removed and disabled after completion. https://github.com/OfficeDev/O365-ActivityFeed-AzureFunction/blob/master/Sentinel/EndPointDLP_preview/SensitiveInfoType.ps1"
+      }
+      },
+      "dependsOn": [
+          "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]"
+      ]
+  },
+    {
+      "name": "[concat(variables('functionAppName'), '/', 'StoreEndPointDLPEvents')]",
+      "type": "Microsoft.Web/sites/functions",
+      "apiVersion": "2018-02-01",
+      "properties": {
+          "config": {
+              "bindings": [
+                  {
+                    "name": "QueueItem",
+                    "type": "queueTrigger",
+                    "direction": "in",
+                    "queueName": "endpointqueue",
+                    "connection": "AzureWebJobsStorage"
+                  }
+              ],
+              "disabled": false
+          },
+         
+         "files": {
+            "run.ps1": "#Paste the code for storing DLP events here and customize it based on your requirements. https://github.com/OfficeDev/O365-ActivityFeed-AzureFunction/blob/master/Sentinel/EndPointDLP_preview/StoreEndpointDLPEvents.ps1"
+        }
+      },
+      "dependsOn": [
+          "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]"
+      ]
+  },
+
+
     {
       "name": "[concat(variables('functionAppName'), '/', 'StoreDLPEvents')]",
       "type": "Microsoft.Web/sites/functions",
