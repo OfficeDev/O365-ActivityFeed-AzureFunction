@@ -54,9 +54,9 @@ By clicking deploy above you will deploy an Azure Function App with the function
 - **Please Observe, there may be a timing issue causing an error when deploying the logic apps. If it is one of the functions it can be safely ignored.** 
    
 * 5. **Deployment of the code to the function**
-  * Download the endpointdlpservice.zip from this repo
+  * Download the dlpservice.zip from this repo
   * Start to connect to Azure PowerShell Connect-AzAccout
-  * Run Publish-AzWebApp -ResourceGroupName REPLACEWITHYOURRG -Name REPLACEWITHYOURAPPNAME -ArchivePath C:\YOURPATH\endpointdlpservice.zip  **Note:The names are case sensitive**
+  * Run Publish-AzWebApp -ResourceGroupName REPLACEWITHYOURRG -Name REPLACEWITHYOURAPPNAME -ArchivePath C:\YOURPATH\dlpservice.zip  **Note:The names are case sensitive**
      
 * 6. To enable the app to automatically synch DLP policies to Sentinel run the following commands it will allow the APP to fully manage Sentinel
     * $id = (Get-AzADServicePrincipal -DisplayNameBeginsWith YourAPP).id
