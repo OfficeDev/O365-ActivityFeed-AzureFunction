@@ -13,6 +13,38 @@ $LogType = $env:customLogName
 #SharePoint Site US
 $SPUS = $env:SPUS
 
+#Retry logic primarily for AF429 where there is more than 60k requests per minute, much code reused from https://stackoverflow.com/questions/45470999/powershell-try-catch-and-retry
+function Test-Command {
+      [CmdletBinding()]
+      Param(
+          [Parameter(Position=0, Mandatory=$true)]
+          [scriptblock]$ScriptBlock,
+  
+          [Parameter(Position=1, Mandatory=$false)]
+          [int]$Maximum = 5,
+  
+          [Parameter(Position=2, Mandatory=$false)]
+          [int]$Delay = 100
+      )
+      Begin {
+          $cnt = 0
+      }
+      Process {
+          do {
+              $cnt++
+              try {
+                  $ScriptBlock.Invoke()
+                  return
+              } catch {
+                  $fault = $_.Exception.InnerException.Message | convertfrom-json
+                       Write-Error $_.Exception.InnerException.Message -ErrorAction Continue
+                          if ($fault.error.code -eq "AF429") {Start-Sleep -Milliseconds $Delay}
+                             else  {$cnt = $Maximum}
+              }
+          } while ($cnt -lt $Maximum)
+          throw 'Execution failed.'
+      }
+  }
 
 # You can use an optional field to specify the timestamp from the data. If the time field is not specified, Azure Monitor assumes the time is the message ingestion time
 $TimeStampField = (Get-Date)
@@ -96,10 +128,10 @@ if ($queueitem.count -eq 1) {$content = $queueitem | convertfrom-json}
 
     foreach ( $url in $content)     
                           {
-                            $uri = $url + "?PublisherIdentifier=" + $TenantGUID  
-                            $record = Invoke-RestMethod -UseBasicParsing -Headers $headerParams -Uri $uri
-   
-   if (-not ($record)) {throw 'Failed to fetch the content blob'}
+            $uri = $url + "?PublisherIdentifier=" + $TenantGUID
+                  $record = Test-Command {  
+                        Invoke-RestMethod -UseBasicParsing -Headers $headerParams -Uri $uri
+                                         } -Delay 10000
    $records += $record
                            }
 
