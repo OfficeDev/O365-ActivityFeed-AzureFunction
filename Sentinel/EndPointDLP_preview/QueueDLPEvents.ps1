@@ -49,7 +49,8 @@ If ($adjustTime.TotalHours -gt 24) {
 
     #Make the request
     $rawRef = Invoke-WebRequest -Headers $headerParams -Uri "https://manage.office.com/api/v1.0/$tenantGUID/activity/feed/subscriptions/content?contenttype=$workload&startTime=$Storedtime&endTime=$endTime&PublisherIdentifier=$TenantGUID" -UseBasicParsing
-         if (-not ($rawRef)) {throw 'Failed to retrieve the content Blob Url'}
+        if (-not ($rawRef)) {throw 'Failed to retrieve the content Blob Url'}
+    
     #If more than one page is returned capture and return in pageArray
     if ($rawRef.Headers.NextPageUri) {
 
@@ -90,14 +91,14 @@ $request
  $i = 0            
         while ($runs -ge 1) { 
     
-                        $rawmessage = $request[$i..$writeSize].contenturi 
-                                     
+            if ($request.count -eq "1") {$rawmessage += $request.contenturi}
+                 Else { $rawmessage = $request[$i..$writeSize].contenturi }
+
                                 foreach ($msg in $rawmessage){ 
                                                              $msgarray += @($msg) 
-                                                             $message = $msgarray | convertto-json
-                                                             }                     
-                        
-                        $queueMessage = New-Object -TypeName Microsoft.Azure.Storage.Queue.CloudQueueMessage -ArgumentList "$message"
+                                                             }    
+                        $message = $msgarray | convertto-json                
+                        $queueMessage = [Microsoft.Azure.Storage.Queue.CloudQueueMessage]::new("$message")
                         $myqueue.CloudQueue.AddMessage($queuemessage)
                
                 $runs -= 1
