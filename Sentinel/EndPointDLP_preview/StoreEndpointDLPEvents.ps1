@@ -14,15 +14,52 @@ $LogType = "endpointdlp"
 $SPUS = $env:SPUS
 
 
+#Retry logic primarily for AF429 where there is more than 60k requests per minute, much reused from https://stackoverflow.com/questions/45470999/powershell-try-catch-and-retry
+function Test-Command {
+      [CmdletBinding()]
+      Param(
+          [Parameter(Position=0, Mandatory=$true)]
+          [scriptblock]$ScriptBlock,
+  
+          [Parameter(Position=1, Mandatory=$false)]
+          [int]$Maximum = 5,
+  
+          [Parameter(Position=2, Mandatory=$false)]
+          [int]$Delay = 100
+      )
+  
+      Begin {
+          $cnt = 0
+      }
+  
+      Process {
+          do {
+              $cnt++
+              try {
+                  $ScriptBlock.Invoke()
+                  return
+              } catch {
+                  $fault = $_.Exception.InnerException.Message | convertfrom-json
+                       Write-Error $_.Exception.InnerException.Message -ErrorAction Continue
+                          if ($fault.error.code -eq "AF429") {Start-Sleep -Milliseconds $Delay}
+                             else  {$cnt = $Maximum}
+              }
+          } while ($cnt -lt $Maximum)
+  
+          throw 'Execution failed.'
+      }
+  }
+  
+
+
 # You can use an optional field to specify the timestamp from the data. If the time field is not specified, Azure Monitor assumes the time is the message ingestion time
 $TimeStampField = (Get-Date)
 
 #Initiate Arrays used by the function
 $records = @()
 $endpointupload = @()
-$spoupload = @()
 $usWorkspace = @()
-$tolocal = @()
+
 
 # Create the function to create the authorization signature
 Function Build-Signature ($customerId, $sharedKey, $date, $contentLength, $method, $contentType, $resource)
@@ -96,10 +133,10 @@ if ($queueitem.count -eq 1) {$content = $queueitem | convertfrom-json}
 
     foreach ( $url in $content)     
                           {
-                            $uri = $url + "?PublisherIdentifier=" + $TenantGUID  
-                            $record = Invoke-RestMethod -UseBasicParsing -Headers $headerParams -Uri $uri
-   
-   if (-not ($record)) {throw 'Failed to fetch the content blob'}
+            $uri = $url + "?PublisherIdentifier=" + $TenantGUID  
+            $record = Test-Command -ScriptBlock {
+                  Invoke-RestMethod -UseBasicParsing -Headers $headerParams -Uri $uri
+                                                } -Delay 10000
    $records += $record
                            }
 
@@ -117,7 +154,7 @@ $headerParamsG  = @{'Authorization'="$($oauthG.token_type) $($oauthG.access_toke
 Foreach ($user in $records) {
 
 #EndpointDLP upload
-if (($user.Workload -eq "EndPoint") -and (($user.PolicyMatchInfo)))     {
+if (($user.Workload -eq "EndPoint") -and (($user.PolicyMatchInfo)))   {
 
     #Add the additional attributes needed to enrich the event stored
     $queryString = $user.UserKey + "?$" + "select=usageLocation,Manager,department,state"
@@ -137,8 +174,9 @@ Clear-Variable -name info
 
 #Determine which Sentinel Workspace to route the information, remember to define the variable for each workspace as an array.
 foreach ($entry in $endpointupload)  {
-        if ($entry.usageLocation -eq "US") { $usWorkspace += $entry  }    
-        if ($entry.usageLocation -ne "US")   { $usWorkspace += $entry  } 
+      $usWorkspace += $entry
+      #if ($entry.usageLocation -eq "US") { $usWorkspace += $entry  }    
+      #if ($entry.usageLocation -ne "US")   { $usWorkspace += $entry  } 
                                 }
 
 #Upload US Workspace, to add addtional workspaces add the WorkspaceID and Workspacekey and make a new post based on those parameters
