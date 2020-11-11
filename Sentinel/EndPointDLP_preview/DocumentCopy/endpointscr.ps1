@@ -90,7 +90,7 @@ Try {
                     $copypath = $info.source.replace($replace, $DriveMapping.DriveLetter)
                     $policy = $info.'Policy Rule Id'
                     $policy
-                    $timestamp = (get-date $event.timecreated).ToString("yyyy-MM-ddTHH:mm:ss")
+                    $timestamp = (Get-Date $info.'Event Timestamp').ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss")
                     copy-toazblob -copypath $copypath -policy $policy -computername $env:COMPUTERNAME -timestamp $timestamp -storedtimepath $storedtimepath
                 }
             }
