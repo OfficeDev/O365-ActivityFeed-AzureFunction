@@ -113,8 +113,8 @@ $request
                                   }
      #Updating timers on success, registering the date from the latest entry returned from the API and adding 1 millisecond to avoid overlap
      $time = $pagearray[0].Content | convertfrom-json
-     $Lastentry = $time[$Time.contentcreated.Count -1].contentCreated
-     if ($Lastentry -ge $storedTime) {out-file -FilePath $Tracker -NoNewline -InputObject (get-date $lastentry).AddMilliseconds(1).ToString("yyyy-MM-ddTHH:mm:ss.fffZ")} 
+     $Lastentry = (get-date ($time[$Time.contentcreated.Count -1].contentCreated)).AddMilliseconds(1).ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
+     if ($Lastentry -ge $storedTime) {out-file -FilePath $Tracker -NoNewline -InputObject $Lastentry} 
 
          } 
 
