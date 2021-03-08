@@ -1,15 +1,13 @@
 {
-    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
-    "contentVersion": "1.0.0.0",
-  "metadata": {
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.1.0.0",
+  
+"metadata": {
     "comments": "This playbook will call and collect Endpoint data associated to DLP alerts and store it in SharePoint.",
     "author": "Jon Nordstrom"
-  },    
+  },   
 
-
-
-	"parameters": {
-
+    "parameters": {
         "workflows_CopyEndPoint_name": {
             "defaultValue": "CopyEndPoint",
             "type": "String"
@@ -36,7 +34,7 @@
     },
     "variables": {},
     "resources": [
-        
+
 {
       "type": "Microsoft.Web/connections",
       "apiVersion": "2016-06-01",
@@ -68,12 +66,11 @@
     },
 
 
-
-	{
+        {
             "type": "Microsoft.Logic/workflows",
             "apiVersion": "2017-07-01",
             "name": "[parameters('workflows_CopyEndPoint_name')]",
-            "location": "eastus",
+            "location": "[resourceGroup().location]",
             "properties": {
                 "state": "Enabled",
                 "definition": {
@@ -86,34 +83,29 @@
                         }
                     },
                     "triggers": {
-                        "When_a_blob_is_added_or_modified_(properties_only)": {
+                        "Recurrence": {
                             "recurrence": {
                                 "frequency": "Minute",
-                                "interval": 1
+                                "interval": 10
                             },
-                            "splitOn": "@triggerBody()",
-                            "metadata": {
-                                "JTJmdGVzdDEyMyUyZmxvZ3MlMmY=": "/endpoint/document/"
-                            },
-                            "type": "ApiConnection",
-                            "inputs": {
-                                "host": {
-                                    "connection": {
-                                        "name": "@parameters('$connections')['azureblob']['connectionId']"
-                                    }
-                                },
-                                "method": "get",
-                                "path": "/datasets/default/triggers/batch/onupdatedfile",
-                                "queries": {
-                                    "folderId": "JTJmdGVzdDEyMyUyZmxvZ3MlMmY=",
-                                    "maxFileCount": 10
-                                }
-                            }
+                            "type": "Recurrence"
                         }
                     },
                     "actions": {
+                        "Filter_array": {
+                            "runAfter": {
+                                "List_blobs": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "Query",
+                            "inputs": {
+                                "from": "@body('List_blobs')?['value']",
+                                "where": "@greater(item()?['LastModified'], addMinutes(utcNow(), -11))"
+                            }
+                        },
                         "For_each": {
-                            "foreach": "@body('List_blobs')?['value']",
+                            "foreach": "@body('Filter_array')",
                             "actions": {
                                 "Compose": {
                                     "runAfter": {
@@ -197,7 +189,7 @@
                                             }
                                         },
                                         "method": "get",
-                                        "path": "/datasets/default/files/@{encodeURIComponent(encodeURIComponent(items('For_each')?['FileLocator']))}/content",
+                                        "path": "/datasets/default/files/@{encodeURIComponent(encodeURIComponent(items('For_each')?['Path']))}/content",
                                         "queries": {
                                             "inferContentType": true
                                         }
@@ -205,7 +197,7 @@
                                 }
                             },
                             "runAfter": {
-                                "List_blobs": [
+                                "Filter_array": [
                                     "Succeeded"
                                 ]
                             },
@@ -214,7 +206,7 @@
                         "List_blobs": {
                             "runAfter": {},
                             "metadata": {
-                                "JTJmdGVzdDEyMyUyZmxvZ3MlMmY=": "/endpoint/document/"
+				"JTJmdGVzdDEyMyUyZmxvZ3MlMmY=": "/endpoint/document/"
                             },
                             "type": "ApiConnection",
                             "inputs": {
@@ -244,7 +236,7 @@
                             },
                             "sharepointonline": {
 				"connectionId": "[resourceId('Microsoft.Web/connections', parameters('connections_sharepointonline_2_externalid'))]",
-                                "connectionName": "sharepointonline-2",
+                                "connectionName": "sharepointonline",
                                 "id": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Web/locations/', resourceGroup().location, '/managedApis/sharepointonline')]"
                             }
                         }
