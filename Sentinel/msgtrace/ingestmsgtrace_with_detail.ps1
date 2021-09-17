@@ -14,8 +14,7 @@ $LogType = $env:customLogName
 $TimeStampField = (Get-Date)
 
 # Create the function to create the authorization signature
-Function Build-Signature ($customerId, $sharedKey, $date, $contentLength, $method, $contentType, $resource)
-{
+Function Build-Signature ($customerId, $sharedKey, $date, $contentLength, $method, $contentType, $resource) {
     $xHeaders = "x-ms-date:" + $date
     $stringToHash = $method + "`n" + $contentLength + "`n" + $contentType + "`n" + $xHeaders + "`n" + $resource
 
@@ -26,13 +25,12 @@ Function Build-Signature ($customerId, $sharedKey, $date, $contentLength, $metho
     $sha256.Key = $keyBytes
     $calculatedHash = $sha256.ComputeHash($bytesToHash)
     $encodedHash = [Convert]::ToBase64String($calculatedHash)
-    $authorization = 'SharedKey {0}:{1}' -f $customerId,$encodedHash
+    $authorization = 'SharedKey {0}:{1}' -f $customerId, $encodedHash
     return $authorization
 }
 
 # Create the function to create and post the request
-Function Post-LogAnalyticsData($customerId, $sharedKey, $body, $logType)
-{
+Function Post-LogAnalyticsData($customerId, $sharedKey, $body, $logType) {
     $method = "POST"
     $contentType = "application/json"
     $resource = "/api/logs"
@@ -49,11 +47,11 @@ Function Post-LogAnalyticsData($customerId, $sharedKey, $body, $logType)
     $uri = "https://" + $customerId + ".ods.opinsights.azure.com" + $resource + "?api-version=2016-04-01"
 
     $headers = @{
-        "Authorization" = $signature;
-        "Log-Type" = $logType;
-        "x-ms-date" = $rfc1123date;
+        "Authorization"        = $signature;
+        "Log-Type"             = $logType;
+        "x-ms-date"            = $rfc1123date;
         "time-generated-field" = $TimeStampField;
-#        "x-ms-AzureResourceId" = $resourceId;
+        #        "x-ms-AzureResourceId" = $resourceId;
     }
 
     $response = Invoke-WebRequest -Uri $uri -Method $method -ContentType $contentType -Headers $headers -Body $body -UseBasicParsing
@@ -67,13 +65,13 @@ Function Post-LogAnalyticsData($customerId, $sharedKey, $body, $logType)
 $expass = $env:expass
 $exuser = $env:exuser
 $password = ConvertTo-SecureString $expass -AsPlainText -Force
-$credentials=New-Object -TypeName System.Management.Automation.PSCredential ($exuser, $password)
+$credentials = New-Object -TypeName System.Management.Automation.PSCredential ($exuser, $password)
 
 if ($credentials) {
-$session = New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri https://outlook.office365.com/PowerShell-LiveId?BasicAuthToOAuthConversion=true -Credential $Credentials -Authentication Basic -AllowRedirection
-                   }
+    $session = New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri https://outlook.office365.com/PowerShell-LiveId?BasicAuthToOAuthConversion=true -Credential $Credentials -Authentication Basic -AllowRedirection
+}
 
-if ($session) {Import-PSSession $session -CommandName Get-MessageTrace,Get-MessageTraceDetail  -AllowClobber -DisableNameChecking}
+if ($session) { Import-PSSession $session -CommandName Get-MessageTrace, Get-MessageTraceDetail  -AllowClobber -DisableNameChecking }
 
 #This sets the start and stop time, $tracker is read from the last time the function was run. (It will fail on the first run.)
 $tracker = "D:\home\timetracker.log" # change to location of choise this is the root.
@@ -86,39 +84,41 @@ $storedTime = Get-content $Tracker
 #Run the message trace
 
 #Store the information in loganalytics
- $pageSize = 5000 
- $page = 1
- $runs = 1
+$pageSize = 5000 
+$page = 1
+$runs = 1
               
-        while ($runs -ge 1) { 
-                $runs
-                $messagetrace = Get-MessageTrace -EndDate $startTime  -startdate $storedTime -page $page -pagesize $pagesize
+while ($runs -ge 1) { 
+    $runs
+    $messagetrace = Get-MessageTrace -EndDate $startTime  -startdate $storedTime -page $page -pagesize $pagesize
 
-           if (($runs -eq 1) -and($messagetrace)) {$storedtime = $messagetrace[0].received}
+    if (($runs -eq 1) -and ($messagetrace)) { $storedtime = $messagetrace[0].received }
                       
-           if ($messagetrace.count -gt 0)   {
+    if ($messagetrace.count -gt 0) {
 
-                    $messagetrace_detail_array = @();
-                    foreach($elem in $messagetrace){
-                        $messagetrace_detail = Get-MessageTraceDetail -MessageTraceId $elem.MessageTraceId -RecipientAddress $elem.RecipientAddress
-                        foreach ($detail_elem in $messagetrace_detail) {
-                            $elem | Add-Member -MemberType NoteProperty -Name Event -Value $detail_elem.Event
-                            $elem | Add-Member -MemberType NoteProperty -Name Action -Value $detail_elem.Action
-                            $elem | Add-Member -MemberType NoteProperty -Name Detail -Value $detail_elem.Detail
-                            $elem | Add-Member -MemberType NoteProperty -Name "Data" -Value $detail_elem.Data
-                            $messagetrace_detail_array += $elem
-                        }
+        $messagetrace_detail_array = @();
+        foreach ($elem in $messagetrace) {
+            $messagetrace_detail = Get-MessageTraceDetail -MessageTraceId $elem.MessageTraceId -RecipientAddress $elem.RecipientAddress
+            foreach ($detail_elem in $messagetrace_detail) {
+                $elem | Add-Member -MemberType NoteProperty -Name Event -Value $detail_elem.Event -Force
+                $elem | Add-Member -MemberType NoteProperty -Name Action -Value $detail_elem.Action -Force
+                $elem | Add-Member -MemberType NoteProperty -Name Detail -Value $detail_elem.Detail -Force
+                $elem | Add-Member -MemberType NoteProperty -Name "Data" -Value $detail_elem.Data -Force
+                $messagetrace_detail_array += $elem
+            }
+        }
                     
-                    $pagedjson = $messagetrace_detail_array | convertTo-Json
-                    Post-LogAnalyticsData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($pagedjson)) -logType $logType                          
-                                      }
-                $runs ++                      
-                $page ++
-                if ($messagetrace.count -ne $pageSize) { $runs = 0 }
+        $pagedjson = $messagetrace_detail_array | convertTo-Json
+        Post-LogAnalyticsData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($pagedjson)) -logType $logType                          
+        
+        $runs ++                      
+        $page ++
+        if ($messagetrace.count -ne $pageSize) { $runs = 0 }
                                      
-                Clear-Variable messagetrace
+        Clear-Variable messagetrace
                                                 
-                                    }   
+    }   
+}
 
 #Update stored time and remove session
 out-file -FilePath $Tracker -NoNewline -InputObject (get-date $storedTime).AddMilliseconds(1).ToString("yyyy-MM-ddTHH:mm:ss.fffZ") 
