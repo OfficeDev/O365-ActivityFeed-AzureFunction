@@ -101,11 +101,13 @@ $storedTime = Get-content $Tracker
                     $messagetrace_detail_array = @();
                     foreach($elem in $messagetrace){
                         $messagetrace_detail = Get-MessageTraceDetail -MessageTraceId $elem.MessageTraceId -RecipientAddress $elem.RecipientAddress
-                        foreach($param_name in $messagetrace_detail.psobject.Properties.Name) {
-                            $elem | Add-Member -MemberType NoteProperty -Name $param_name -Value $messagetrace_detail.$param_name
+                        foreach ($detail_elem in $messagetrace_detail) {
+                            $elem | Add-Member -MemberType NoteProperty -Name Event -Value $detail_elem.Event
+                            $elem | Add-Member -MemberType NoteProperty -Name Action -Value $detail_elem.Action
+                            $elem | Add-Member -MemberType NoteProperty -Name Detail -Value $detail_elem.Detail
+                            $elem | Add-Member -MemberType NoteProperty -Name "Data" -Value $detail_elem.Data
+                            $messagetrace_detail_array += $elem
                         }
-                        $messagetrace_detail_array += $elem
-                    }
                     
                     $pagedjson = $messagetrace_detail_array | convertTo-Json
                     Post-LogAnalyticsData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($pagedjson)) -logType $logType                          
