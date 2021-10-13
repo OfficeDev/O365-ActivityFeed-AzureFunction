@@ -55,7 +55,7 @@ If ($adjustTime.TotalHours -gt 24) {
         $pagedReq = $rawRef.Headers.NextPageUri
             while ($pageTracker -ne $false)     
              {   
-                    $pageuri = $pagedReq + "?PublisherIdentifier=" + $TenantGUID  
+                     $pageuri = "$pagedReq&PublisherIdentifier=$TenantGUID" 
         	$CurrentPage = Invoke-WebRequest -Headers $headerParams -Uri $pageuri -UseBasicParsing
             $pageArray += $CurrentPage
 
