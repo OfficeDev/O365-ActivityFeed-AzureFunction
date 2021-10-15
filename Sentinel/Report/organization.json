@@ -169,7 +169,6 @@
             "resourceType": "microsoft.operationalinsights/workspaces"
           },
           {
-            "id": "e2b700d7-d218-47db-9521-52176ed43005",
             "version": "KqlParameterItem/1.0",
             "name": "Location",
             "type": 2,
@@ -192,7 +191,8 @@
             },
             "timeContextFromParameter": "TimeRange",
             "queryType": 0,
-            "resourceType": "microsoft.operationalinsights/workspaces"
+            "resourceType": "microsoft.operationalinsights/workspaces",
+            "id": "fcf37b5e-d51d-46e8-b782-4b8b3c661188"
           }
         ],
         "style": "pills",
@@ -212,7 +212,7 @@
       "type": 3,
       "content": {
         "version": "KqlItem/1.0",
-        "query": "let data = O365DLP_CL\r\n| where \"{Users:lable}\"==\"All\" or SharePointMetaData_From_s in ({Users})\r\n| where \"{Location:Label}\"==\"All\" or usageLocation_s in ({Location})\r\n| where \"{Location:Policy}\"==\"All\" or usageLocation_s in ({Policy})\r\n| where \"{Department:Label}\"==\"All\" or department_s in ({Department});\r\ndata\r\n| summarize Count = count() by department_s\r\n| join kind = fullouter (datatable(department_s:string)['Sales & Marketing', 'Legal']) on department_s\r\n| project department_s = iff(department_s == '', department_s1, department_s), Count = iff(department_s == '', 0, Count)\r\n| join kind = inner (data\r\n    | make-series Trend = count() default = 0 on CreationTime_t from {TimeRange:start} to {TimeRange:end} step {TimeRange:grain} by department_s)\r\n    on department_s\r\n| project-away department_s1, CreationTime_t\r\n| extend department_s = department_s\r\n| union (\r\n    data \r\n    | summarize Count = count() \r\n    | extend jkey = 1\r\n    | join kind=inner (data\r\n        | make-series Trend = count() default = 0 on CreationTime_t from {TimeRange:start} to {TimeRange:end} step {TimeRange:grain}\r\n        | extend jkey = 1) on jkey\r\n            | extend department_s = 'All', department_ss = '*'    \r\n)\r\n",
+        "query": "let data = O365DLP_CL\r\n| extend department_s = iff(isempty(department_s), \"External\", department_s)\r\n| where \"{Users:lable}\"==\"All\" or SharePointMetaData_From_s in ({Users})\r\n| where \"{Location:Label}\"==\"All\" or usageLocation_s in ({Location})\r\n| where \"{Location:Policy}\"==\"All\" or usageLocation_s in ({Policy})\r\n| where \"{Department:Label}\"==\"All\" or department_s in ({Department});\r\ndata\r\n| summarize Count = count() by department_s\r\n| join kind = fullouter (datatable(department_s:string)['Sales & Marketing', 'Legal']) on department_s\r\n| project department_s = iff(department_s == '', department_s1, department_s), Count = iff(department_s == '', 0, Count)\r\n| join kind = inner (data\r\n    | make-series Trend = count() default = 0 on CreationTime_t from {TimeRange:start} to {TimeRange:end} step {TimeRange:grain} by department_s)\r\n    on department_s\r\n| project-away department_s1, CreationTime_t\r\n| extend department_s = department_s\r\n| union (\r\n    data \r\n    | summarize Count = count() \r\n    | extend jkey = 1\r\n    | join kind=inner (data\r\n        | make-series Trend = count() default = 0 on CreationTime_t from {TimeRange:start} to {TimeRange:end} step {TimeRange:grain}\r\n        | extend jkey = 1) on jkey\r\n            | extend department_s = 'All', department_ss = '*'    \r\n)\r\n",
         "size": 4,
         "timeContext": {
           "durationMs": 7776000000
@@ -266,8 +266,8 @@
       "type": 3,
       "content": {
         "version": "KqlItem/1.0",
-        "query": "let data = O365DLP_CL\r\n| extend Department = department_s\r\n| extend manager = manager_s\r\n| extend UserId = tolower(iff(isempty(SharePointMetaData_From_s), ExchangeMetaData_From_s, SharePointMetaData_From_s)) \r\n| where Department != \"\"\r\n| where \"{Users:lable}\"==\"All\" or UserId in ({Users})\r\n| where \"{Location:Label}\"==\"All\" or usageLocation_s in ({Location})\r\n| where \"{Department:Label}\"==\"All\" or department_s in ({Department});\r\nlet appData = data\r\n| summarize TotalCount = count() by Department\r\n| join kind=inner (data\r\n    | make-series Trend = count() default = 0 on TimeGenerated in range({TimeRange:start}, {TimeRange:end}, {TimeRange:grain}) by Department\r\n    | project-away TimeGenerated) on Department\r\n| order by TotalCount desc, Department asc\r\n| project Department, TotalCount, Trend\r\n| serialize Id = row_number();\r\ndata\r\n| summarize TotalCount = count() by UserId , Department, manager, usageLocation_s\r\n| join kind=inner (data\r\n    | make-series Trend = count() default = 0 on TimeGenerated in range({TimeRange:start}, {TimeRange:end}, {TimeRange:grain}) by Department, UserId, manager, usageLocation_s\r\n    | project-away TimeGenerated) on Department, UserId, manager, usageLocation_s\r\n| order by TotalCount desc, Department asc\r\n| project Department, UserId, TotalCount, Trend, manager, usageLocation_s\r\n| serialize Id = row_number(1000000)\r\n| join kind=inner (appData) on Department\r\n| project Id, Name = UserId, Type = 'UserId', ['Department Count'] = TotalCount, Trend,  ParentId = Id1, Manager = manager, UsageLocation = usageLocation_s\r\n| union (appData \r\n    | project Id, Name = Department, Type = 'Department', ['Department Count'] = TotalCount,  Trend)\r\n| order by ['Department Count'] desc, Name asc",
-        "size": 1,
+        "query": "let data = O365DLP_CL\r\n| extend Department = department_s\r\n| extend manager = manager_s\r\n| extend UserId = tolower(iff(isempty(SharePointMetaData_From_s), ExchangeMetaData_From_s, SharePointMetaData_From_s)) \r\n| extend Policy = tostring(parse_json(PolicyDetails_s)[0].PolicyName)\r\n| where Department != \"\"\r\n| where \"{Users:lable}\"==\"All\" or UserId in ({Users})\r\n| where \"{Location:Label}\"==\"All\" or usageLocation_s in ({Location})\r\n| where \"{Department:Label}\"==\"All\" or department_s in ({Department});\r\nlet appData = data\r\n| summarize TotalCount = count() by Department\r\n| join kind=inner (data\r\n    | make-series Trend = count() default = 0 on TimeGenerated in range({TimeRange:start}, {TimeRange:end}, {TimeRange:grain}) by Department\r\n    | project-away TimeGenerated) on Department\r\n| order by TotalCount desc, Department asc\r\n| project Department, TotalCount, Trend\r\n| serialize Id = row_number();\r\ndata\r\n| summarize TotalCount = count() by UserId , Department, manager, usageLocation_s,Policy\r\n| join kind=inner (data\r\n    | make-series Trend = count() default = 0 on TimeGenerated in range({TimeRange:start}, {TimeRange:end}, {TimeRange:grain}) by Department, UserId, manager, usageLocation_s,Policy\r\n    | project-away TimeGenerated) on Department, UserId, manager, usageLocation_s\r\n| order by TotalCount desc, Department asc\r\n| project Department, UserId, TotalCount, Trend, manager, usageLocation_s, Policy\r\n| serialize Id = row_number(1000000)\r\n| join kind=inner (appData) on Department\r\n| project Id, Name = UserId, Type = 'UserId', ['Department Count'] = TotalCount, Trend,  ParentId = Id1, Manager = manager, UsageLocation = usageLocation_s, Policy = Policy\r\n| union (appData \r\n    | project Id, Name = Department, Type = 'Department', ['Department Count'] = TotalCount,  Trend)\r\n| order by ['Department Count'] desc, Name asc",
+        "size": 2,
         "showAnalytics": true,
         "timeContext": {
           "durationMs": 7776000000
