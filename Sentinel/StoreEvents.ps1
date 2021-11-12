@@ -159,16 +159,28 @@ $headerParamsG  = @{'Authorization'="$($oauthG.token_type) $($oauthG.access_toke
 
 Foreach ($user in $records) {
 #Capture detection entries that are too long for LA to store
-if (($user.PolicyDetails.rules.ConditionsMatched.SensitiveInformation.SensitiveInformationDetections.ResultsTruncated -eq "true") -or ($user.PolicyDetails.rules.ConditionsMatched.SensitiveInformation.SensitiveInformationDetections.Count -gt 150)) {
-$detectedrows = $user.PolicyDetails.rules.ConditionsMatched.SensitiveInformation.SensitiveInformationDetections.DetectedValues.count
-do      {
-    $increment = [math]::truncate($detectedrows/2 )
-    $detected = $user.PolicyDetails.rules.ConditionsMatched.SensitiveInformation.SensitiveInformationDetections.DetectedValues[0..$increment]
-    $detectedcount = $detected.value | Measure-object -Character
-    $detectedrows = [math]::truncate($increment*1.5)
-        } until ($detectedcount.Characters -le "10240" )
-            $user.PolicyDetails.rules.ConditionsMatched.SensitiveInformation.SensitiveInformationDetections.DetectedValues = $detected
-                                                                                                                                  }
+if (($user.PolicyDetails.rules.ConditionsMatched.SensitiveInformation.SensitiveInformationDetections.ResultsTruncated -eq "true") -or ($user.PolicyDetails.rules.ConditionsMatched.SensitiveInformation.SensitiveInformationDetections.DetectedValues.Count -gt 100)) {
+       
+ while (($user.PolicyDetails.rules.ConditionsMatched.SensitiveInformation.SensitiveInformationDetections |convertto-json -depth 20| measure-object -Character).characters -gt "29000") {
+    $sit = $user.PolicyDetails.rules.ConditionsMatched.SensitiveInformation.SensitiveInformationDetections.count 
+    for ($i = 0; $i -lt $SIT) {
+    $i
+        $detectedrows = $user.PolicyDetails.rules.ConditionsMatched.SensitiveInformation.SensitiveInformationDetections[$i].DetectedValues.count
+        do      {
+
+            $dec = 1
+            if ($detectedrows -gt 30) {$dec = 2}
+            $increment = [math]::truncate($detectedrows/$dec)
+            $detected = $user.PolicyDetails.rules.ConditionsMatched.SensitiveInformation.SensitiveInformationDetections[$i].DetectedValues[0..$increment]
+            $detectedcount = $detected.value | Measure-object -Character
+            $detectedrows = [math]::truncate($increment*1.5)
+                } until ($detectedcount.Characters -le "10240" )
+                    $user.PolicyDetails.rules.ConditionsMatched.SensitiveInformation.SensitiveInformationDetections[$i].DetectedValues = $detected
+                    $user.PolicyDetails.rules.ConditionsMatched.SensitiveInformation.SensitiveInformationDetections[$i].DetectedValues.count                                                                                                        
+                    $i++
+                   }
+                                                                                                                                      }
+                                                                                                                                    }
 
 #Exchange and Teams upload data process
 $user.workload
