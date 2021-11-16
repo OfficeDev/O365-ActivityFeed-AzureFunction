@@ -1,84 +1,93 @@
-{
+   {
   "etag": "\"ruleGuid\"",
   "kind": "Scheduled",
-  "properties": {
-    "incidentConfiguration":  {
-                                  "createIncident":  true,
-                                  "groupingConfiguration":  {
-                                                                "enabled":  true,
-                                                                "reopenClosedIncident":  false,
-                                                                "lookbackDuration":  "PT45M",
-                                                                "matchingMethod":  "Selected",
-                                                                        "groupByEntities":  [
-                                                                                               "Account"
-                                                                                            ],
-                                                                        "groupByAlertDetails":  [
+    "properties":  {
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  true,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT45M",
+                                                                                   "matchingMethod":  "Selected",
+                                                                                   "groupByEntities":  [
+                                                                                                           "Account"
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
 
-                                                                                                ],
-                                                                        "groupByCustomDetails":   [
-                                                                                                "User"
-                                                                                                  ]
-                                                            }
-                              },
-    "customDetails":  {
-                          "User":  "Account",
-                          "Manager":  "manager_s",
-                          "SensitiveData":  "SensitiveInformationTypeName",
-                          "DocumentorSubject":  "SubjectDoc",
-                          "DataShared":  "Detected",
-                          "Actions":  "Actions",
-                          "NumberofMatches":  "MatchCount",
-                          "WorkloadType":  "Workload_s",
-                          "Department":  "department_s"
-                      },
-    "entityMappings":  [
-                           {
-                               "entityType":  "Account",
-                               "fieldMappings":  [
-                                                     {
-                                                         "identifier":  "AadUserId",
-                                                         "columnName":  "Account"
-                                                     }
-                                                 ]
-                           },
-                           {
-                               "entityType":  "MailMessage",
-                               "fieldMappings":  [
-                                                     {
-                                                         "identifier":  "InternetMessageId",
-                                                         "columnName":  "ExchangeMetaData_MessageID_s"
-                                                     },
-                                                     {
-                                                         "identifier":  "Recipient",
-                                                         "columnName":  "Recipients"
-                                                     }
-                                                 ]
-                           },
-                           {
-                               "entityType":  "File",
-                               "fieldMappings":  [
-                                                     {
-                                                         "identifier":  "Name",
-                                                         "columnName":  "SubjectDoc"
-                                                     },
-                                                     {
-                                                         "identifier":  "Directory",
-                                                         "columnName":  "linkoriginal"
-                                                     }
-                                                 ]
-                           }
-                       ],
-    "queryFrequency":  "PT5M",
-    "queryPeriod":  "PT5M",
-    "triggerOperator":  "GreaterThan",
-    "triggerThreshold":  0,
-    "eventGroupingSettings":  {
-                                  "aggregationKind":  "AlertPerResult"
-                              },
-    "severity":  "UpdateSeverity",
-    "query":  "O365DLP_CL\r\n| where parse_json(PolicyDetails_s)[0].PolicyName == \"DLPPOLICY\"\r\n| where parse_json(tostring(parse_json(PolicyDetails_s)[0].Rules))[0].Severity == \"UpdateSeverity\"\r\n| extend Detected = tostring(parse_json(tostring(parse_json(tostring(parse_json(tostring(parse_json(tostring(parse_json(tostring(parse_json(PolicyDetails_s)[0].Rules))[0].ConditionsMatched)).SensitiveInformation))[0].SensitiveInformationDetections)).DetectedValues)))\r\n| extend SensitiveInformationTypeName = tostring(parse_json(tostring(parse_json(tostring(parse_json(tostring(parse_json(PolicyDetails_s)[0].Rules))[0].ConditionsMatched)).SensitiveInformation))[0].SensitiveInformationTypeName) \r\n| extend MessageId = ObjectId_s\r\n| extend linkoriginal = originalContent_s\r\n| extend Actions = tostring(parse_json(tostring(parse_json(tostring(parse_json(PolicyDetails_s)[0].Rules))[0].Actions)))\r\n| extend linkoriginal = iff(isempty(SharePointMetaData_FilePathUrl_s), originalContent_s, SharePointMetaData_FilePathUrl_s) \r\n| extend Account = iff(isempty(SharePointMetaData_From_s), ExchangeMetaData_From_s, SharePointMetaData_From_s) \r\n| 
-extend SubjectDoc = iff(isempty(SharePointMetaData_FileName_s), ExchangeMetaData_Subject_s, SharePointMetaData_FileName_s) \r\n| extend Recipients = ExchangeMetaData_To_s\r\n| extend Policy = tostring(parse_json(PolicyDetails_s)[0].PolicyName)\r\n| extend MatchCount = tostring(parse_json(tostring(parse_json(tostring(parse_json(tostring(parse_json(PolicyDetails_s)[0].Rules))[0].ConditionsMatched)).SensitiveInformation))[0].Count)\r\n| extend MatchConfidence = tostring(parse_json(tostring(parse_json(tostring(parse_json(tostring(parse_json(PolicyDetails_s)[0].Rules))[0].ConditionsMatched)).SensitiveInformation))[0].Confidence)\r\n| project Account ,Workload_s,SensitiveInformationTypeName, Detected, linkoriginal, Recipients, SubjectDoc, TimeGenerated, manager_s,department_s,Actions,Policy,MatchConfidence,MatchCount,ExchangeMetaData_MessageID_s",
-    "suppressionDuration":  "PT2H",
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+                                                                                                                "User"
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "customDetails":  {
+                                             "User":  "Account",
+                                             "SensitiveData":  "SensitiveInformationTypeName",
+                                             "DocumentorSubject":  "SubjectDoc",
+                                             "DataShared":  "Detected",
+                                             "Actions":  "Actions",
+                                             "Override":  "ExceptionInfo_Reason_s",
+                                             "Override_Reason":  "ExceptionInfo_Justification_s",
+                                             "NumberofMatches":  "MatchCount",
+                                             "WorkloadType":  "Workload_s",
+                                             "Manager":  "manager_s",
+                                             "Department":  "department_s"
+                                         },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Name",
+                                                                            "columnName":  "accountsplit_0"
+                                                                        },
+                                                                        {
+                                                                            "identifier":  "UPNSuffix",
+                                                                            "columnName":  "accountsplit_1"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "MailMessage",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "InternetMessageId",
+                                                                            "columnName":  "ExchangeMetaData_MessageID_s"
+                                                                        },
+                                                                        {
+                                                                            "identifier":  "Recipient",
+                                                                            "columnName":  "Recipients"
+                                                                        },
+                                                                        {
+                                                                            "identifier":  "Sender",
+                                                                            "columnName":  "UserId_s"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "File",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Name",
+                                                                            "columnName":  "SubjectDoc"
+                                                                        },
+                                                                        {
+                                                                            "identifier":  "Directory",
+                                                                            "columnName":  "linkoriginal"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "queryFrequency":  "PT5M",
+                       "queryPeriod":  "PT5M",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "AlertPerResult"
+                                                 },
+                       "severity": "UpdateSeverity",
+                       "query":  "O365DLP_CL\r\n| where parse_json(PolicyDetails_s)[0].PolicyName == \"DLPPOLICY\"\r\n| where parse_json(tostring(parse_json(PolicyDetails_s)[0].Rules))[0].Severity == \"UpdateSeverity\"\r\n| extend Detected = tostring(parse_json(tostring(parse_json(tostring(parse_json(tostring(parse_json(tostring(parse_json(tostring(parse_json(PolicyDetails_s)[0].Rules))[0].ConditionsMatched)).SensitiveInformation))[0].SensitiveInformationDetections)).DetectedValues)))\r\n| extend SensitiveInformationTypeName = tostring(parse_json(tostring(parse_json(tostring(parse_json(tostring(parse_json(PolicyDetails_s)[0].Rules))[0].ConditionsMatched)).SensitiveInformation))[0].SensitiveInformationTypeName) \r\n| extend MessageId = ObjectId_s\r\n| extend linkoriginal = originalContent_s\r\n| extend Actions = tostring(parse_json(tostring(parse_json(tostring(parse_json(PolicyDetails_s)[0].Rules))[0].Actions)))\r\n| extend linkoriginal = iff(isempty(SharePointMetaData_FilePathUrl_s), originalContent_s, SharePointMetaData_FilePathUrl_s) \r\n| extend Account = iff(isempty(SharePointMetaData_From_s), ExchangeMetaData_From_s, SharePointMetaData_From_s) \r\n|  extend SubjectDoc = iff(isempty(SharePointMetaData_FileName_s), ExchangeMetaData_Subject_s, SharePointMetaData_FileName_s) \r\n| extend Recipients = ExchangeMetaData_To_s\r\n| extend Policy = tostring(parse_json(PolicyDetails_s)[0].PolicyName)\r\n| extend MatchCount = tostring(parse_json(tostring(parse_json(tostring(parse_json(tostring(parse_json(PolicyDetails_s)[0].Rules))[0].ConditionsMatched)).SensitiveInformation))[0].Count)\r\n| extend MatchConfidence = tostring(parse_json(tostring(parse_json(tostring(parse_json(tostring(parse_json(PolicyDetails_s)[0].Rules))[0].ConditionsMatched)).SensitiveInformation))[0].Confidence)\r\n| extend accountsplit = split(UserId_s, \"@\")\r\n| project Account ,Workload_s,SensitiveInformationTypeName, Detected, linkoriginal, Recipients, SubjectDoc, TimeGenerated, manager_s,department_s,Actions,Policy,MatchConfidence,MatchCount,ExchangeMetaData_MessageID_s,ExceptionInfo_Justification_s,ExceptionInfo_Reason_s,accountsplit[0],accountsplit[1],UserId_s",
+                           "suppressionDuration":  "PT2H",
     "suppressionEnabled":  false,
     "tactics":  [
                     "Exfiltration"
