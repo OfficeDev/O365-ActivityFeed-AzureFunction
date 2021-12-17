@@ -52,7 +52,7 @@ If you happen to get hyphens in the csv header fields, remove the hyphens since 
    - .\importwatch.ps1 -csv C:\tmp\UserAccounts.csv -Watchlist UserAccounts -Workspace usinstance -errlog c:\wlupload.log
 
 ### Deploy the Label Statistics Workbook
-Deploy the workbook LabelStatistics.json in this repo by simply copying the code across to a new Azure Workbook. 
+Deploy the workbook Sensitivitylabels.json in this repo by simply copying the code across to a new Azure Workbook. 
 1. [Open] Workbooks from the Sentinel Workspace where you intend to install the workbooks / portal.azure.com
 2. [Click] "Add workbook" 
 3. When the New Workbook window open select edit, then select the Advanced Editor ([click] the </> icon )
