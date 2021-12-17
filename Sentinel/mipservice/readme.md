@@ -16,7 +16,7 @@ description: "This sample can be used to create MIP events in Sentinel."
 
 Use the endpointdlp preview steps to deploy the code. https://github.com/OfficeDev/O365-ActivityFeed-AzureFunction/tree/master/Sentinel/EndPointDLP_preview
 **During the deployment specify all content types in the template DLP.ALL,Audit.General,Audit.Exchange,Audit.SharePoint (Alt. after deployment under configuration)
-Replace STEP 5. by using the zip file in this repo. 
+Replace STEP 5. by using the zip file in this repo.**
 
 ### Prerequisites
 
@@ -44,7 +44,7 @@ Documentation for Watchlists https://docs.microsoft.com/en-us/azure/sentinel/wat
 If you happen to get hyphens in the csv header fields, remove the hyphens since the WL engine cannot process. 
 2. Create a new Microsoft Sentinel Watchlist call it **Sensitive**, set the ImmutableId as the index field.
 3. Create a new Microsoft Sentinel Watchlist call it MipMap, import the mipmap.csv file in this repo. (File to translate MIP operations)
-4. Create a new Microsoft Sentinel Watchlist call it UserAccounts, Import your account list, **for reporting to work well you need to include, userprincipalname,department,FullName,Title (The more detail you add the cooler you can make the report dashboard or any alerts)
+4. Create a new Microsoft Sentinel Watchlist call it UserAccounts, Import your account list, **for reporting to work well you need to include, userprincipalname,department,FullName,Title (The more detail you add the cooler you can make the report dashboard or any alerts)**
    - The Indexing field should be the UserPrincipalName, we use it as a key to enrich the items
    - You can start with a small csv file, for bulk uploading a lot of data please see importwatch.ps1 in this repo it works in PS and PS Core. It supports incremental uploads as well as updating existing objects in the list.
    - .\importwatch.ps1 -csv C:\tmp\UserAccounts.csv -Watchlist UserAccounts -Workspace usinstance -errlog c:\wlupload.log
