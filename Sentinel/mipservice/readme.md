@@ -35,7 +35,7 @@ Permissions needed for the app
      - ActivityFeed.ReadDlp   (Needed for detailed events)
     
 **Deployment of the code to the function**
-  * Download mipservice.zip from this repo
+  * Download mipservice.zip from this repo, the SHA256 hash is 9A8E886C9996157FFAFC21AF3661B1C243CAA1776B45B65FB914929C625FBCF3
   * Start to connect to Azure PowerShell Connect-AzAccout
   * Run Publish-AzWebApp -ResourceGroupName REPLACEWITHYOURRG -Name REPLACEWITHYOURAPPNAME -ArchivePath C:\YOURPATH\ipservice.zip  **Note:The names are case sensitive**
 
