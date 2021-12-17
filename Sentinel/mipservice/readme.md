@@ -15,8 +15,11 @@ description: "This sample can be used to create MIP events in Sentinel."
 # Ingesting Micrsoft MIP events to Sentinel
 
 Use the endpointdlp preview steps to deploy the code. https://github.com/OfficeDev/O365-ActivityFeed-AzureFunction/tree/master/Sentinel/EndPointDLP_preview
-**During the deployment specify all content types in the template DLP.ALL,Audit.General,Audit.Exchange,Audit.SharePoint (Alt. after deployment under configuration)
-Replace STEP 5. by using the zip file in this repo.**
+
+**During the deployment specify all content types in the dialog, deploy to Azure** 
+  - DLP.ALL,Audit.General,Audit.Exchange,Audit.SharePoint (Alt. after deployment under configuration of the Function App)
+
+**Replace STEP 5. by using the zip file in this repo.**
 
 ### Prerequisites
 
@@ -24,7 +27,6 @@ Replace STEP 5. by using the zip file in this repo.**
 - Ability to create an Azure Function App. 
 - A Sentinel Workspace and access to the Keys
 - You need permissions to make a new App registration. 
-- SharePoint Library if you want to utilize the ability to store full email content in SharePoint.
 
 ### Installing
 Permissions needed for the app
