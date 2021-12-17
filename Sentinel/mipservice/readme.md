@@ -51,8 +51,8 @@ If you happen to get hyphens in the csv header fields, remove the hyphens since 
 
 ### Deploy the Label Statistics Workbook
 Deploy the workbook LabelStatistics.json in this repo by simply copying the code across to a new Azure Workbook. 
-[Open] Workbooks from the Sentinel Workspace where you intend to install the workbooks / portal.azure.com
-[Click] "Add workbook"
-When the New Workbook window open select edit, then select the Advanced Editor ([click] the </> icon )
-Copy the text of the json template you are installing from this repository [paste] over any json that exists.
-[Click] save, select the appropriate location and name for the workbook.
+1. [Open] Workbooks from the Sentinel Workspace where you intend to install the workbooks / portal.azure.com
+2. [Click] "Add workbook" 
+3. When the New Workbook window open select edit, then select the Advanced Editor ([click] the </> icon )
+4. Copy the text of the json template you are installing from this repository [paste] over any json that exists.
+5. [Click] save, select the appropriate location and name for the workbook.
