@@ -1,0 +1,711 @@
+{
+  "version": "Notebook/1.0",
+  "items": [
+    {
+      "type": 9,
+      "content": {
+        "version": "KqlParameterItem/1.0",
+        "parameters": [
+          {
+            "id": "36a4172e-0e49-4884-b2a2-2281528a2ff4",
+            "version": "KqlParameterItem/1.0",
+            "name": "TimeRange",
+            "type": 4,
+            "isRequired": true,
+            "value": {
+              "durationMs": 7776000000
+            },
+            "typeSettings": {
+              "selectableValues": [
+                {
+                  "durationMs": 300000
+                },
+                {
+                  "durationMs": 900000
+                },
+                {
+                  "durationMs": 1800000
+                },
+                {
+                  "durationMs": 3600000
+                },
+                {
+                  "durationMs": 14400000
+                },
+                {
+                  "durationMs": 43200000
+                },
+                {
+                  "durationMs": 86400000
+                },
+                {
+                  "durationMs": 172800000
+                },
+                {
+                  "durationMs": 259200000
+                },
+                {
+                  "durationMs": 604800000
+                },
+                {
+                  "durationMs": 1209600000
+                },
+                {
+                  "durationMs": 2419200000
+                },
+                {
+                  "durationMs": 2592000000
+                },
+                {
+                  "durationMs": 5184000000
+                },
+                {
+                  "durationMs": 7776000000
+                }
+              ],
+              "allowCustom": true
+            }
+          },
+          {
+            "id": "4e1b6539-9788-43e2-a283-4891f33f1677",
+            "version": "KqlParameterItem/1.0",
+            "name": "Operations",
+            "type": 2,
+            "isRequired": true,
+            "multiSelect": true,
+            "quote": "'",
+            "delimiter": ",",
+            "query": "endpointdlp_CL\r\n| where Operation_s contains \"sensitivity\"\r\n| where Workload_s != \"SecurityComplianceCenter\"\r\n| summarize Count = count() by Operation_s\r\n| order by Count desc, Operation_s asc\r\n| project Value = Operation_s, Label = strcat(Operation_s, ' - ', Count)",
+            "value": [
+              "value::all"
+            ],
+            "typeSettings": {
+              "additionalResourceOptions": [
+                "value::all"
+              ],
+              "selectAllValue": "All",
+              "showDefault": false
+            },
+            "timeContext": {
+              "durationMs": 0
+            },
+            "timeContextFromParameter": "TimeRange",
+            "queryType": 0,
+            "resourceType": "microsoft.operationalinsights/workspaces"
+          },
+          {
+            "id": "e2b700d7-d218-47db-9521-52176ed43005",
+            "version": "KqlParameterItem/1.0",
+            "name": "Users",
+            "type": 2,
+            "isRequired": true,
+            "multiSelect": true,
+            "quote": "'",
+            "delimiter": ",",
+            "query": "O365DLP_CL\r\n| where Workload_s in ('Exchange', 'MicrosoftTeams')\r\n| where ExchangeMetaData_From_s != \"\"\r\n| summarize Count = count() by ExchangeMetaData_From_s\r\n| order by Count desc, ExchangeMetaData_From_s asc\r\n| project Value = ExchangeMetaData_From_s, Label = strcat(ExchangeMetaData_From_s, ' - ', Count)",
+            "value": [
+              "value::all"
+            ],
+            "typeSettings": {
+              "additionalResourceOptions": [
+                "value::all"
+              ],
+              "selectAllValue": "All"
+            },
+            "timeContext": {
+              "durationMs": 0
+            },
+            "timeContextFromParameter": "TimeRange",
+            "queryType": 0,
+            "resourceType": "microsoft.operationalinsights/workspaces"
+          },
+          {
+            "id": "fee19597-ebc1-4f26-bc82-1284e9111625",
+            "version": "KqlParameterItem/1.0",
+            "name": "Policy",
+            "type": 2,
+            "multiSelect": true,
+            "quote": "'",
+            "delimiter": ",",
+            "query": "let watchlist = (_GetWatchlist('Sensitive'));\r\nendpointdlp_CL\r\n| where Operation_s contains \"sensitivity\"\r\n| where Workload_s != \"SecurityComplianceCenter\"\r\n| extend label = iff(isempty(LabelId_g), SensitivityLabelEventData_SensitivityLabelId_g, LabelId_g)\r\n| join kind = inner \r\n ( \r\nwatchlist\r\n| extend label = tostring(ImmutableId)\r\n)\r\non label\r\n| summarize Count = count() by DisplayName\r\n| order by Count desc, DisplayName asc\r\n| project Value = DisplayName, Label = strcat(DisplayName, ' - ', Count)\r\n",
+            "value": [
+              "value::all"
+            ],
+            "typeSettings": {
+              "additionalResourceOptions": [
+                "value::all"
+              ],
+              "selectAllValue": "All",
+              "showDefault": false
+            },
+            "timeContext": {
+              "durationMs": 0
+            },
+            "timeContextFromParameter": "TimeRange",
+            "queryType": 0,
+            "resourceType": "microsoft.operationalinsights/workspaces"
+          }
+        ],
+        "style": "pills",
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces"
+      },
+      "name": "parameters - 1"
+    },
+    {
+      "type": 1,
+      "content": {
+        "json": "## **General Label Overview**"
+      },
+      "name": "text - 0"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "let watchlist = (_GetWatchlist('Sensitive'));\r\nlet data = (endpointdlp_CL\r\n| where Operation_s contains \"sensitivity\"\r\n| extend label = iff(isempty(LabelId_g), SensitivityLabelEventData_SensitivityLabelId_g, LabelId_g)\r\n| extend acct = iff(isempty(SharePointMetaData_FileOwner_s), ExchangeMetaData_From_s, SharePointMetaData_FileOwner_s)\r\n| extend UserId =iff(isempty(acct), SensitivityLabelEventData_SensitivityLabelOwnerEmail_s, acct)\r\n| join kind = inner \r\n ( \r\nwatchlist\r\n| extend label = tostring(ImmutableId)\r\n)\r\non label);\r\ndata\r\n| summarize Count = count() by Workload_s\r\n| join kind = fullouter (datatable(Workload_s:string)['Exchange', 'MicrosoftTeams']) on Workload_s\r\n| project Workload_s = iff(Workload_s == '', Workload_s1, Workload_s), Count = iff(Workload_s == '', 0, Count)\r\n| join kind = inner (data\r\n    | make-series Trend = count() default = 0 on CreationTime_t from {TimeRange:start} to {TimeRange:end} step {TimeRange:grain} by Workload_s)\r\n    on Workload_s\r\n| project-away Workload_s1, CreationTime_t\r\n| extend Workload_s = Workload_s\r\n| union (\r\n    data \r\n    | summarize Count = count() \r\n    | extend jkey = 1\r\n    | join kind=inner (data\r\n        | make-series Trend = count() default = 0 on CreationTime_t from {TimeRange:start} to {TimeRange:end} step {TimeRange:grain}\r\n        | extend jkey = 1) on jkey\r\n    | extend Workload_s = 'All', Workload_ss = '*'  \r\n)\r\n| order by Count desc\r\n| take 10\r\n",
+        "size": 4,
+        "timeContext": {
+          "durationMs": 7776000000
+        },
+        "timeContextFromParameter": "TimeRange",
+        "exportFieldName": "Workload_s",
+        "exportParameterName": "SelectedWorkload",
+        "exportDefaultValue": "All",
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces",
+        "visualization": "tiles",
+        "tileSettings": {
+          "titleContent": {
+            "columnMatch": "Workload_s",
+            "formatter": 1,
+            "formatOptions": {
+              "showIcon": true
+            }
+          },
+          "leftContent": {
+            "columnMatch": "Count",
+            "formatter": 12,
+            "formatOptions": {
+              "palette": "auto",
+              "showIcon": true
+            },
+            "numberFormat": {
+              "unit": 17,
+              "options": {
+                "maximumSignificantDigits": 3,
+                "maximumFractionDigits": 2
+              }
+            }
+          },
+          "secondaryContent": {
+            "columnMatch": "Trend",
+            "formatter": 9,
+            "formatOptions": {
+              "min": 0,
+              "palette": "coldHot",
+              "showIcon": true
+            }
+          },
+          "showBorder": false
+        }
+      },
+      "customWidth": "50",
+      "name": "query - 10"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "let watchlist = (_GetWatchlist('Sensitive'));\r\nlet watchlist2 = (_GetWatchlist('MipMap'));\r\nlet dlp= (endpointdlp_CL\r\n| where Operation_s contains \"sensitivity\"\r\n| extend label = iff(isempty(LabelId_g), SensitivityLabelEventData_SensitivityLabelId_g, LabelId_g)\r\n| extend acct = iff(isempty(SharePointMetaData_FileOwner_s), ExchangeMetaData_From_s, SharePointMetaData_FileOwner_s)\r\n| extend acct2 =iff(isempty(acct), SensitivityLabelEventData_SensitivityLabelOwnerEmail_s, acct)\r\n| extend UserId =iff(isempty(acct2),UserId_s, acct2)\r\n| extend File1 = iff(isempty(SharePointMetaData_FilePathUrl_s), ItemName_s, SharePointMetaData_FilePathUrl_s)\r\n| extend FileSubject = iff(isempty(File1), ObjectId_s, File1)\r\n| extend Type = iff(SensitivityLabelEventData_ActionSource_d != \"\",\"ActionSource\",\"\")\r\n| extend Value = iff(SensitivityLabelEventData_ActionSource_d != \"\",toint(SensitivityLabelEventData_ActionSource_d),dynamic(\"\"))\r\n| extend Type2 = iff(SensitivityLabelEventData_LabelEventType_d != \"\",\"LabelEventType\",\"\")\r\n| extend Value2 = iff(SensitivityLabelEventData_LabelEventType_d != \"\",toint(SensitivityLabelEventData_LabelEventType_d),dynamic(\"\"))\r\n| extend Type3 = iff(TargetLocation_d != \"\",\"LocationType\",\"\")\r\n| extend Value3 = iff(TargetLocation_d != \"\",toint(TargetLocation_d),dynamic(\"\"))\r\n| extend old1 = tostring(SensitivityLabelEventData_OldSensitivityLabelId_g)\r\n);\r\nlet data = (dlp\r\n| join kind = inner\r\n ( \r\nwatchlist\r\n| extend label = tostring(ImmutableId)\r\n)\r\non label\r\n| join kind = leftouter   \r\n(\r\nwatchlist2 \r\n| extend Value = toint(SearchKey)\r\n| extend Type = tostring(Type)\r\n)\r\non Type,Value\r\n| extend ActionSource = Name\r\n| join kind = leftouter  \r\n(\r\nwatchlist2 \r\n| extend Value2 = toint(SearchKey)\r\n| extend Type2 = tostring(Type)\r\n)\r\non Type2,Value2\r\n| join kind = leftouter   \r\n(\r\nwatchlist2 \r\n| extend Value3 = toint(SearchKey)\r\n| extend Type3 = tostring(Type)\r\n)\r\non Type3,Value3\r\n| join kind = leftouter\r\n ( \r\nwatchlist\r\n| extend old1 = tostring(ImmutableId)\r\n)\r\non old1\r\n| extend label = DisplayName\r\n| extend oldlabel = DisplayName1\r\n| extend ActionSource = Name\r\n| extend LabelEventType =Name1\r\n| extend LocationType =Name2\r\n);\r\ndata\r\n| where LocationType != \"\"\r\n| summarize Count = count() by LocationType\r\n| join kind = fullouter (datatable(LocationType:string)['Exchange', 'MicrosoftTeams']) on LocationType\r\n| project LocationType = iff(LocationType == '', LocationType1, LocationType), Count = iff(LocationType == '', 0, Count)\r\n| join kind = inner (data\r\n    | make-series Trend = count() default = 0 on CreationTime_t from {TimeRange:start} to {TimeRange:end} step {TimeRange:grain} by LocationType)\r\n    on LocationType\r\n| project-away LocationType1, CreationTime_t\r\n| extend LocationType = LocationType\r\n| union (\r\n    data \r\n    | summarize Count = count() \r\n    | extend jkey = 1\r\n    | join kind=inner (data\r\n        | make-series Trend = count() default = 0 on CreationTime_t from {TimeRange:start} to {TimeRange:end} step {TimeRange:grain}\r\n        | extend jkey = 1) on jkey\r\n    | extend LocationType = 'All', LocationTypes = '*'  \r\n)\r\n| order by Count desc\r\n| take 10\r\n",
+        "size": 4,
+        "timeContext": {
+          "durationMs": 7776000000
+        },
+        "timeContextFromParameter": "TimeRange",
+        "exportFieldName": "Workload_s",
+        "exportParameterName": "SelectedWorkload",
+        "exportDefaultValue": "All",
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces",
+        "visualization": "tiles",
+        "tileSettings": {
+          "titleContent": {
+            "columnMatch": "LocationType",
+            "formatter": 1
+          },
+          "leftContent": {
+            "columnMatch": "Count",
+            "formatter": 12,
+            "formatOptions": {
+              "palette": "auto"
+            },
+            "numberFormat": {
+              "unit": 17,
+              "options": {
+                "maximumSignificantDigits": 3,
+                "maximumFractionDigits": 2
+              }
+            }
+          },
+          "secondaryContent": {
+            "columnMatch": "Trend",
+            "formatter": 9,
+            "formatOptions": {
+              "min": 0,
+              "palette": "coldHot"
+            }
+          },
+          "showBorder": false
+        }
+      },
+      "customWidth": "50",
+      "name": "query - 10 - Copy"
+    },
+    {
+      "type": 1,
+      "content": {
+        "json": "## Label Usage Overview"
+      },
+      "name": "text - 11"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "let watchlist = (_GetWatchlist('Sensitive'));\r\nlet data = (endpointdlp_CL\r\n| where Operation_s contains \"sensitivity\"\r\n| extend label = iff(isempty(LabelId_g), SensitivityLabelEventData_SensitivityLabelId_g, LabelId_g)\r\n| extend acct = iff(isempty(SharePointMetaData_FileOwner_s), ExchangeMetaData_From_s, SharePointMetaData_FileOwner_s)\r\n| extend UserId =iff(isempty(acct), SensitivityLabelEventData_SensitivityLabelOwnerEmail_s, acct)\r\n| join kind = inner \r\n ( \r\nwatchlist\r\n| extend label = tostring(ImmutableId)\r\n)\r\non label);\r\nlet appData = data\r\n| summarize TotalCount = count() by DisplayName\r\n| join kind=inner (data\r\n    | make-series Trend = count() default = 0 on TimeGenerated in range({TimeRange:start}, {TimeRange:end}, {TimeRange:grain}) by DisplayName\r\n    | project-away TimeGenerated) on DisplayName\r\n| order by TotalCount desc, DisplayName asc\r\n| project DisplayName, TotalCount, Trend\r\n| serialize Id = row_number();\r\ndata\r\n| summarize TotalCount = count() by UserId , DisplayName\r\n| join kind=inner (data\r\n    | make-series Trend = count() default = 0 on TimeGenerated in range({TimeRange:start}, {TimeRange:end}, {TimeRange:grain}) by DisplayName, UserId\r\n    | project-away TimeGenerated) on DisplayName, UserId\r\n| order by TotalCount desc, DisplayName asc\r\n| project DisplayName, UserId, TotalCount, Trend\r\n| serialize Id = row_number(1000000)\r\n| join kind=inner (appData) on DisplayName\r\n| project Id, Name = UserId, Type = 'UserId', ['DisplayName Count'] = TotalCount, Trend,  ParentId = Id1\r\n| union (appData \r\n    | project Id, Name = DisplayName, Type = 'DisplayName', ['DisplayName Count'] = TotalCount,  Trend)\r\n| order by ['DisplayName Count'] desc, Name asc",
+        "size": 1,
+        "showAnalytics": true,
+        "timeContext": {
+          "durationMs": 7776000000
+        },
+        "timeContextFromParameter": "TimeRange",
+        "exportParameterName": "OperationDetail",
+        "exportDefaultValue": "{ \"Name\":\"\", \"Type\":\"*\"}",
+        "showExportToExcel": true,
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces",
+        "gridSettings": {
+          "formatters": [
+            {
+              "columnMatch": "Id",
+              "formatter": 5,
+              "formatOptions": {
+                "showIcon": true
+              }
+            },
+            {
+              "columnMatch": "Operations Count",
+              "formatter": 8,
+              "formatOptions": {
+                "min": 0,
+                "palette": "orange",
+                "showIcon": true
+              }
+            },
+            {
+              "columnMatch": "Trend",
+              "formatter": 9,
+              "formatOptions": {
+                "min": 0,
+                "palette": "gray",
+                "showIcon": true
+              }
+            },
+            {
+              "columnMatch": "ParentId",
+              "formatter": 5,
+              "formatOptions": {
+                "showIcon": true
+              }
+            }
+          ],
+          "filter": true,
+          "hierarchySettings": {
+            "idColumn": "Id",
+            "parentColumn": "ParentId",
+            "treeType": 0,
+            "expanderColumn": "Name"
+          }
+        }
+      },
+      "name": "query - 3"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "let watchlist = (_GetWatchlist('Sensitive'));\r\nendpointdlp_CL\r\n| where Operation_s contains \"sensitivity\"\r\n| extend label = iff(isempty(LabelId_g), SensitivityLabelEventData_SensitivityLabelId_g, LabelId_g)\r\n| extend acct = iff(isempty(SharePointMetaData_FileOwner_s), ExchangeMetaData_From_s, SharePointMetaData_FileOwner_s)\r\n| extend UserId =iff(isempty(acct), SensitivityLabelEventData_SensitivityLabelOwnerEmail_s, acct)\r\n| join kind = inner \r\n ( \r\nwatchlist\r\n| extend label = tostring(ImmutableId)\r\n)\r\non label\r\n| summarize Amount = count() by DisplayName, bin_at(TimeGenerated, 1d, now()) \r\n| sort by Amount ",
+        "size": 1,
+        "showAnalytics": true,
+        "title": "Label Usage over time",
+        "timeContext": {
+          "durationMs": 7776000000
+        },
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces",
+        "visualization": "linechart"
+      },
+      "name": "query - 2"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "let details = dynamic({OperationDetail});\r\nendpointdlp_CL \r\n| where Operation_s notcontains \"Get-\"\r\n| where Operation_s notcontains \"New-\"\r\n| where Operation_s notcontains \"Set-\"\r\n| extend acct = iff(isempty(SharePointMetaData_FileOwner_s), ExchangeMetaData_From_s, SharePointMetaData_FileOwner_s)\r\n| extend acct2 =iff(isempty(acct), SensitivityLabelEventData_SensitivityLabelOwnerEmail_s, acct)\r\n| extend UserId =iff(isempty(acct2),UserId_s, acct2)\r\n| where \"{Users:lable}\"==\"All\" or UserId in ({Users})\r\n| where details.Type == '*' or (details.Type == 'Operation' and Operation_s == details.Name) or (details.Type == 'UserId' and UserId == details.Name)\r\n| summarize Number = count() by Operation_s",
+        "size": 0,
+        "showAnalytics": true,
+        "title": "Label Operations",
+        "timeContext": {
+          "durationMs": 7776000000
+        },
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces",
+        "visualization": "piechart"
+      },
+      "customWidth": "50",
+      "name": "query - 4"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "let details = dynamic({OperationDetail});\r\nlet watchlist = (_GetWatchlist('Sensitive'));\r\nlet watchlist2 = (_GetWatchlist('MipMap'));\r\nlet dlp= (endpointdlp_CL\r\n| where Operation_s contains \"sensitivity\"\r\n| extend label = iff(isempty(LabelId_g), SensitivityLabelEventData_SensitivityLabelId_g, LabelId_g)\r\n| extend acct = iff(isempty(SharePointMetaData_FileOwner_s), ExchangeMetaData_From_s, SharePointMetaData_FileOwner_s)\r\n| extend acct2 =iff(isempty(acct), SensitivityLabelEventData_SensitivityLabelOwnerEmail_s, acct)\r\n| extend UserId =iff(isempty(acct2),UserId_s, acct2)\r\n| extend File1 = iff(isempty(SharePointMetaData_FilePathUrl_s), ItemName_s, SharePointMetaData_FilePathUrl_s)\r\n| extend FileSubject = iff(isempty(File1), ObjectId_s, File1)\r\n| extend Type = iff(SensitivityLabelEventData_ActionSource_d != \"\",\"ActionSource\",\"\")\r\n| extend Value = iff(SensitivityLabelEventData_ActionSource_d != \"\",toint(SensitivityLabelEventData_ActionSource_d),dynamic(\"\"))\r\n| extend Type2 = iff(SensitivityLabelEventData_LabelEventType_d != \"\",\"LabelEventType\",\"\")\r\n| extend Value2 = iff(SensitivityLabelEventData_LabelEventType_d != \"\",toint(SensitivityLabelEventData_LabelEventType_d),dynamic(\"\"))\r\n| extend Type3 = iff(TargetLocation_d != \"\",\"LocationType\",\"\")\r\n| extend Value3 = iff(TargetLocation_d != \"\",toint(TargetLocation_d),dynamic(\"\"))\r\n| extend old1 = tostring(SensitivityLabelEventData_OldSensitivityLabelId_g)\r\n);\r\ndlp\r\n| join kind = leftouter\r\n ( \r\nwatchlist\r\n| extend label = tostring(ImmutableId)\r\n)\r\non label\r\n| join kind = leftouter   \r\n(\r\nwatchlist2 \r\n| extend Value = toint(SearchKey)\r\n| extend Type = tostring(Type)\r\n)\r\non Type,Value\r\n| extend ActionSource = Name\r\n| join kind = leftouter  \r\n(\r\nwatchlist2 \r\n| extend Value2 = toint(SearchKey)\r\n| extend Type2 = tostring(Type)\r\n)\r\non Type2,Value2\r\n| join kind = leftouter   \r\n(\r\nwatchlist2 \r\n| extend Value3 = toint(SearchKey)\r\n| extend Type3 = tostring(Type)\r\n)\r\non Type3,Value3\r\n| join kind = leftouter\r\n ( \r\nwatchlist\r\n| extend old1 = tostring(ImmutableId)\r\n)\r\non old1\r\n| extend label = DisplayName\r\n| extend oldlabel = DisplayName1\r\n| extend ActionSource = Name\r\n| extend LabelEventType =Name1\r\n| extend LocationType =Name2\r\n| where LabelEventType !=\"\"\r\n| project UserId,FileSubject,Platform_s,ClientIP_s,label,ActionSource,LabelEventType,LocationType,Operation_s,oldlabel,Workload_s,TimeGenerated\r\n| where \"{Users:lable}\"==\"All\" or UserId in ({Users})\r\n| where details.Type == '*' or (details.Type == 'Operation' and Operation_s == details.Name) or (details.Type == 'UserId' and UserId == details.Name)\r\n| summarize Number = count() by LabelEventType",
+        "size": 0,
+        "showAnalytics": true,
+        "title": "Label Changes",
+        "timeContext": {
+          "durationMs": 7776000000
+        },
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces",
+        "visualization": "piechart"
+      },
+      "customWidth": "50",
+      "name": "query - 5"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "let watchlist = (_GetWatchlist('Sensitive'));\r\nlet watchlist2 = (_GetWatchlist('MipMap'));\r\nlet dlp= (endpointdlp_CL\r\n| where Operation_s contains \"sensitivity\"\r\n| extend label = iff(isempty(LabelId_g), SensitivityLabelEventData_SensitivityLabelId_g, LabelId_g)\r\n| extend acct = iff(isempty(SharePointMetaData_FileOwner_s), ExchangeMetaData_From_s, SharePointMetaData_FileOwner_s)\r\n| extend acct2 =iff(isempty(acct), SensitivityLabelEventData_SensitivityLabelOwnerEmail_s, acct)\r\n| extend UserId =iff(isempty(acct2),UserId_s, acct2)\r\n| extend File1 = iff(isempty(SharePointMetaData_FilePathUrl_s), ItemName_s, SharePointMetaData_FilePathUrl_s)\r\n| extend FileSubject = iff(isempty(File1), ObjectId_s, File1)\r\n| extend Type = iff(SensitivityLabelEventData_ActionSource_d != \"\",\"ActionSource\",\"\")\r\n| extend Value = iff(SensitivityLabelEventData_ActionSource_d != \"\",toint(SensitivityLabelEventData_ActionSource_d),dynamic(\"\"))\r\n| extend Type2 = iff(SensitivityLabelEventData_LabelEventType_d != \"\",\"LabelEventType\",\"\")\r\n| extend Value2 = iff(SensitivityLabelEventData_LabelEventType_d != \"\",toint(SensitivityLabelEventData_LabelEventType_d),dynamic(\"\"))\r\n| extend Type3 = iff(TargetLocation_d != \"\",\"LocationType\",\"\")\r\n| extend Value3 = iff(TargetLocation_d != \"\",toint(TargetLocation_d),dynamic(\"\"))\r\n| extend old1 = tostring(SensitivityLabelEventData_OldSensitivityLabelId_g)\r\n);\r\ndlp\r\n| join kind = leftouter\r\n ( \r\nwatchlist\r\n| extend label = tostring(ImmutableId)\r\n)\r\non label\r\n| join kind = leftouter   \r\n(\r\nwatchlist2 \r\n| extend Value = toint(SearchKey)\r\n| extend Type = tostring(Type)\r\n)\r\non Type,Value\r\n| extend ActionSource = Name\r\n| join kind = leftouter  \r\n(\r\nwatchlist2 \r\n| extend Value2 = toint(SearchKey)\r\n| extend Type2 = tostring(Type)\r\n)\r\non Type2,Value2\r\n| join kind = leftouter   \r\n(\r\nwatchlist2 \r\n| extend Value3 = toint(SearchKey)\r\n| extend Type3 = tostring(Type)\r\n)\r\non Type3,Value3\r\n| join kind = leftouter\r\n ( \r\nwatchlist\r\n| extend old1 = tostring(ImmutableId)\r\n)\r\non old1\r\n| extend label = DisplayName\r\n| extend oldlabel = DisplayName1\r\n| extend ActionSource = Name\r\n| extend LabelEventType =Name1\r\n| extend LocationType =Name2\r\n| project UserId,FileSubject,Platform_s,ClientIP_s,label,ActionSource,LabelEventType,LocationType,Operation_s,oldlabel,Workload_s,TimeGenerated\r\n| summarize Number = count() by UserId,FileSubject,Platform_s,ClientIP_s,label,ActionSource,LabelEventType,LocationType,Operation_s,oldlabel,Workload_s, bin(TimeGenerated, 1d)\r\n| order by Number, TimeGenerated",
+        "size": 1,
+        "title": "Label Details",
+        "timeContext": {
+          "durationMs": 7776000000
+        },
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces",
+        "gridSettings": {
+          "filter": true,
+          "sortBy": [
+            {
+              "itemKey": "Platform_s",
+              "sortOrder": 2
+            }
+          ]
+        },
+        "sortBy": [
+          {
+            "itemKey": "Platform_s",
+            "sortOrder": 2
+          }
+        ]
+      },
+      "customWidth": "50",
+      "name": "query - 6"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "let watchlist = (_GetWatchlist('Sensitive'));\r\nlet watchlist2 = (_GetWatchlist('MipMap'));\r\nlet dlp= (endpointdlp_CL\r\n| where Operation_s contains \"sensitivity\"\r\n| extend label = iff(isempty(LabelId_g), SensitivityLabelEventData_SensitivityLabelId_g, LabelId_g)\r\n| extend acct = iff(isempty(SharePointMetaData_FileOwner_s), ExchangeMetaData_From_s, SharePointMetaData_FileOwner_s)\r\n| extend acct2 =iff(isempty(acct), SensitivityLabelEventData_SensitivityLabelOwnerEmail_s, acct)\r\n| extend UserId =iff(isempty(acct2),UserId_s, acct2)\r\n| extend File1 = iff(isempty(SharePointMetaData_FilePathUrl_s), ItemName_s, SharePointMetaData_FilePathUrl_s)\r\n| extend FileSubject = iff(isempty(File1), ObjectId_s, File1)\r\n| extend Type = iff(SensitivityLabelEventData_ActionSource_d != \"\",\"ActionSource\",\"\")\r\n| extend Value = iff(SensitivityLabelEventData_ActionSource_d != \"\",toint(SensitivityLabelEventData_ActionSource_d),dynamic(\"\"))\r\n| extend Type2 = iff(SensitivityLabelEventData_LabelEventType_d != \"\",\"LabelEventType\",\"\")\r\n| extend Value2 = iff(SensitivityLabelEventData_LabelEventType_d != \"\",toint(SensitivityLabelEventData_LabelEventType_d),dynamic(\"\"))\r\n| extend Type3 = iff(TargetLocation_d != \"\",\"LocationType\",\"\")\r\n| extend Value3 = iff(TargetLocation_d != \"\",toint(TargetLocation_d),dynamic(\"\"))\r\n| extend old1 = tostring(SensitivityLabelEventData_OldSensitivityLabelId_g)\r\n);\r\ndlp\r\n| join kind = leftouter\r\n ( \r\nwatchlist\r\n| extend label = tostring(ImmutableId)\r\n)\r\non label\r\n| join kind = leftouter   \r\n(\r\nwatchlist2 \r\n| extend Value = toint(SearchKey)\r\n| extend Type = tostring(Type)\r\n)\r\non Type,Value\r\n| extend ActionSource = Name\r\n| join kind = leftouter  \r\n(\r\nwatchlist2 \r\n| extend Value2 = toint(SearchKey)\r\n| extend Type2 = tostring(Type)\r\n)\r\non Type2,Value2\r\n| join kind = leftouter   \r\n(\r\nwatchlist2 \r\n| extend Value3 = toint(SearchKey)\r\n| extend Type3 = tostring(Type)\r\n)\r\non Type3,Value3\r\n| join kind = leftouter\r\n ( \r\nwatchlist\r\n| extend old1 = tostring(ImmutableId)\r\n)\r\non old1\r\n| extend Label = DisplayName\r\n| extend Oldlabel = DisplayName1\r\n| extend ActionSource = Name\r\n| extend LabelEventType =Name1\r\n| extend LocationType =Name2\r\n| where LabelEventType != \"LabelUpgraded\"\r\n| where LabelEventType != \"\"\r\n| project UserId,FileSubject,Platform_s,ClientIP_s,Label,ActionSource,LabelEventType,LocationType,Operation_s,Oldlabel,Workload_s,TimeGenerated\r\n| summarize Number = count() by UserId,LabelEventType,FileSubject,Platform_s,ClientIP_s,Label,Oldlabel,ActionSource,LocationType,Operation_s,Workload_s, bin(TimeGenerated, 1d)\r\n| order by Number, TimeGenerated",
+        "size": 1,
+        "title": "Label Downgraded or Removed",
+        "timeContext": {
+          "durationMs": 7776000000
+        },
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces",
+        "gridSettings": {
+          "filter": true
+        },
+        "sortBy": []
+      },
+      "customWidth": "50",
+      "name": "query - 7"
+    },
+    {
+      "type": 1,
+      "content": {
+        "json": "## Organizational Report"
+      },
+      "name": "text - 12"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "let watchlist = (_GetWatchlist('Sensitive'));\r\nlet watchlist2 = (_GetWatchlist('MipMap'));\r\nlet watchlist3 = (_GetWatchlist('UserAccounts'));\r\nlet dlp = (endpointdlp_CL\r\n    | where Operation_s contains \"sensitivity\"\r\n    | extend label = iff(isempty(LabelId_g), SensitivityLabelEventData_SensitivityLabelId_g, LabelId_g)\r\n    | extend acct = iff(isempty(SharePointMetaData_FileOwner_s), ExchangeMetaData_From_s, SharePointMetaData_FileOwner_s)\r\n    | extend acct2 =iff(isempty(acct), SensitivityLabelEventData_SensitivityLabelOwnerEmail_s, acct)\r\n    | extend UserId =iff(isempty(acct2), UserId_s, acct2)\r\n    | extend File1 = iff(isempty(SharePointMetaData_FilePathUrl_s), ItemName_s, SharePointMetaData_FilePathUrl_s)\r\n    | extend FileSubject = iff(isempty(File1), ObjectId_s, File1)\r\n    | extend Type = iff(SensitivityLabelEventData_ActionSource_d != \"\", \"ActionSource\", \"\")\r\n    | extend Value = iff(SensitivityLabelEventData_ActionSource_d != \"\", toint(SensitivityLabelEventData_ActionSource_d), dynamic(\"\"))\r\n    | extend Type2 = iff(SensitivityLabelEventData_LabelEventType_d != \"\", \"LabelEventType\", \"\")\r\n    | extend Value2 = iff(SensitivityLabelEventData_LabelEventType_d != \"\", toint(SensitivityLabelEventData_LabelEventType_d), dynamic(\"\"))\r\n    | extend Type3 = iff(TargetLocation_d != \"\", \"department\", \"\")\r\n    | extend Value3 = iff(TargetLocation_d != \"\", toint(TargetLocation_d), dynamic(\"\"))\r\n    | extend old1 = tostring(SensitivityLabelEventData_OldSensitivityLabelId_g)\r\n    );\r\nlet data = (dlp\r\n| join kind = inner\r\n    ( \r\n    watchlist\r\n    | extend label = tostring(ImmutableId)\r\n    )\r\n    on label\r\n| join kind = leftouter   \r\n    (\r\n    watchlist2 \r\n    | extend Value = toint(SearchKey)\r\n    | extend Type = tostring(Type)\r\n    )\r\n    on Type, Value\r\n| extend ActionSource = Name\r\n| join kind = leftouter  \r\n    (\r\n    watchlist2 \r\n    | extend Value2 = toint(SearchKey)\r\n    | extend Type2 = tostring(Type)\r\n    )\r\n    on Type2, Value2\r\n| join kind = leftouter   \r\n    (\r\n    watchlist2 \r\n    | extend Value3 = toint(SearchKey)\r\n    | extend Type3 = tostring(Type)\r\n    )\r\n    on Type3, Value3\r\n| join kind = leftouter\r\n    ( \r\n    watchlist\r\n    | extend old1 = tostring(ImmutableId)\r\n    )\r\n    on old1\r\n| join kind = leftouter\r\n    ( \r\n    watchlist3\r\n    | extend UserId = tostring(SearchKey)\r\n    )\r\n    on UserId\r\n| extend label = DisplayName\r\n| extend oldlabel = DisplayName1\r\n| extend ActionSource = Name\r\n| extend LabelEventType =Name1\r\n);\r\ndata\r\n| where department != ''\r\n| summarize Count = count() by department\r\n| project\r\n    department = iff(department == '', department, department),\r\n    Count = iff(department == '', 0, Count)\r\n| join kind = inner (data\r\n    | make-series Trend = count() default = 0 on CreationTime_t from ago(90d) to now() step 2d by department)\r\n    on department\r\n| project-away department, CreationTime_t\r\n| extend department = department1\r\n| union (\r\n    data \r\n    | summarize Count = count() \r\n    | extend jkey = 1\r\n    | join kind=inner (data\r\n        | make-series Trend = count() default = 0 on CreationTime_t from ago(90d) to now() step 2d\r\n        | extend jkey = 1)\r\n        on jkey     \r\n        | extend department = 'All',department1 = 'All'\r\n    )\r\n\r\n| order by Count desc\r\n| take 10\r\n",
+        "size": 4,
+        "timeContext": {
+          "durationMs": 0
+        },
+        "timeContextFromParameter": "TimeRange",
+        "exportFieldName": "Workload_s",
+        "exportParameterName": "SelectedWorkload",
+        "exportDefaultValue": "All",
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces",
+        "visualization": "tiles",
+        "tileSettings": {
+          "titleContent": {
+            "columnMatch": "department1",
+            "formatter": 1
+          },
+          "leftContent": {
+            "columnMatch": "Count",
+            "formatter": 12,
+            "formatOptions": {
+              "palette": "auto"
+            },
+            "numberFormat": {
+              "unit": 17,
+              "options": {
+                "maximumSignificantDigits": 3,
+                "maximumFractionDigits": 2
+              }
+            }
+          },
+          "secondaryContent": {
+            "columnMatch": "Trend",
+            "formatter": 9,
+            "formatOptions": {
+              "min": 0,
+              "palette": "coldHot"
+            }
+          },
+          "showBorder": false
+        }
+      },
+      "customWidth": "100",
+      "name": "query - 10 - Copy"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "let watchlist = (_GetWatchlist('Sensitive'));\r\nlet watchlist3 = (_GetWatchlist('UserAccounts'));\r\nlet data = (endpointdlp_CL\r\n| where Operation_s notcontains \"Get-\"\r\n| where Operation_s notcontains \"New-\"\r\n| where Operation_s notcontains \"Set-\"\r\n    | where Operation_s contains \"sensitivity\"\r\n    | extend label = iff(isempty(LabelId_g), SensitivityLabelEventData_SensitivityLabelId_g, LabelId_g)\r\n| extend acct = iff(isempty(SharePointMetaData_FileOwner_s), ExchangeMetaData_From_s, SharePointMetaData_FileOwner_s)\r\n| extend acct2 =iff(isempty(acct), SensitivityLabelEventData_SensitivityLabelOwnerEmail_s, acct)\r\n| extend UserId =iff(isempty(acct2),UserId_s, acct2)\r\n    | join kind = inner \r\n    (\r\n            watchlist3\r\n        | extend UserId = tostring(SearchKey)\r\n        )\r\n        on UserId\r\n    | join kind = inner \r\n        ( \r\n        watchlist\r\n        | extend label = tostring(ImmutableId)\r\n        )\r\n        on label);\r\nlet appData = data\r\n    | summarize TotalCount = count() by department\r\n    | join kind=inner (data\r\n        | make-series Trend = count() default = 0 on TimeGenerated in range(ago(90d), now(), 2d) by department\r\n        | project-away TimeGenerated)\r\n        on department\r\n    | order by TotalCount desc, department asc\r\n    | project department, TotalCount, Trend\r\n    | serialize Id = row_number();\r\ndata\r\n| summarize TotalCount = count() by UserId, department,DisplayName\r\n| join kind=inner (data\r\n    | make-series Trend = count() default = 0 on TimeGenerated in range(ago(90d), now(), 2d) by department, UserId,DisplayName\r\n    | project-away TimeGenerated)\r\n    on department, UserId, DisplayName\r\n| order by TotalCount desc, department asc\r\n| project department, UserId,DisplayName, TotalCount, Trend\r\n| serialize Id = row_number(1000000)\r\n| join kind=inner (appData) on department\r\n| project\r\n    Id,\r\n    Name = UserId,\r\n    Type = 'UserId',\r\n    DisplayName,\r\n    ['department Count'] = TotalCount,\r\n    Trend,\r\n    ParentId = Id1\r\n| union (appData \r\n    | project\r\n        Id,\r\n        Name = department,\r\n        Type = 'department',\r\n        ['department Count'] = TotalCount,\r\n        Trend)\r\n| order by ['department Count'] desc, Name asc",
+        "size": 1,
+        "showAnalytics": true,
+        "timeContext": {
+          "durationMs": 7776000000
+        },
+        "timeContextFromParameter": "TimeRange",
+        "exportParameterName": "OperationDetail",
+        "exportDefaultValue": "{ \"Name\":\"\", \"Type\":\"*\"}",
+        "showExportToExcel": true,
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces",
+        "visualization": "table",
+        "gridSettings": {
+          "formatters": [
+            {
+              "columnMatch": "Id",
+              "formatter": 5,
+              "formatOptions": {
+                "showIcon": true
+              }
+            },
+            {
+              "columnMatch": "Operations Count",
+              "formatter": 8,
+              "formatOptions": {
+                "min": 0,
+                "palette": "orange",
+                "showIcon": true
+              }
+            },
+            {
+              "columnMatch": "Trend",
+              "formatter": 9,
+              "formatOptions": {
+                "min": 0,
+                "palette": "gray",
+                "showIcon": true
+              }
+            },
+            {
+              "columnMatch": "ParentId",
+              "formatter": 5,
+              "formatOptions": {
+                "showIcon": true
+              }
+            }
+          ],
+          "filter": true,
+          "hierarchySettings": {
+            "idColumn": "Id",
+            "parentColumn": "ParentId",
+            "treeType": 0,
+            "expanderColumn": "Name"
+          }
+        },
+        "graphSettings": {
+          "type": 0,
+          "topContent": {
+            "columnMatch": "DisplayName",
+            "formatter": 1
+          },
+          "centerContent": {
+            "columnMatch": "TotalCount",
+            "formatter": 1,
+            "numberFormat": {
+              "unit": 17,
+              "options": {
+                "maximumSignificantDigits": 3,
+                "maximumFractionDigits": 2
+              }
+            }
+          }
+        }
+      },
+      "name": "query - 3 - Copy"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "let watchlist = (_GetWatchlist('Sensitive'));\r\nlet watchlist3 = (_GetWatchlist('UserAccounts'));\r\nlet data = (endpointdlp_CL\r\n| where Operation_s notcontains \"Get-\"\r\n| where Operation_s notcontains \"New-\"\r\n| where Operation_s notcontains \"Set-\"\r\n    | where Operation_s contains \"sensitivity\"\r\n    | extend label = iff(isempty(LabelId_g), SensitivityLabelEventData_SensitivityLabelId_g, LabelId_g)\r\n| extend acct = iff(isempty(SharePointMetaData_FileOwner_s), ExchangeMetaData_From_s, SharePointMetaData_FileOwner_s)\r\n| extend acct2 =iff(isempty(acct), SensitivityLabelEventData_SensitivityLabelOwnerEmail_s, acct)\r\n| extend UserId =iff(isempty(acct2),UserId_s, acct2)\r\n    | join kind = leftouter \r\n    (\r\n            watchlist3\r\n        | extend UserId = tostring(SearchKey)\r\n        )\r\n        on UserId\r\n    | join kind = leftouter \r\n        ( \r\n        watchlist\r\n        | extend label = tostring(ImmutableId)\r\n        )\r\n        on label);\r\nlet appData = data\r\n| summarize TotalCount = count() by Operation_s\r\n| join kind=inner (data\r\n    | make-series Trend = count() default = 0 on TimeGenerated in range({TimeRange:start}, {TimeRange:end}, {TimeRange:grain}) by Operation_s\r\n    | project-away TimeGenerated) on Operation_s\r\n| order by TotalCount desc, Operation_s asc\r\n| project Operation_s, TotalCount, Trend\r\n| serialize Id = row_number();\r\ndata\r\n| summarize TotalCount = count() by department , Operation_s\r\n| join kind=inner (data\r\n    | make-series Trend = count() default = 0 on TimeGenerated in range({TimeRange:start}, {TimeRange:end}, {TimeRange:grain}) by Operation_s, department\r\n    | project-away TimeGenerated) on Operation_s, department\r\n| order by TotalCount desc, Operation_s asc\r\n| project Operation_s, department, TotalCount, Trend\r\n| serialize Id = row_number(1000000)\r\n| join kind=inner (appData) on Operation_s\r\n| project Id, Name = department, Type = 'department', ['Operation_ss Count'] = TotalCount, Trend,  ParentId = Id1\r\n| union (appData \r\n    | project Id, Name = Operation_s, Type = 'Operation_s', ['Operation_ss Count'] = TotalCount,  Trend)\r\n| order by ['Operation_ss Count'] desc, Name asc",
+        "size": 0,
+        "title": "Label operations",
+        "timeContext": {
+          "durationMs": 7776000000
+        },
+        "timeContextFromParameter": "TimeRange",
+        "exportParameterName": "FileOperations",
+        "exportDefaultValue": "{ \"Name\":\"\", \"Type\":\"*\"}",
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces",
+        "gridSettings": {
+          "formatters": [
+            {
+              "columnMatch": "Id",
+              "formatter": 5,
+              "formatOptions": {
+                "showIcon": true
+              }
+            },
+            {
+              "columnMatch": "Operations Count",
+              "formatter": 8,
+              "formatOptions": {
+                "min": 0,
+                "palette": "blue",
+                "showIcon": true
+              }
+            },
+            {
+              "columnMatch": "Trend",
+              "formatter": 10,
+              "formatOptions": {
+                "min": 0,
+                "palette": "greenDark",
+                "showIcon": true
+              }
+            },
+            {
+              "columnMatch": "ParentId",
+              "formatter": 5,
+              "formatOptions": {
+                "showIcon": true
+              }
+            }
+          ],
+          "filter": true,
+          "hierarchySettings": {
+            "idColumn": "Id",
+            "parentColumn": "ParentId",
+            "treeType": 0,
+            "expanderColumn": "Name"
+          }
+        }
+      },
+      "name": "query - 8"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "let watchlist = (_GetWatchlist('Sensitive'));\r\nlet watchlist3 = (_GetWatchlist('UserAccounts'));\r\nlet data = endpointdlp_CL\r\n| where Operation_s notcontains \"Get-\"\r\n| where Operation_s notcontains \"New-\"\r\n| where Operation_s notcontains \"Set-\"\r\n    | where Operation_s contains \"sensitivity\"\r\n    | extend File1 = iff(isempty(SharePointMetaData_FilePathUrl_s), ItemName_s, SharePointMetaData_FilePathUrl_s)\r\n| extend FileSubject = iff(isempty(File1), ObjectId_s, File1)\r\n    | extend label = iff(isempty(LabelId_g), SensitivityLabelEventData_SensitivityLabelId_g, LabelId_g)\r\n| extend acct = iff(isempty(SharePointMetaData_FileOwner_s), ExchangeMetaData_From_s, SharePointMetaData_FileOwner_s)\r\n| extend acct2 =iff(isempty(acct), SensitivityLabelEventData_SensitivityLabelOwnerEmail_s, acct)\r\n| extend UserId =iff(isempty(acct2),UserId_s, acct2)\r\n    | join kind = leftouter\r\n    (\r\n            watchlist3\r\n        | extend UserId = tostring(SearchKey)\r\n        )\r\n        on UserId\r\n    | join kind = leftouter\r\n        ( \r\n        watchlist\r\n        | extend label = tostring(ImmutableId)\r\n        )\r\n        on label    \r\n| summarize Calls = count() by App = DisplayName, Request = Operation_s  , Dependency = department\r\n| extend RequestId = strcat(App, '::', Request);\r\nlet links = data\r\n| summarize Calls = sum(Calls) by App, RequestId\r\n| project SourceId = App, TargetId = RequestId, Calls, Kind = 'App -> Request'\r\n| union (data\r\n    | project SourceId = RequestId, TargetId = Dependency, Calls, Kind = 'Request -> Dependency');\r\nlet nodes = data\r\n| summarize Calls = sum(Calls) by App\r\n| project Id = App, Name = App, Calls, Kind = 'App'\r\n| union (data\r\n    | summarize Calls = sum(Calls) by RequestId, Request\r\n    | project Id = RequestId, Name = Request, Calls, Kind = 'Request')\r\n| union (data\r\n    | summarize Calls = sum(Calls) by Dependency\r\n    | project Id = Dependency, Name = Dependency, Calls, Kind = 'Dependency');\r\nnodes\r\n| union (links)",
+        "size": 0,
+        "timeContext": {
+          "durationMs": 7776000000
+        },
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces",
+        "visualization": "graph",
+        "tileSettings": {
+          "showBorder": false
+        },
+        "graphSettings": {
+          "type": 0,
+          "topContent": {
+            "columnMatch": "Name",
+            "formatter": 12,
+            "formatOptions": {
+              "showIcon": true
+            }
+          },
+          "centerContent": {
+            "columnMatch": "SourceId",
+            "formatter": 1,
+            "formatOptions": {
+              "showIcon": true
+            },
+            "numberFormat": {
+              "unit": 17,
+              "options": {
+                "style": "decimal",
+                "maximumFractionDigits": 2,
+                "maximumSignificantDigits": 3
+              }
+            }
+          },
+          "bottomContent": {
+            "columnMatch": "Name",
+            "formatOptions": {
+              "showIcon": true
+            }
+          },
+          "nodeIdField": "Id",
+          "sourceIdField": "SourceId",
+          "targetIdField": "TargetId",
+          "edgeSize": "Calls",
+          "nodeSize": null,
+          "staticNodeSize": 100,
+          "colorSettings": {
+            "nodeColorField": "Kind",
+            "type": 1,
+            "colorPalette": "pastel",
+            "emptyValueColor": "redBright"
+          },
+          "hivesMargin": 5
+        }
+      },
+      "customWidth": "100",
+      "name": "query - 12"
+    }
+  ],
+  "fallbackResourceIds": [
+    "/subscriptions/5c6aa890-66de-490d-904d-b84eb5e2cd43/resourcegroups/sentinel/providers/microsoft.operationalinsights/workspaces/sentinel"
+  ],
+  "fromTemplateId": "sentinel-UserWorkbook",
+  "$schema": "https://github.com/Microsoft/Application-Insights-Workbooks/blob/master/schema/workbook.json"
+}
