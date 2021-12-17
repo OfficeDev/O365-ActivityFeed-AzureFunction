@@ -45,7 +45,7 @@ Documentation for Watchlists https://docs.microsoft.com/en-us/azure/sentinel/wat
 1. Export the MIP labels using SCC Powershell, sample Get-Label | select ImmutableId,DisplayName,LabelActions | Export-Csv c:\tmp\slabels.csv -NoTypeInformation
 If you happen to get hyphens in the csv header fields, remove the hyphens since the WL engine cannot process. 
 2. Create a new Microsoft Sentinel Watchlist call it **Sensitive**, set the ImmutableId as the index field.
-3. Create a new Microsoft Sentinel Watchlist call it MipMap, import the mipmap.csv file in this repo. (File to translate MIP operations)
+3. Create a new Microsoft Sentinel Watchlist call it **MipMap**, set the Value field as the index field, import the mipmap.csv file in this repo. (File to translate MIP operations)
 4. Create a new Microsoft Sentinel Watchlist call it UserAccounts, Import your account list, **for reporting to work well you need to include, userprincipalname,department,FullName,Title (The more detail you add the cooler you can make the report dashboard or any alerts)**
    - The Indexing field should be the UserPrincipalName, we use it as a key to enrich the items
    - You can start with a small csv file, for bulk uploading a lot of data please see importwatch.ps1 in this repo it works in PS and PS Core. It supports incremental uploads as well as updating existing objects in the list.
