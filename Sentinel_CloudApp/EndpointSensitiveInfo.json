@@ -1,0 +1,499 @@
+﻿{
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "workbookDisplayName": {
+      "type": "string",
+      "defaultValue": "Endpoint sensitive data correlated with risk",
+      "metadata": {
+        "description": "This workbook is used to show the potential of presenting endpoint processing of Sensitive Information from within Sentinel, utilizing CloudAppEvents.",
+        "author": "Jon Nordstrom, Microsoft"
+      }
+    },
+    "sentinelworkspace": {
+      "type": "string",
+      "defaultValue": "Change to your workspace",
+      "metadata": {
+        "description": "The name of the Sentinel workspace being used"
+      }
+    },
+    "workbookId": {
+      "type": "string",
+      "defaultValue": "[newGuid()]",
+      "metadata": {
+        "description": "The unique guid for this workbook instance"
+      }
+    }
+  },
+  "variables": {
+    "workbookContent": {
+      "version": "Notebook/1.0",
+      "items": [
+        {
+          "type": 9,
+          "content": {
+            "version": "KqlParameterItem/1.0",
+            "parameters": [
+              {
+                "id": "4459cc76-3bf4-4ca1-a981-ac7b57aa245a",
+                "version": "KqlParameterItem/1.0",
+                "name": "TimeRange",
+                "label": "Time range",
+                "type": 4,
+                "isRequired": true,
+                "value": {
+                  "durationMs": 7776000000
+                },
+                "typeSettings": {
+                  "selectableValues": [
+                    {
+                      "durationMs": 300000
+                    },
+                    {
+                      "durationMs": 900000
+                    },
+                    {
+                      "durationMs": 1800000
+                    },
+                    {
+                      "durationMs": 3600000
+                    },
+                    {
+                      "durationMs": 14400000
+                    },
+                    {
+                      "durationMs": 43200000
+                    },
+                    {
+                      "durationMs": 86400000
+                    },
+                    {
+                      "durationMs": 172800000
+                    },
+                    {
+                      "durationMs": 259200000
+                    },
+                    {
+                      "durationMs": 604800000
+                    },
+                    {
+                      "durationMs": 1209600000
+                    },
+                    {
+                      "durationMs": 2419200000
+                    },
+                    {
+                      "durationMs": 2592000000
+                    },
+                    {
+                      "durationMs": 5184000000
+                    },
+                    {
+                      "durationMs": 7776000000
+                    }
+                  ],
+                  "allowCustom": true
+                }
+              },
+               {
+                "id": "594d398d-703f-4e6d-81e7-97ab7803b08f",
+                "version": "KqlParameterItem/1.0",
+                "name": "sit",
+                "label": "Sensitive Info Type",
+                "type": 2,
+                "description": "Choose IP for the queries",
+                "isRequired": true,
+                "multiSelect": true,
+                "quote": "'",
+                "delimiter": ",",
+                "query": "CloudAppEvents\n| where parse_json(tostring(RawEventData.SensitiveInfoTypeData)) != \"\"\n| extend sit = parse_json(tostring(RawEventData.SensitiveInfoTypeData))\n| summarize sit2 = make_list(sit)\n| mv-expand sit2\n| extend SensitiveInfoTypeName = tostring(sit2.SensitiveInfoTypeName)\n| extend hitCount = tostring(sit2.Count)\n| project SensitiveInfoTypeName, todecimal(hitCount)\n| summarize Count=sum(todecimal(hitCount)) by SensitiveInfoTypeName\n| order by Count desc, SensitiveInfoTypeName asc\n| project Value = SensitiveInfoTypeName, SensitiveInfoTypeName = strcat(SensitiveInfoTypeName, ' - ', Count)",
+                "value": [
+                  "value::all"
+                ],
+                "typeSettings": {
+                  "additionalResourceOptions": [
+                    "value::all"
+                  ],
+                  "selectAllValue": "All",
+                  "showDefault": false
+                },
+                "timeContext": {
+                  "durationMs": 0
+                },
+                "timeContextFromParameter": "TimeRange",
+                "queryType": 0,
+                "resourceType": "microsoft.operationalinsights/workspaces"
+              }
+            ],
+            "style": "pills",
+            "queryType": 0,
+            "resourceType": "microsoft.operationalinsights/workspaces"
+          },
+          "name": "parameters - 5"
+        },
+        {
+          "type": 1,
+          "content": {
+            "json": "## Overview"
+          },
+          "name": "text - 4"
+        },
+        {
+          "type": 3,
+          "content": {
+            "version": "KqlItem/1.0",
+            "query": "let data = (CloudAppEvents\r\n    | where parse_json(tostring(RawEventData.SensitiveInfoTypeData)) != \"\"\r\n    | where parse_json(tostring(RawEventData.SensitiveInfoTypeData)) != \"[]\"\r\n    | extend sit = parse_json(tostring(RawEventData.SensitiveInfoTypeData))\r\n    | extend UserId = tostring(RawEventData.UserId)\r\n    //Expand all Sensitive Info types in the separate rows\r\n    | extend document = tostring(RawEventData.ObjectId)\r\n    | extend UserId = tostring(RawEventData.UserId)\r\n    | extend CreationTime_t = todatetime(RawEventData.CreationTime)\r\n    | extend Workload_s = tostring(RawEventData.Workload)\r\n    | join kind=leftouter \r\n        (\r\n        CloudAppEvents\r\n        | where ActionType == \"AlertTriggered\"\r\n        | extend Name_ = tostring(RawEventData.Name)\r\n        | where Name_ != \"\"\r\n        | extend f3u_ = tolower(parse_json(tostring(RawEventData.Data)).f3u)\r\n        | extend UserId = f3u_\r\n        )\r\n        on UserId  \r\n| extend Device = iff(isempty(tostring(parse_json(tostring(RawEventData.DeviceName)))), tostring(parse_json(tostring(RawEventData.Common)).DeviceName), tostring(parse_json(tostring(RawEventData.DeviceName))))\r\n| join kind=leftouter \r\n    (\r\n    SecurityAlert\r\n    | extend Device = CompromisedEntity\r\n    )\r\n    on Device\r\n| where CompromisedEntity != \"\" or AlertType != \"\"\r\n//User Account enrichment.\r\n| extend UserId = tolower(UserId)\r\n| join kind=leftouter\r\n    (\r\n    _GetWatchlist('UserAccounts')\r\n    | extend UserId = tolower(SearchKey)\r\n    )\r\n    on UserId\r\n| where Department != '');\r\ndata\r\n| summarize Count = count() by Department\r\n| project\r\n    Department = iff(Department == '', Department, Department),\r\n    Count = iff(Department == '', 0, Count)\r\n| join kind = inner (data\r\n    | make-series Trend = count() default = 0 on CreationTime_t from ago(90d) to now() step 2d by Department )\r\n    on Department\r\n| project-away Department, CreationTime_t\r\n| extend Department = Department1\r\n| union (\r\n    data \r\n    | summarize Count = count() \r\n    | extend jkey = 1\r\n    | join kind=inner (data\r\n        | make-series Trend = count() default = 0 on CreationTime_t from ago(90d) to now() step 2d\r\n        | extend jkey = 1)\r\n        on jkey     \r\n    | extend Department = 'All', Department1 = 'All'\r\n    )\r\n| order by Count desc\r\n| take 15",
+            "size": 4,
+            "title": "Sensitivity Operations paired with Risks per department ",
+            "timeContextFromParameter": "TimeRange",
+            "queryType": 0,
+            "resourceType": "microsoft.operationalinsights/workspaces",
+            "visualization": "tiles",
+            "gridSettings": {
+              "filter": true
+            },
+            "tileSettings": {
+              "titleContent": {
+                "columnMatch": "Department",
+                "formatter": 1
+              },
+              "leftContent": {
+                "columnMatch": "Count",
+                "formatter": 12,
+                "formatOptions": {
+                  "palette": "auto"
+                },
+                "numberFormat": {
+                  "unit": 17,
+                  "options": {
+                    "maximumSignificantDigits": 3,
+                    "maximumFractionDigits": 2
+                  }
+                }
+              },
+              "secondaryContent": {
+                "columnMatch": "Trend",
+                "formatter": 9,
+                "formatOptions": {
+                  "palette": "coldHot"
+                }
+              },
+              "showBorder": false
+            }
+          },
+          "name": "query - 10"
+        },
+        {
+          "type": 3,
+          "content": {
+            "version": "KqlItem/1.0",
+            "query": "CloudAppEvents\r\n| where parse_json(tostring(RawEventData.SensitiveInfoTypeData)) != \"\"\r\n| where parse_json(tostring(RawEventData.SensitiveInfoTypeData)) != \"[]\"\r\n| extend sit = parse_json(tostring(RawEventData.SensitiveInfoTypeData))\r\n| where \"{sit:label}\" ==\"All\" or sit in ({sit})\r\n| summarize Events= count() by bin_at(TimeGenerated, 1h, now()), ActionType\r\n\r\n",
+            "size": 0,
+            "title": "Activity relating to sensitive content on endpoint",
+            "timeContextFromParameter": "TimeRange",
+            "exportToExcelOptions": "all",
+            "queryType": 0,
+            "resourceType": "microsoft.operationalinsights/workspaces",
+            "visualization": "timechart"
+          },
+          "customWidth": "40",
+          "conditionalVisibility": {
+            "parameterName": "sit",
+            "comparison": "isNotEqualTo"
+          },
+          "name": "query - 1"
+        },
+        {
+          "type": 3,
+          "content": {
+            "version": "KqlItem/1.0",
+            "query": "let timeframe=31d;\r\nlet AppEvents = (CloudAppEvents\r\n| where parse_json(tostring(RawEventData.SensitiveInfoTypeData)) != \"\"\r\n| where parse_json(tostring(RawEventData.SensitiveInfoTypeData)) != \"[]\"\r\n| extend sit = parse_json(tostring(RawEventData.SensitiveInfoTypeData))\r\n);\r\nAppEvents\r\n| extend Device = iff(isempty(tostring(parse_json(tostring(RawEventData.DeviceName)))), tostring(parse_json(tostring(RawEventData.Common)).DeviceName), tostring(parse_json(tostring(RawEventData.DeviceName))))\r\n| join kind=inner\r\n    (\r\n    SecurityAlert\r\n    | where TimeGenerated >= ago(timeframe)\r\n    | extend Device = CompromisedEntity\r\n    )\r\n    on Device\r\n| where Device !=\"\"   \r\n| summarize count()  by Description\r\n| order by count_ desc",
+            "size": 0,
+            "title": "SIT correlated with Device Risk",
+            "timeContextFromParameter": "TimeRange",
+            "showRefreshButton": true,
+            "queryType": 0,
+            "resourceType": "microsoft.operationalinsights/workspaces",
+            "visualization": "piechart"
+          },
+          "customWidth": "20",
+          "name": "query - 1 - Copy - Copy"
+        },
+        {
+          "type": 3,
+          "content": {
+            "version": "KqlItem/1.0",
+            "query": "let timeframe=31d;\r\nlet AppEvents = (CloudAppEvents\r\n| where parse_json(tostring(RawEventData.SensitiveInfoTypeData)) != \"\"\r\n| where parse_json(tostring(RawEventData.SensitiveInfoTypeData)) != \"[]\"\r\n| extend sit = parse_json(tostring(RawEventData.SensitiveInfoTypeData))\r\n| extend UserId = tostring(RawEventData.UserId)\r\n);\r\nAppEvents\r\n| extend Device = tostring(parse_json(tostring(RawEventData.Common)).DeviceName)\r\n| join kind=inner\r\n    (\r\nCloudAppEvents\r\n| where ActionType == \"AlertTriggered\"\r\n| extend Name_ = tostring(RawEventData.Name)\r\n| where Name_ != \"\"\r\n| extend f3u_ = tolower(parse_json(tostring(RawEventData.Data)).f3u)\r\n| extend UserId = f3u_\r\n    )\r\n    on UserId  \r\n| summarize count()  by Name_\r\n| order by count_ desc",
+            "size": 0,
+            "title": "SIT Data handling Correlated with Risk",
+            "timeContextFromParameter": "TimeRange",
+            "showRefreshButton": true,
+            "queryType": 0,
+            "resourceType": "microsoft.operationalinsights/workspaces",
+            "visualization": "piechart"
+          },
+          "customWidth": "20",
+          "name": "query - 1 - Copy - Copy - Copy"
+        },
+        {
+          "type": 3,
+          "content": {
+            "version": "KqlItem/1.0",
+            "query": "let AppEvents = (CloudAppEvents\r\n| where parse_json(tostring(RawEventData.SensitiveInfoTypeData)) != \"\"\r\n| where parse_json(tostring(RawEventData.SensitiveInfoTypeData)) != \"[]\"\r\n| extend sit = parse_json(tostring(RawEventData.SensitiveInfoTypeData))\r\n//Expand all Sensitive Info types in the separate rows\r\n| mv-expand sit\r\n| extend SensitiveInfoTypeName = tostring(sit.SensitiveInfoTypeName)\r\n| extend document = tostring(RawEventData.ObjectId)\r\n);\r\n    AppEvents\r\n    | extend city = City\r\n    | extend country = CountryCode\r\n    | extend Level = SensitiveInfoTypeName\r\n| summarize count()  by Level,city,country\r\n| join kind=leftouter (\r\nAppEvents\r\n| extend city = City\r\n| make-series TrendList = count() on TimeGenerated in range({TimeRange:start}, {TimeRange:end}, {TimeRange:grain}) by city \r\n) on city\r\n| project Level, country, city, [\"Total events\"] = count_, TrendLine = TrendList\r\n| top 15 by [\"Total events\"] desc\r\n \r\n\r\n",
+            "size": 3,
+            "title": "Top 10 Locations and SIT",
+            "timeContextFromParameter": "TimeRange",
+            "queryType": 0,
+            "resourceType": "microsoft.operationalinsights/workspaces",
+            "visualization": "table",
+            "gridSettings": {
+              "formatters": [
+                {
+                  "columnMatch": "Total events",
+                  "formatter": 4,
+                  "formatOptions": {
+                    "palette": "blue"
+                  }
+                },
+                {
+                  "columnMatch": "TrendLine",
+                  "formatter": 9,
+                  "formatOptions": {
+                    "palette": "redGreen"
+                  }
+                }
+              ],
+              "sortBy": [
+                {
+                  "itemKey": "$gen_bar_Total events_3",
+                  "sortOrder": 2
+                }
+              ]
+            },
+            "sortBy": [
+              {
+                "itemKey": "$gen_bar_Total events_3",
+                "sortOrder": 2
+              }
+            ]
+          },
+          "customWidth": "40",
+          "name": "query - 1 - Copy"
+        },
+        {
+          "type": 3,
+          "content": {
+            "version": "KqlItem/1.0",
+            "query": "let AppEvents = (CloudAppEvents\r\n| where parse_json(tostring(RawEventData.SensitiveInfoTypeData)) != \"\"\r\n| where parse_json(tostring(RawEventData.SensitiveInfoTypeData)) != \"[]\"\r\n| extend sit = parse_json(tostring(RawEventData.SensitiveInfoTypeData))\r\n| extend UserId = tolower(RawEventData.UserId)\r\n//Expand all Sensitive Info types in the separate rows\r\n| mv-expand sit\r\n| extend SensitiveInfoTypeName = tostring(sit.SensitiveInfoTypeName)\r\n| extend document = tostring(RawEventData.ObjectId)\r\n//User Account enrichment.\r\n    | extend UserId = tolower(UserId)\r\n    | join kind=leftouter\r\n        (\r\n        _GetWatchlist('UserAccounts')\r\n        | extend UserId = tolower(SearchKey)\r\n        )\r\n        on UserId);\r\n        AppEvents\r\n    | extend Department = Department\r\n    | extend country = CountryCode\r\n    | extend Level = SensitiveInfoTypeName\r\n| summarize count()  by Level,Department,country\r\n| join kind=leftouter (\r\nAppEvents\r\n| extend Department = Department\r\n| make-series TrendList = count() on TimeGenerated in range({TimeRange:start}, {TimeRange:end}, {TimeRange:grain}) by Department \r\n) on Department\r\n| project Level, country, Department, [\"Total events\"] = count_, TrendLine = TrendList\r\n| top 15 by [\"Total events\"] desc\r\n \r\n\r\n",
+            "size": 3,
+            "title": "Top 10 Departments and SIT",
+            "timeContextFromParameter": "TimeRange",
+            "queryType": 0,
+            "resourceType": "microsoft.operationalinsights/workspaces",
+            "visualization": "table",
+            "gridSettings": {
+              "formatters": [
+                {
+                  "columnMatch": "Total events",
+                  "formatter": 4,
+                  "formatOptions": {
+                    "palette": "blue"
+                  }
+                },
+                {
+                  "columnMatch": "TrendLine",
+                  "formatter": 9,
+                  "formatOptions": {
+                    "palette": "redGreen"
+                  }
+                }
+              ],
+              "sortBy": [
+                {
+                  "itemKey": "$gen_bar_Total events_3",
+                  "sortOrder": 2
+                }
+              ]
+            },
+            "sortBy": [
+              {
+                "itemKey": "$gen_bar_Total events_3",
+                "sortOrder": 2
+              }
+            ]
+          },
+          "customWidth": "45",
+          "name": "query - 1 - Copy - Copy"
+        },
+        {
+          "type": 1,
+          "content": {
+            "json": "## Accounts correlated with risk and Sensitive Information usage"
+          },
+          "name": "text - 5"
+        },
+        {
+          "type": 3,
+          "content": {
+            "version": "KqlItem/1.0",
+            "query": "let timeframe=31d;\r\nlet AppEvents = (CloudAppEvents\r\n| where parse_json(tostring(RawEventData.SensitiveInfoTypeData)) != \"\"\r\n| where parse_json(tostring(RawEventData.SensitiveInfoTypeData)) != \"[]\"\r\n| extend sit = parse_json(tostring(RawEventData.SensitiveInfoTypeData))\r\n| extend UserId = tolower(RawEventData.UserId)\r\n| extend TargetDomain = tostring(RawEventData.TargetDomain)\r\n);\r\nAppEvents\r\n| extend Device = tostring(parse_json(tostring(RawEventData.Common)).DeviceName)\r\n| join kind=leftouter \r\n    (\r\nCloudAppEvents\r\n| where ActionType == \"AlertTriggered\"\r\n| extend Name_ = tostring(RawEventData.Name)\r\n| where Name_ != \"\"\r\n| extend f3u_ = tolower(parse_json(tostring(RawEventData.Data)).f3u)\r\n| extend UserId = f3u_\r\n    )\r\n    on UserId  \r\n| extend Device = iff(isempty(tostring(parse_json(tostring(RawEventData.DeviceName)))), tostring(parse_json(tostring(RawEventData.Common)).DeviceName), tostring(parse_json(tostring(RawEventData.DeviceName))))\r\n| join kind=leftouter \r\n    (\r\n    SecurityAlert\r\n    | extend Device = CompromisedEntity\r\n    )\r\n    on Device\r\n| where CompromisedEntity != \"\" or AlertType != \"\"\r\n| extend AlertName = iff(isempty(tostring(Name_)), tostring(DisplayName), tostring(Name_))\r\n| summarize Attempts = count() by UserId,TargetDomain, AlertName, tostring(sit),ActionType\r\n|order by TargetDomain",
+            "size": 0,
+            "title": "Accounts with risk correlated with SIT and Action",
+            "exportFieldName": "UserId",
+            "exportParameterName": "User",
+            "queryType": 0,
+            "resourceType": "microsoft.operationalinsights/workspaces",
+            "visualization": "table",
+            "gridSettings": {
+              "filter": true,
+              "sortBy": [
+                {
+                  "itemKey": "UserId",
+                  "sortOrder": 1
+                }
+              ]
+            },
+            "sortBy": [
+              {
+                "itemKey": "UserId",
+                "sortOrder": 1
+              }
+            ],
+            "graphSettings": {
+              "type": 0,
+              "topContent": {
+                "columnMatch": "IPAddress",
+                "formatter": 1
+              },
+              "centerContent": {
+                "columnMatch": "Lockouts",
+                "formatter": 1,
+                "numberFormat": {
+                  "unit": 17,
+                  "options": {
+                    "maximumSignificantDigits": 3,
+                    "maximumFractionDigits": 2
+                  }
+                }
+              }
+            }
+          },
+          "customWidth": "50",
+          "showPin": true,
+          "name": "query - 1 - Copy - Copy - Copy - Copy"
+        },
+        {
+          "type": 3,
+          "content": {
+            "version": "KqlItem/1.0",
+            "query": "let timeframe=31d;\r\nlet User = todynamic(\"{User}\");\r\nlet AppEvents = (CloudAppEvents\r\n| where parse_json(tostring(RawEventData.SensitiveInfoTypeData)) != \"\"\r\n| where parse_json(tostring(RawEventData.SensitiveInfoTypeData)) != \"[]\"\r\n| extend sit = parse_json(tostring(RawEventData.SensitiveInfoTypeData))\r\n| mv-expand sit\r\n| extend UserId = tolower(RawEventData.UserId)\r\n| extend SensitiveInfoTypeName = tostring(sit.SensitiveInfoTypeName)\r\n| extend document = tostring(RawEventData.ObjectId)\r\n);\r\nAppEvents\r\n| where UserId == User\r\n| extend ObjectId = tostring(RawEventData.ObjectId)\r\n| extend DeviceName = tostring(RawEventData.DeviceName)\r\n| extend Application = tostring(RawEventData.Application)\r\n| summarize count = count() by document,Application,SensitiveInfoTypeName,ActionType,DeviceName\r\n|order by ActionType\r\n",
+            "size": 0,
+            "title": "Expand User sensitive activity details on click lefthand data",
+            "queryType": 0,
+            "resourceType": "microsoft.operationalinsights/workspaces",
+            "visualization": "table",
+            "gridSettings": {
+              "filter": true,
+              "sortBy": [
+                {
+                  "itemKey": "ActionType",
+                  "sortOrder": 2
+                }
+              ]
+            },
+            "sortBy": [
+              {
+                "itemKey": "ActionType",
+                "sortOrder": 2
+              }
+            ]
+          },
+          "customWidth": "50",
+          "name": "query - 1 - Copy - Copy - Copy"
+        },
+        {
+          "type": 1,
+          "content": {
+            "json": "## External domains receiving sensitive content"
+          },
+          "name": "text - 13"
+        },
+        {
+          "type": 3,
+          "content": {
+            "version": "KqlItem/1.0",
+            "query": "let data = (CloudAppEvents\r\n    | where parse_json(tostring(RawEventData.SensitiveInfoTypeData)) != \"\"\r\n    | where parse_json(tostring(RawEventData.SensitiveInfoTypeData)) != \"[]\"\r\n    | extend sit = parse_json(tostring(RawEventData.SensitiveInfoTypeData))\r\n    | extend UserId = tostring(RawEventData.UserId)\r\n    //Expand all Sensitive Info types in the separate rows\r\n    | mv-expand sit\r\n    | extend SensitiveInfoTypeName = tostring(sit.SensitiveInfoTypeName)\r\n    | extend document = tostring(RawEventData.ObjectId)\r\n    //User Account enrichment.\r\n    | extend UserId = tolower(UserId)\r\n    | join kind=leftouter\r\n        (\r\n        _GetWatchlist('UserAccounts')\r\n        | extend UserId = tolower(SearchKey)\r\n        )\r\n        on UserId\r\n| extend TargetDomain = tostring(RawEventData.TargetDomain)\r\n| where TargetDomain !=\"\"\r\n| project TargetDomain, UserId, SensitiveInfoTypeName\r\n| summarize Calls = count() by App = TargetDomain, Request = SensitiveInfoTypeName, Dependency = UserId \r\n| extend RequestId = strcat(App, '::', Request));\r\nlet links = data\r\n    | summarize Calls = sum(Calls) by App, RequestId\r\n    | project SourceId = App, TargetId = RequestId, Calls, Kind = 'App -> Request'\r\n    | union (data\r\n        | project\r\n            SourceId = RequestId,\r\n            TargetId = Dependency,\r\n            Calls,\r\n            Kind = 'Request -> Dependency');\r\nlet nodes = data\r\n    | summarize Calls = sum(Calls) by App\r\n    | project Id = App, Name = App, Calls, Kind = 'App'\r\n    | union (data\r\n        | summarize Calls = sum(Calls) by RequestId, Request\r\n        | project Id = RequestId, Name = Request, Calls, Kind = 'Request')\r\n    | union (data\r\n        | summarize Calls = sum(Calls) by Dependency\r\n        | project Id = Dependency, Name = Dependency, Calls, Kind = 'Dependency');\r\nnodes\r\n| union (links)\r\n",
+            "size": 3,
+            "timeContextFromParameter": "TimeRange",
+            "queryType": 0,
+            "resourceType": "microsoft.operationalinsights/workspaces",
+            "visualization": "graph",
+            "graphSettings": {
+              "type": 0,
+              "topContent": {
+                "columnMatch": "Id",
+                "formatter": 1
+              },
+              "centerContent": {
+                "columnMatch": "Calls",
+                "formatter": 1,
+                "numberFormat": {
+                  "unit": 17,
+                  "options": {
+                    "maximumSignificantDigits": 3,
+                    "maximumFractionDigits": 2
+                  }
+                }
+              },
+              "nodeIdField": "Id",
+              "sourceIdField": "SourceId",
+              "targetIdField": "TargetId",
+              "graphOrientation": 3,
+              "showOrientationToggles": false,
+              "nodeSize": null,
+              "staticNodeSize": 100,
+              "colorSettings": {
+                "nodeColorField": "Kind",
+                "type": 1,
+                "colorPalette": "default"
+              },
+              "hivesMargin": 5
+            }
+          },
+          "name": "query - 20"
+        }
+      ],
+      "isLocked": false,
+      "fallbackResourceIds": [
+        "/subscriptions/c3d92c0e-4056-47b2-8cc6-0d835d000b6d/resourcegroups/siem/providers/microsoft.operationalinsights/workspaces/privacy"
+      ],
+      "styleSettings": {
+        "paddingStyle": "wide"
+      },
+      "fromTemplateId": "sentinel-UserWorkbook"
+    }
+  },
+  "resources": [
+    {
+      "name": "[parameters('workbookId')]",
+      "type": "microsoft.insights/workbooks",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2021-03-08",
+      "dependsOn": [],
+      "kind": "shared",
+      "properties": {
+        "displayName": "[parameters('workbookDisplayName')]",
+        "serializedData": "[string(variables('workbookContent'))]",
+        "version": "1.0",
+        "sourceId": "[concat(resourceGroup().id,'/providers/microsoft.operationalinsights/workspaces/',parameters('sentinelworkspace'))]",
+        "category": "sentinel"
+      }
+    }
+  ],
+  "outputs": {
+    "workbookId": {
+      "type": "string",
+      "value": "[resourceId( 'microsoft.insights/workbooks', parameters('workbookId'))]"
+    }
+  },
+  "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#"
+}
