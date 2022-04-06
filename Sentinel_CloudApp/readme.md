@@ -1,3 +1,5 @@
+Deploy MIP Label report [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://raw.githubusercontent.com/OfficeDev/O365-ActivityFeed-AzureFunction/master/Sentinel_CloudApp/Label%20Statistics.json)
+
 ---
 page_type: sample
 products:
@@ -7,7 +9,7 @@ languages:
 - powershellcore
 extensions:
   contentType: samples
-  createdDate: 12/17/2021 3:00:56 PM
+  createdDate: 04/06/2021 3:00:56 PM
 description: "This sample can be used to create MIP events in Sentinel."
 ---
 
