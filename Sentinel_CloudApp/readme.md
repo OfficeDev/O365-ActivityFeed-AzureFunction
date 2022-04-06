@@ -1,8 +1,8 @@
-- Deploy MIP Label report [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FOfficeDev%2FO365-ActivityFeed-AzureFunction%2Fmaster%2FSentinel_CloudApp%2fLabel%20Statistics.json)
-- Deploy Endpoint sensitive with risk [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FOfficeDev%2FO365-ActivityFeed-AzureFunction%2Fmaster%2FSentinel_CloudApp%2fEndpointSensitiveInfo.json)
-- Deploy sample rules [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FOfficeDev%2FO365-ActivityFeed-AzureFunction%2Fmaster%2FSentinel_CloudApp%2fAzure_Sentinel_analytics_rules.json)
+### MIP Label report [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FOfficeDev%2FO365-ActivityFeed-AzureFunction%2Fmaster%2FSentinel_CloudApp%2fLabel%20Statistics.json)
+### Endpoint sensitive with risk [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FOfficeDev%2FO365-ActivityFeed-AzureFunction%2Fmaster%2FSentinel_CloudApp%2fEndpointSensitiveInfo.json)
+### Sample analytic rules [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FOfficeDev%2FO365-ActivityFeed-AzureFunction%2Fmaster%2FSentinel_CloudApp%2fAzure_Sentinel_analytics_rules.json)
 
----/
+---
 page_type: sample
 products:
 - Microsoft 365
@@ -11,7 +11,7 @@ languages:
 - powershellcore
 extensions:
   contentType: samples
-  createdDate: 04/06/2021 3:00:56 PM
+  createdDate: 04/06/2022 3:00:56 PM
 description: "This sample can be used to create MIP events in Sentinel."
 ---
 
