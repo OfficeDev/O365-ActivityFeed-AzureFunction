@@ -1,4 +1,6 @@
-Deploy MIP Label report [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com/OfficeDev/O365-ActivityFeed-AzureFunction/master/Sentinel_CloudApp/Label%20Statistics.json)
+- Deploy MIP Label report [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FOfficeDev%2FO365-ActivityFeed-AzureFunction%2Fmaster%2FSentinel_CloudApp%2fLabel%20Statistics.json)
+- Deploy Endpoint sensitive with risk [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FOfficeDev%2FO365-ActivityFeed-AzureFunction%2Fmaster%2FSentinel_CloudApp%2fEndpointSensitiveInfo.json)
+- Deploy sample rules [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FOfficeDev%2FO365-ActivityFeed-AzureFunction%2Fmaster%2FSentinel_CloudApp%2fAzure_Sentinel_analytics_rules.json)
 
 ---/
 page_type: sample
