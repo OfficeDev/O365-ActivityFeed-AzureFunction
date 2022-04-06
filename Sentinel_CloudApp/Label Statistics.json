@@ -1,0 +1,735 @@
+{
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "workbookDisplayName": {
+      "type": "string",
+      "defaultValue": "M365 Label Statistics",
+      "metadata": {
+        "description": "This workbook is used to show the potential of presenting MIP label data from within Sentinel, utilizing CloudAppEvents.",
+        "author": "Jon Nordstrom, Microsoft"
+      }
+    },
+    "sentinelworkspace": {
+      "type": "string",
+      "defaultValue": "Change to your workspace",
+      "metadata": {
+        "description": "The name of the Sentinel workspace being used"
+      }
+    },
+    "workbookId": {
+      "type": "string",
+      "defaultValue": "[newGuid()]",
+      "metadata": {
+        "description": "The unique guid for this workbook instance"
+      }
+    }
+  },
+  "variables": {
+    "workbookContent": {
+      "version": "Notebook/1.0",
+      "items": [
+        {
+          "type": 9,
+          "content": {
+            "version": "KqlParameterItem/1.0",
+            "parameters": [
+              {
+                "id": "36a4172e-0e49-4884-b2a2-2281528a2ff4",
+                "version": "KqlParameterItem/1.0",
+                "name": "TimeRange",
+                "type": 4,
+                "isRequired": true,
+                "value": {
+                  "durationMs": 7776000000
+                },
+                "typeSettings": {
+                  "selectableValues": [
+                    {
+                      "durationMs": 300000
+                    },
+                    {
+                      "durationMs": 900000
+                    },
+                    {
+                      "durationMs": 1800000
+                    },
+                    {
+                      "durationMs": 3600000
+                    },
+                    {
+                      "durationMs": 14400000
+                    },
+                    {
+                      "durationMs": 43200000
+                    },
+                    {
+                      "durationMs": 86400000
+                    },
+                    {
+                      "durationMs": 172800000
+                    },
+                    {
+                      "durationMs": 259200000
+                    },
+                    {
+                      "durationMs": 604800000
+                    },
+                    {
+                      "durationMs": 1209600000
+                    },
+                    {
+                      "durationMs": 2419200000
+                    },
+                    {
+                      "durationMs": 2592000000
+                    },
+                    {
+                      "durationMs": 5184000000
+                    },
+                    {
+                      "durationMs": 7776000000
+                    }
+                  ],
+                  "allowCustom": true
+                }
+              },
+              {
+                "id": "4e1b6539-9788-43e2-a283-4891f33f1677",
+                "version": "KqlParameterItem/1.0",
+                "name": "Labels",
+                "type": 2,
+                "isRequired": true,
+                "multiSelect": true,
+                "quote": "'",
+                "delimiter": ",",
+                "query": "CloudAppEvents\r\n| where ActionType contains \"Sensitivity\" or ObjectName == \"MipLabel\"\r\n//Exclude possible sources of duplication\r\n| where ObjectName != \"Get-AutoSensitivityLabelPolicy\"\r\n| where RawEventData.Application <> \"Outlook\"\r\n| where parse_json(tostring(RawEventData.Common)).ProcessName <> \"OUTLOOK\"\r\n//Refine further on MIPLabel\r\n| where parse_json(tostring(RawEventData.SensitivityLabelEventData)).SensitivityLabelId != \"\" or RawEventData.RecordType == 43\r\n| summarize arg_max(TimeGenerated, *) by ReportId\r\n| extend LabelGUID = tostring(parse_json(tostring(RawEventData.SensitivityLabelEventData)).SensitivityLabelId)\r\n| join kind = leftouter   \r\n ( \r\n_GetWatchlist('Sensitive')\r\n| extend LabelGUID = tostring(ImmutableId)\r\n)\r\non LabelGUID\r\n| extend label = iff(isempty(tostring(RawEventData.LabelName)),DisplayName, tostring(RawEventData.LabelName))\r\n| summarize Count = count() by label\r\n| order by Count desc, label asc\r\n| project Value = label, Label = strcat(label, ' - ', Count)",
+                "value": [
+                  "value::all"
+                ],
+                "typeSettings": {
+                  "additionalResourceOptions": [
+                    "value::all"
+                  ],
+                  "selectAllValue": "All",
+                  "showDefault": false
+                },
+                "timeContext": {
+                  "durationMs": 0
+                },
+                "timeContextFromParameter": "TimeRange",
+                "queryType": 0,
+                "resourceType": "microsoft.operationalinsights/workspaces"
+              },
+              {
+                "version": "KqlParameterItem/1.0",
+                "name": "dep",
+                "label": "Department",
+                "type": 2,
+                "isRequired": true,
+                "multiSelect": true,
+                "quote": "'",
+                "delimiter": ",",
+                "query": "_GetWatchlist('UserAccounts')\r\n| summarize Count = count() by Department\r\n| order by Count desc, Department asc\r\n| project Value = Department, Label = strcat(Department, ' - ', Count)",
+                "value": [
+                  "value::all"
+                ],
+                "typeSettings": {
+                  "additionalResourceOptions": [
+                    "value::all"
+                  ],
+                  "selectAllValue": "All",
+                  "showDefault": false
+                },
+                "timeContext": {
+                  "durationMs": 0
+                },
+                "timeContextFromParameter": "TimeRange",
+                "queryType": 0,
+                "resourceType": "microsoft.operationalinsights/workspaces",
+                "id": "fc7efa00-2569-424d-80d0-363e6064ab3a"
+              }
+            ],
+            "style": "pills",
+            "queryType": 0,
+            "resourceType": "microsoft.operationalinsights/workspaces"
+          },
+          "name": "parameters - 1"
+        },
+        {
+          "type": 1,
+          "content": {
+            "json": "## **General Label Overview**"
+          },
+          "name": "text - 0"
+        },
+        {
+          "type": 3,
+          "content": {
+            "version": "KqlItem/1.0",
+            "query": "let data = CloudAppEvents\r\n    | where ActionType contains \"Sensitivity\" or ObjectName == \"MipLabel\" or ActionType == \"AutoSensitivityLabelRuleMatch\"\r\n    //Exclude possible sources of duplication\r\n    | where ObjectName != \"Get-AutoSensitivityLabelPolicy\"\r\n    | where RawEventData.Application <> \"Outlook\"\r\n    | where parse_json(tostring(RawEventData.Common)).ProcessName <> \"OUTLOOK\"\r\n    | extend OldSensitivityLabelId = tostring(parse_json(tostring(RawEventData.SensitivityLabelEventData)).OldSensitivityLabelId)\r\n//Refine further on MIPLabel\r\n    | where parse_json(tostring(RawEventData.SensitivityLabelEventData)).SensitivityLabelId != \"\" or RawEventData.RecordType == 43 or RawEventData.LabelId != \"\" or OldSensitivityLabelId != \"\"\r\n    | summarize arg_max(TimeGenerated, *) by ReportId\r\n    | extend LabelGUID1 = tostring(parse_json(tostring(RawEventData.SensitivityLabelEventData)).SensitivityLabelId)\r\n    | extend LabelGUID2 = iff(isempty(tostring(RawEventData.LabelId)),LabelGUID1, tostring(RawEventData.LabelId))\r\n    | extend LabelGUID = iff(isempty(tostring(LabelGUID2)),OldSensitivityLabelId, tostring(LabelGUID2))\r\n    | join kind = leftouter   \r\n        ( _GetWatchlist('Sensitive')\r\n        | extend LabelGUID = tostring(SearchKey)\r\n        )\r\n        on LabelGUID\r\n    | extend label = iff(isempty(tostring(RawEventData.LabelName)), DisplayName, tostring(RawEventData.LabelName))\r\n    | extend UserId = tostring(RawEventData.UserId)\r\n    | extend CreationTime =  todatetime(RawEventData.CreationTime)\r\n    //User Account enrichment.\r\n| join kind=leftouter\r\n(\r\n_GetWatchlist('UserAccounts')\r\n | extend UserId = tostring(SearchKey)\r\n)\r\non UserId\r\n    | where \"{dep:label}\" ==\"All\" or Department in ({dep})\r\n    | where \"{Labels:label}\" ==\"All\" or label in ({Labels});\r\ndata\r\n| summarize Count = count() by label\r\n| join kind = fullouter (datatable(label: string)[]) on label\r\n| project label = iff(label == '', label1, label), Count = iff(label == '', 0, Count)\r\n| join kind = inner (data\r\n    | make-series Trend = count() default = 0 on CreationTime from ago(90d) to now() step 2d by label)\r\n    on label\r\n| project-away label1, CreationTime\r\n| extend label = label\r\n| union (\r\n    data \r\n    | summarize Count = count() \r\n    | extend jkey = 1\r\n    | join kind=inner (data\r\n        | make-series Trend = count() default = 0 on CreationTime from ago(90d) to now() step 2d\r\n        | extend jkey = 1)\r\n        on jkey\r\n    | extend label = 'All', Workload_ss = '*'  \r\n    )\r\n| order by Count desc\r\n| take 10",
+            "size": 4,
+            "timeContext": {
+              "durationMs": 7776000000
+            },
+            "timeContextFromParameter": "TimeRange",
+            "exportFieldName": "label",
+            "exportParameterName": "SelectedLabel",
+            "exportDefaultValue": "All",
+            "queryType": 0,
+            "resourceType": "microsoft.operationalinsights/workspaces",
+            "visualization": "tiles",
+            "tileSettings": {
+              "titleContent": {
+                "columnMatch": "label",
+                "formatter": 1
+              },
+              "leftContent": {
+                "columnMatch": "Count",
+                "formatter": 12,
+                "formatOptions": {
+                  "palette": "auto"
+                },
+                "numberFormat": {
+                  "unit": 17,
+                  "options": {
+                    "maximumSignificantDigits": 3,
+                    "maximumFractionDigits": 2
+                  }
+                }
+              },
+              "secondaryContent": {
+                "columnMatch": "Trend",
+                "formatter": 9,
+                "formatOptions": {
+                  "min": 0,
+                  "palette": "coldHot"
+                }
+              },
+              "showBorder": false
+            }
+          },
+          "customWidth": "50",
+          "name": "query - 10"
+        },
+        {
+          "type": 3,
+          "content": {
+            "version": "KqlItem/1.0",
+            "query": "let data = CloudAppEvents\r\n    | where ActionType contains \"Sensitivity\" or ObjectName == \"MipLabel\"\r\n    //Exclude possible sources of duplication\r\n    | where ObjectName != \"Get-AutoSensitivityLabelPolicy\"\r\n    | where RawEventData.Application <> \"Outlook\"\r\n    | where parse_json(tostring(RawEventData.Common)).ProcessName <> \"OUTLOOK\"\r\n    | extend OldSensitivityLabelId = tostring(parse_json(tostring(RawEventData.SensitivityLabelEventData)).OldSensitivityLabelId)\r\n//Refine further on MIPLabel\r\n    | where parse_json(tostring(RawEventData.SensitivityLabelEventData)).SensitivityLabelId != \"\" or RawEventData.RecordType == 43 or RawEventData.LabelId != \"\" or OldSensitivityLabelId != \"\"\r\n    | summarize arg_max(TimeGenerated, *) by ReportId\r\n    | extend LabelGUID1 = tostring(parse_json(tostring(RawEventData.SensitivityLabelEventData)).SensitivityLabelId)\r\n    | extend LabelGUID2 = iff(isempty(tostring(RawEventData.LabelId)),LabelGUID1, tostring(RawEventData.LabelId))\r\n    | extend LabelGUID = iff(isempty(tostring(LabelGUID2)),OldSensitivityLabelId, tostring(LabelGUID2))\r\n    | join kind = leftouter   \r\n        ( \r\n        _GetWatchlist('Sensitive')\r\n        | extend LabelGUID = tostring(SearchKey)\r\n        )\r\n        on LabelGUID\r\n    | extend label = iff(isempty(tostring(RawEventData.LabelName)), DisplayName, tostring(RawEventData.LabelName))\r\n    | extend UserId = tostring(RawEventData.UserId)\r\n    | extend CreationTime_t =  todatetime(RawEventData.CreationTime)\r\n    | extend Workload_s = tostring(RawEventData.Workload)\r\n        //User Account enrichment.\r\n| join kind=leftouter\r\n(\r\n_GetWatchlist('UserAccounts')\r\n | extend UserId = tostring(SearchKey)\r\n)\r\non UserId\r\n    | where \"{dep:label}\" ==\"All\" or Department in ({dep})\r\n    | where \"{Labels:label}\" ==\"All\" or label in ({Labels});\r\ndata\r\n| summarize Count = count() by Workload_s\r\n| join kind = fullouter (datatable(Workload_s:string)['Exchange', 'MicrosoftTeams']) on Workload_s\r\n| project Workload_s = iff(Workload_s == '', Workload_s1, Workload_s), Count = iff(Workload_s == '', 0, Count)\r\n| join kind = inner (data\r\n    | make-series Trend = count() default = 0 on CreationTime_t from {TimeRange:start} to {TimeRange:end} step {TimeRange:grain} by Workload_s)\r\n    on Workload_s\r\n| project-away Workload_s1, CreationTime_t\r\n| extend Workload_s = Workload_s\r\n| union (\r\n    data \r\n    | summarize Count = count() \r\n    | extend jkey = 1\r\n    | join kind=inner (data\r\n        | make-series Trend = count() default = 0 on CreationTime_t from {TimeRange:start} to {TimeRange:end} step {TimeRange:grain}\r\n        | extend jkey = 1) on jkey\r\n    | extend Workload_s = 'All', Workload_ss = '*'  \r\n)\r\n| order by Count desc\r\n| take 10\r\n",
+            "size": 4,
+            "timeContext": {
+              "durationMs": 7776000000
+            },
+            "timeContextFromParameter": "TimeRange",
+            "exportFieldName": "Workload_s",
+            "exportParameterName": "SelectedWorkload",
+            "exportDefaultValue": "All",
+            "queryType": 0,
+            "resourceType": "microsoft.operationalinsights/workspaces",
+            "visualization": "tiles",
+            "tileSettings": {
+              "titleContent": {
+                "columnMatch": "Workload_s",
+                "formatter": 1
+              },
+              "leftContent": {
+                "columnMatch": "Count",
+                "formatter": 12,
+                "formatOptions": {
+                  "palette": "auto"
+                },
+                "numberFormat": {
+                  "unit": 17,
+                  "options": {
+                    "maximumSignificantDigits": 3,
+                    "maximumFractionDigits": 2
+                  }
+                }
+              },
+              "secondaryContent": {
+                "columnMatch": "Trend",
+                "formatter": 9,
+                "formatOptions": {
+                  "min": 0,
+                  "palette": "coldHot"
+                }
+              },
+              "showBorder": false
+            }
+          },
+          "customWidth": "50",
+          "name": "query - 10 - Copy"
+        },
+        {
+          "type": 1,
+          "content": {
+            "json": "## Label Usage Overview"
+          },
+          "name": "text - 11"
+        },
+        {
+          "type": 3,
+          "content": {
+            "version": "KqlItem/1.0",
+            "query": "let data = CloudAppEvents\r\n    | where ActionType contains \"Sensitivity\" or ObjectName == \"MipLabel\"\r\n    //Exclude possible sources of duplication\r\n    | where ObjectName != \"Get-AutoSensitivityLabelPolicy\"\r\n    | where RawEventData.Application <> \"Outlook\"\r\n    | where parse_json(tostring(RawEventData.Common)).ProcessName <> \"OUTLOOK\"\r\n        | extend OldSensitivityLabelId = tostring(parse_json(tostring(RawEventData.SensitivityLabelEventData)).OldSensitivityLabelId)\r\n//Refine further on MIPLabel\r\n    | where parse_json(tostring(RawEventData.SensitivityLabelEventData)).SensitivityLabelId != \"\" or RawEventData.RecordType == 43 or RawEventData.LabelId != \"\" or OldSensitivityLabelId != \"\"\r\n    | summarize arg_max(TimeGenerated, *) by ReportId\r\n    | extend LabelGUID1 = tostring(parse_json(tostring(RawEventData.SensitivityLabelEventData)).SensitivityLabelId)\r\n    | extend LabelGUID2 = iff(isempty(tostring(RawEventData.LabelId)),LabelGUID1, tostring(RawEventData.LabelId))\r\n    | extend LabelGUID = iff(isempty(tostring(LabelGUID2)),OldSensitivityLabelId, tostring(LabelGUID2))\r\n    | join kind = leftouter   \r\n        ( \r\n        _GetWatchlist('Sensitive')\r\n        | extend LabelGUID = tostring(SearchKey)\r\n        )\r\n        on LabelGUID\r\n    | extend label = iff(isempty(tostring(RawEventData.LabelName)), DisplayName, tostring(RawEventData.LabelName))\r\n    | extend UserId = tostring(RawEventData.UserId)\r\n    | extend CreationTime_t =  todatetime(RawEventData.CreationTime)\r\n    | extend Workload_s = tostring(RawEventData.Workload)\r\n    //User Account enrichment.\r\n| join kind=leftouter\r\n(\r\n_GetWatchlist('UserAccounts')\r\n | extend UserId = tostring(SearchKey)\r\n)\r\non UserId\r\n    | where \"{dep:label}\" ==\"All\" or Department in ({dep})\r\n    | where \"{Labels:label}\" ==\"All\" or label in ({Labels});\r\nlet appData = data\r\n| summarize TotalCount = count() by label\r\n| join kind=inner (data\r\n    | make-series Trend = count() default = 0 on TimeGenerated in range({TimeRange:start}, {TimeRange:end}, {TimeRange:grain}) by label\r\n    | project-away TimeGenerated) on label\r\n| order by TotalCount desc, label asc\r\n| project label, TotalCount, Trend\r\n| serialize Id = row_number();\r\ndata\r\n| summarize TotalCount = count() by UserId , label\r\n| join kind=inner (data\r\n    | make-series Trend = count() default = 0 on TimeGenerated in range({TimeRange:start}, {TimeRange:end}, {TimeRange:grain}) by label, UserId\r\n    | project-away TimeGenerated) on label, UserId\r\n| order by TotalCount desc, label asc\r\n| project label, UserId, TotalCount, Trend\r\n| serialize Id = row_number(1000000)\r\n| join kind=inner (appData) on label\r\n| project Id, Name = UserId, Type = 'UserId', ['label Count'] = TotalCount, Trend,  ParentId = Id1\r\n| union (appData \r\n    | project Id, Name = label, Type = 'label', ['label Count'] = TotalCount,  Trend)\r\n| order by ['label Count'] desc, Name asc",
+            "size": 1,
+            "showAnalytics": true,
+            "timeContext": {
+              "durationMs": 7776000000
+            },
+            "timeContextFromParameter": "TimeRange",
+            "exportParameterName": "OperationDetail",
+            "exportDefaultValue": "{ \"Name\":\"\", \"Type\":\"*\"}",
+            "showExportToExcel": true,
+            "queryType": 0,
+            "resourceType": "microsoft.operationalinsights/workspaces",
+            "gridSettings": {
+              "formatters": [
+                {
+                  "columnMatch": "Id",
+                  "formatter": 5,
+                  "formatOptions": {
+                    "showIcon": true
+                  }
+                },
+                {
+                  "columnMatch": "Operations Count",
+                  "formatter": 8,
+                  "formatOptions": {
+                    "min": 0,
+                    "palette": "orange",
+                    "showIcon": true
+                  }
+                },
+                {
+                  "columnMatch": "Trend",
+                  "formatter": 9,
+                  "formatOptions": {
+                    "min": 0,
+                    "palette": "gray",
+                    "showIcon": true
+                  }
+                },
+                {
+                  "columnMatch": "ParentId",
+                  "formatter": 5,
+                  "formatOptions": {
+                    "showIcon": true
+                  }
+                }
+              ],
+              "filter": true,
+              "hierarchySettings": {
+                "idColumn": "Id",
+                "parentColumn": "ParentId",
+                "treeType": 0,
+                "expanderColumn": "Name"
+              }
+            }
+          },
+          "name": "query - 3"
+        },
+        {
+          "type": 3,
+          "content": {
+            "version": "KqlItem/1.0",
+            "query": "let data = CloudAppEvents\r\n    | where ActionType contains \"Sensitivity\" or ObjectName == \"MipLabel\"\r\n    //Exclude possible sources of duplication\r\n    | where ObjectName != \"Get-AutoSensitivityLabelPolicy\"\r\n    | where RawEventData.Application <> \"Outlook\"\r\n    | where parse_json(tostring(RawEventData.Common)).ProcessName <> \"OUTLOOK\"\r\n        | extend OldSensitivityLabelId = tostring(parse_json(tostring(RawEventData.SensitivityLabelEventData)).OldSensitivityLabelId)\r\n//Refine further on MIPLabel\r\n    | where parse_json(tostring(RawEventData.SensitivityLabelEventData)).SensitivityLabelId != \"\" or RawEventData.RecordType == 43 or RawEventData.LabelId != \"\" or OldSensitivityLabelId != \"\"\r\n    | summarize arg_max(TimeGenerated, *) by ReportId\r\n    | extend LabelGUID1 = tostring(parse_json(tostring(RawEventData.SensitivityLabelEventData)).SensitivityLabelId)\r\n    | extend LabelGUID2 = iff(isempty(tostring(RawEventData.LabelId)),LabelGUID1, tostring(RawEventData.LabelId))\r\n    | extend LabelGUID = iff(isempty(tostring(LabelGUID2)),OldSensitivityLabelId, tostring(LabelGUID2))\r\n    | join kind = leftouter   \r\n        ( \r\n        _GetWatchlist('Sensitive')\r\n        | extend LabelGUID = tostring(SearchKey)\r\n        )\r\n        on LabelGUID\r\n    | extend label = iff(isempty(tostring(RawEventData.LabelName)), DisplayName, tostring(RawEventData.LabelName))\r\n    | extend UserId = tostring(RawEventData.UserId)\r\n    | extend TimeGenerated =  todatetime(RawEventData.CreationTime)\r\n    | extend Workload_s = tostring(RawEventData.Workload)\r\n    //User Account enrichment.\r\n| join kind=leftouter\r\n(\r\n_GetWatchlist('UserAccounts')\r\n | extend UserId = tostring(SearchKey)\r\n)\r\non UserId\r\n    | where \"{dep:label}\" ==\"All\" or Department in ({dep})\r\n    | where \"{Labels:label}\" ==\"All\" or label in ({Labels});\r\n    data\r\n| summarize Amount = count() by label, bin_at(TimeGenerated, 1d, now()) \r\n| sort by Amount ",
+            "size": 1,
+            "showAnalytics": true,
+            "title": "Label Usage over time",
+            "timeContext": {
+              "durationMs": 7776000000
+            },
+            "timeContextFromParameter": "TimeRange",
+            "queryType": 0,
+            "resourceType": "microsoft.operationalinsights/workspaces",
+            "visualization": "linechart"
+          },
+          "name": "query - 2"
+        },
+        {
+          "type": 3,
+          "content": {
+            "version": "KqlItem/1.0",
+            "query": "let data = CloudAppEvents\r\n    | where ActionType contains \"Sensitivity\" or ObjectName == \"MipLabel\"\r\n    //Exclude possible sources of duplication\r\n    | where ObjectName != \"Get-AutoSensitivityLabelPolicy\"\r\n    | where RawEventData.Application <> \"Outlook\"\r\n    | where parse_json(tostring(RawEventData.Common)).ProcessName <> \"OUTLOOK\"\r\n        | extend OldSensitivityLabelId = tostring(parse_json(tostring(RawEventData.SensitivityLabelEventData)).OldSensitivityLabelId)\r\n//Refine further on MIPLabel\r\n    | where parse_json(tostring(RawEventData.SensitivityLabelEventData)).SensitivityLabelId != \"\" or RawEventData.RecordType == 43 or RawEventData.LabelId != \"\" or OldSensitivityLabelId != \"\"\r\n    | summarize arg_max(TimeGenerated, *) by ReportId\r\n    | extend LabelGUID1 = tostring(parse_json(tostring(RawEventData.SensitivityLabelEventData)).SensitivityLabelId)\r\n    | extend LabelGUID2 = iff(isempty(tostring(RawEventData.LabelId)),LabelGUID1, tostring(RawEventData.LabelId))\r\n    | extend LabelGUID = iff(isempty(tostring(LabelGUID2)),OldSensitivityLabelId, tostring(LabelGUID2))\r\n    | join kind = leftouter   \r\n        ( \r\n        _GetWatchlist('Sensitive')\r\n        | extend LabelGUID = tostring(SearchKey)\r\n        )\r\n        on LabelGUID\r\n    | extend label = iff(isempty(tostring(RawEventData.LabelName)), DisplayName, tostring(RawEventData.LabelName))\r\n    | extend UserId = tostring(RawEventData.UserId)\r\n    | extend CreationTime_t =  todatetime(RawEventData.CreationTime)\r\n    | extend Workload_s = tostring(RawEventData.Workload)\r\n    //User Account enrichment.\r\n| join kind=leftouter\r\n(\r\n_GetWatchlist('UserAccounts')\r\n | extend UserId = tostring(SearchKey)\r\n)\r\non UserId\r\n    | where \"{dep:label}\" ==\"All\" or Department in ({dep})\r\n    | where \"{Labels:label}\" ==\"All\" or label in ({Labels});\r\n    data\r\n| summarize Number = count() by ActionType",
+            "size": 0,
+            "showAnalytics": true,
+            "title": "Label Operations",
+            "timeContext": {
+              "durationMs": 7776000000
+            },
+            "timeContextFromParameter": "TimeRange",
+            "queryType": 0,
+            "resourceType": "microsoft.operationalinsights/workspaces",
+            "visualization": "piechart"
+          },
+          "customWidth": "50",
+          "name": "query - 4"
+        },
+        {
+          "type": 3,
+          "content": {
+            "version": "KqlItem/1.0",
+            "query": "let details = dynamic({OperationDetail});\r\nCloudAppEvents\r\n| where ActionType contains \"Sensitivity\" or ObjectName == \"MipLabel\"\r\n//Exclude possible sources of duplication\r\n| where ObjectName != \"Get-AutoSensitivityLabelPolicy\"\r\n| where RawEventData.Application <> \"Outlook\"\r\n| where parse_json(tostring(RawEventData.Common)).ProcessName <> \"OUTLOOK\"\r\n    | extend OldSensitivityLabelId = tostring(parse_json(tostring(RawEventData.SensitivityLabelEventData)).OldSensitivityLabelId)\r\n//Refine further on MIPLabel\r\n    | where parse_json(tostring(RawEventData.SensitivityLabelEventData)).SensitivityLabelId != \"\" or RawEventData.RecordType == 43 or RawEventData.LabelId != \"\" or OldSensitivityLabelId != \"\"\r\n    | summarize arg_max(TimeGenerated, *) by ReportId\r\n    | extend LabelGUID1 = tostring(parse_json(tostring(RawEventData.SensitivityLabelEventData)).SensitivityLabelId)\r\n    | extend LabelGUID2 = iff(isempty(tostring(RawEventData.LabelId)),LabelGUID1, tostring(RawEventData.LabelId))\r\n    | extend LabelGUID = iff(isempty(tostring(LabelGUID2)),OldSensitivityLabelId, tostring(LabelGUID2))\r\n| join kind = leftouter   \r\n ( \r\n_GetWatchlist('Sensitive')\r\n| extend LabelGUID = tostring(SearchKey)\r\n)\r\non LabelGUID\r\n| extend label = iff(isempty(tostring(RawEventData.LabelName)),DisplayName, tostring(RawEventData.LabelName))\r\n| extend UserId = tostring(RawEventData.UserId)\r\n| extend CreationTime_ = tostring(RawEventData.CreationTime)\r\n| extend Workload_s = tostring(RawEventData.Workload)\r\n| extend ActionSource = tostring(parse_json(tostring(RawEventData.SensitivityLabelEventData)).ActionSource)\r\n| extend LabelDocevent = toint(parse_json(tostring(RawEventData.SensitivityLabelEventData)).LabelEventType)\r\n| extend LabelEmail = tostring(RawEventData.LabelAction)\r\n    //User Account enrichment.\r\n| join kind=leftouter\r\n(\r\n_GetWatchlist('UserAccounts')\r\n | extend UserId = tostring(SearchKey)\r\n)\r\non UserId\r\n    | where \"{dep:label}\" ==\"All\" or Department in ({dep})\r\n    | where \"{Labels:label}\" ==\"All\" or label in ({Labels})\r\n//Determine Label Action to present\r\n| join kind = leftouter   \r\n(\r\n_GetWatchlist('MipMap')\r\n| extend LabelDocevent = toint(SearchKey)\r\n| extend Type = Type\r\n| where Type == \"LabelEventType\"\r\n)\r\non LabelDocevent\r\n| extend LabelEventType = iff(isempty(LabelEmail), Name, LabelEmail)\r\n| summarize Number = count() by LabelEventType",
+            "size": 0,
+            "showAnalytics": true,
+            "title": "Label Changes",
+            "timeContext": {
+              "durationMs": 7776000000
+            },
+            "timeContextFromParameter": "TimeRange",
+            "queryType": 0,
+            "resourceType": "microsoft.operationalinsights/workspaces",
+            "visualization": "piechart"
+          },
+          "customWidth": "50",
+          "name": "query - 5"
+        },
+        {
+          "type": 3,
+          "content": {
+            "version": "KqlItem/1.0",
+            "query": "\r\nlet data = (CloudAppEvents\r\n| where ActionType contains \"Sensitivity\" or ObjectName == \"MipLabel\"\r\n//Exclude possible sources of duplication\r\n| where ObjectName != \"Get-AutoSensitivityLabelPolicy\"\r\n| where RawEventData.Application <> \"Outlook\"\r\n| where parse_json(tostring(RawEventData.Common)).ProcessName <> \"OUTLOOK\"\r\n    | extend OldSensitivityLabelId = tostring(parse_json(tostring(RawEventData.SensitivityLabelEventData)).OldSensitivityLabelId)\r\n//Refine further on MIPLabel\r\n    | where parse_json(tostring(RawEventData.SensitivityLabelEventData)).SensitivityLabelId != \"\" or RawEventData.RecordType == 43 or RawEventData.LabelId != \"\" or OldSensitivityLabelId != \"\"\r\n    | summarize arg_max(TimeGenerated, *) by ReportId\r\n    | extend LabelGUID1 = tostring(parse_json(tostring(RawEventData.SensitivityLabelEventData)).SensitivityLabelId)\r\n    | extend LabelGUID2 = iff(isempty(tostring(RawEventData.LabelId)),LabelGUID1, tostring(RawEventData.LabelId))\r\n    | extend LabelGUID = iff(isempty(tostring(LabelGUID2)),OldSensitivityLabelId, tostring(LabelGUID2))\r\n| join kind = leftouter   \r\n ( \r\n_GetWatchlist('Sensitive')\r\n| extend LabelGUID = tostring(SearchKey)\r\n)\r\non LabelGUID\r\n| extend label = iff(isempty(tostring(RawEventData.LabelName)),DisplayName, tostring(RawEventData.LabelName))\r\n| extend UserId = tostring(RawEventData.UserId)\r\n| extend CreationTime_t = todatetime(RawEventData.CreationTime)\r\n| extend Workload_s = tostring(RawEventData.Workload)\r\n| extend ActionSource = tostring(parse_json(tostring(RawEventData.SensitivityLabelEventData)).ActionSource)\r\n| extend LabelDocevent = toint(parse_json(tostring(RawEventData.SensitivityLabelEventData)).LabelEventType)\r\n| extend LabelEmail = tostring(RawEventData.LabelAction)\r\n//Determine Label Action to present\r\n| join kind = leftouter   \r\n(\r\n_GetWatchlist('MipMap')\r\n| extend LabelDocevent = toint(SearchKey)\r\n| extend Type = Type\r\n| where Type == \"LabelEventType\"\r\n)\r\non LabelDocevent\r\n| extend LabelEventType = iff(isempty(LabelEmail), Name, LabelEmail)\r\n| extend ActionSourceDoc = ActionSource\r\n| join kind = leftouter   \r\n(\r\n_GetWatchlist('MipMap')\r\n| extend ActionSourceDoc = (SearchKey)\r\n| extend Type = Type\r\n| where Type == \"ActionSource\"\r\n)\r\non ActionSourceDoc\r\n| extend ActionSource = Name1\r\n//User Account enrichment.\r\n| join kind=leftouter\r\n(\r\n_GetWatchlist('UserAccounts')\r\n | extend UserId = tostring(SearchKey)\r\n)\r\non UserId\r\n    | where \"{dep:label}\" ==\"All\" or Department in ({dep})\r\n    | where \"{Labels:label}\" ==\"All\" or label in ({Labels})\r\n//Document and email subject Logic\r\n| extend ItemName_ = tostring(RawEventData.ItemName)\r\n| extend ObjectId_ = tostring(RawEventData.ObjectId)\r\n| extend DocumentorSubject = iff(isempty(tostring(ItemName_)),ObjectId_, tostring(ItemName_))\r\n);\r\ndata\r\n| summarize Number = count() by UserId,DocumentorSubject,OSPlatform,IPAddress,label,ActionSource,LabelEventType, bin(TimeGenerated, 1d)\r\n| order by Number, TimeGenerated",
+            "size": 1,
+            "title": "Label Details",
+            "timeContext": {
+              "durationMs": 7776000000
+            },
+            "timeContextFromParameter": "TimeRange",
+            "queryType": 0,
+            "resourceType": "microsoft.operationalinsights/workspaces",
+            "gridSettings": {
+              "filter": true,
+              "sortBy": [
+                {
+                  "itemKey": "UserId",
+                  "sortOrder": 1
+                }
+              ]
+            },
+            "sortBy": [
+              {
+                "itemKey": "UserId",
+                "sortOrder": 1
+              }
+            ]
+          },
+          "customWidth": "50",
+          "name": "query - 6"
+        },
+        {
+          "type": 3,
+          "content": {
+            "version": "KqlItem/1.0",
+            "query": "\r\nlet data = (CloudAppEvents\r\n| where ActionType contains \"Sensitivity\" or ObjectName == \"MipLabel\"\r\n//Exclude possible sources of duplication\r\n| where ObjectName != \"Get-AutoSensitivityLabelPolicy\"\r\n| where RawEventData.Application <> \"Outlook\"\r\n| where parse_json(tostring(RawEventData.Common)).ProcessName <> \"OUTLOOK\"\r\n    | extend OldSensitivityLabelId = tostring(parse_json(tostring(RawEventData.SensitivityLabelEventData)).OldSensitivityLabelId)\r\n//Refine further on MIPLabel\r\n    | where parse_json(tostring(RawEventData.SensitivityLabelEventData)).SensitivityLabelId != \"\" or RawEventData.RecordType == 43 or RawEventData.LabelId != \"\" or OldSensitivityLabelId != \"\"\r\n    | summarize arg_max(TimeGenerated, *) by ReportId\r\n    | extend LabelGUID1 = tostring(parse_json(tostring(RawEventData.SensitivityLabelEventData)).SensitivityLabelId)\r\n    | extend LabelGUID2 = iff(isempty(tostring(RawEventData.LabelId)),LabelGUID1, tostring(RawEventData.LabelId))\r\n    | extend LabelGUID = iff(isempty(tostring(LabelGUID2)),OldSensitivityLabelId, tostring(LabelGUID2))\r\n| join kind = leftouter   \r\n ( \r\n_GetWatchlist('Sensitive')\r\n| extend LabelGUID = tostring(SearchKey)\r\n)\r\non LabelGUID\r\n| extend label = iff(isempty(tostring(RawEventData.LabelName)),DisplayName, tostring(RawEventData.LabelName))\r\n| extend UserId = tostring(RawEventData.UserId)\r\n| extend CreationTime_t = todatetime(RawEventData.CreationTime)\r\n| extend Workload_s = tostring(RawEventData.Workload)\r\n| extend ActionSource = tostring(parse_json(tostring(RawEventData.SensitivityLabelEventData)).ActionSource)\r\n| extend LabelDocevent = toint(parse_json(tostring(RawEventData.SensitivityLabelEventData)).LabelEventType)\r\n| extend LabelEmail = tostring(RawEventData.LabelAction)\r\n//Determine Label Action to present\r\n| join kind = leftouter   \r\n(\r\n_GetWatchlist('MipMap')\r\n| extend LabelDocevent = toint(SearchKey)\r\n| extend Type = Type\r\n| where Type == \"LabelEventType\"\r\n)\r\non LabelDocevent\r\n| extend LabelEventType = iff(isempty(LabelEmail), Name, LabelEmail)\r\n| extend OldLabel = OldSensitivityLabelId\r\n| join kind = leftouter   \r\n(\r\n_GetWatchlist('Sensitive')\r\n| extend OldLabel = SearchKey\r\n)\r\non OldLabel\r\n| extend OldLabel = DisplayName1\r\n| extend ActionSourceDoc = ActionSource\r\n| join kind = leftouter   \r\n(\r\n_GetWatchlist('MipMap')\r\n| extend ActionSourceDoc = (SearchKey)\r\n| extend Type = Type\r\n| where Type == \"ActionSource\"\r\n)\r\non ActionSourceDoc\r\n| extend ActionSource = Name1\r\n| extend UserId = tolower(UserId)\r\n//User Account enrichment.\r\n| join kind=leftouter\r\n(\r\n_GetWatchlist('UserAccounts')\r\n | extend UserId = tolower(SearchKey)\r\n)\r\non UserId\r\n//Document and email subject Logic\r\n| extend ItemName_ = tostring(RawEventData.ItemName)\r\n| extend ObjectId_ = tostring(RawEventData.ObjectId)\r\n| extend DocumentorSubject = iff(isempty(tostring(ItemName_)),ObjectId_, tostring(ItemName_))\r\n    | where \"{dep:label}\" ==\"All\" or Department in ({dep})\r\n    | where \"{Labels:label}\" ==\"All\" or label in ({Labels})\r\n);\r\ndata\r\n| where LabelEventType == \"LabelRemoved\" or LabelEventType == \"LabelDowngraded\"\r\n| extend SensitivityLabelJustificationText_ = tostring(RawEventData.SensitivityLabelJustificationText)\r\n| extend Justification = replace_regex(SensitivityLabelJustificationText_,\"%20\",\" \")\r\n| project UserId,DocumentorSubject,OSPlatform,IPAddress,label,OldLabel,ActionSource,TimeGenerated,LabelEventType,Justification,Department\r\n| summarize Number = count() by LabelEventType,UserId,Department,DocumentorSubject,label,OldLabel,ActionSource,Justification,OSPlatform,IPAddress, bin(TimeGenerated, 1d)\r\n| order by Number, TimeGenerated",
+            "size": 1,
+            "title": "Label Downgraded or Removed",
+            "timeContext": {
+              "durationMs": 7776000000
+            },
+            "timeContextFromParameter": "TimeRange",
+            "queryType": 0,
+            "resourceType": "microsoft.operationalinsights/workspaces",
+            "gridSettings": {
+              "filter": true
+            },
+            "sortBy": []
+          },
+          "customWidth": "50",
+          "name": "query - 7"
+        },
+        {
+          "type": 1,
+          "content": {
+            "json": "## Organizational Report"
+          },
+          "name": "text - 12"
+        },
+        {
+          "type": 3,
+          "content": {
+            "version": "KqlItem/1.0",
+            "query": "let details = dynamic({OperationDetail});\r\nlet data = (CloudAppEvents\r\n| where ActionType contains \"Sensitivity\" or ObjectName == \"MipLabel\"\r\n//Exclude possible sources of duplication\r\n| where ObjectName != \"Get-AutoSensitivityLabelPolicy\"\r\n| where RawEventData.Application <> \"Outlook\"\r\n| where parse_json(tostring(RawEventData.Common)).ProcessName <> \"OUTLOOK\"\r\n    | extend OldSensitivityLabelId = tostring(parse_json(tostring(RawEventData.SensitivityLabelEventData)).OldSensitivityLabelId)\r\n//Refine further on MIPLabel\r\n    | where parse_json(tostring(RawEventData.SensitivityLabelEventData)).SensitivityLabelId != \"\" or RawEventData.RecordType == 43 or RawEventData.LabelId != \"\" or OldSensitivityLabelId != \"\"\r\n    | summarize arg_max(TimeGenerated, *) by ReportId\r\n    | extend LabelGUID1 = tostring(parse_json(tostring(RawEventData.SensitivityLabelEventData)).SensitivityLabelId)\r\n    | extend LabelGUID2 = iff(isempty(tostring(RawEventData.LabelId)),LabelGUID1, tostring(RawEventData.LabelId))\r\n    | extend LabelGUID = iff(isempty(tostring(LabelGUID2)),OldSensitivityLabelId, tostring(LabelGUID2))\r\n| join kind = leftouter   \r\n ( \r\n_GetWatchlist('Sensitive')\r\n| extend LabelGUID = tostring(SearchKey)\r\n)\r\non LabelGUID\r\n| extend label = iff(isempty(tostring(RawEventData.LabelName)),DisplayName, tostring(RawEventData.LabelName))\r\n| extend UserId = tostring(RawEventData.UserId)\r\n| extend CreationTime_t = todatetime(RawEventData.CreationTime)\r\n| extend Workload_s = tostring(RawEventData.Workload)\r\n| extend ActionSource = tostring(parse_json(tostring(RawEventData.SensitivityLabelEventData)).ActionSource)\r\n| extend LabelDocevent = toint(parse_json(tostring(RawEventData.SensitivityLabelEventData)).LabelEventType)\r\n| extend LabelEmail = tostring(RawEventData.LabelAction)\r\n//Determine Label Action to present\r\n| join kind = leftouter   \r\n(\r\n_GetWatchlist('MipMap')\r\n| extend LabelDocevent = toint(SearchKey)\r\n| extend Type = Type\r\n| where Type == \"LabelEventType\"\r\n)\r\non LabelDocevent\r\n| extend LabelEventType = iff(isempty(LabelEmail), Name, LabelEmail)\r\n//User Account enrichment.\r\n| extend UserId = tolower(UserId)\r\n| join kind=leftouter\r\n(\r\n_GetWatchlist('UserAccounts')\r\n | extend UserId = tolower(SearchKey)\r\n)\r\non UserId);\r\ndata\r\n    | where \"{dep:label}\" ==\"All\" or Department in ({dep})\r\n    | where \"{Labels:label}\" ==\"All\" or label in ({Labels})\r\n| where Department != ''\r\n| summarize Count = count() by Department\r\n| project\r\n    Department = iff(Department == '', Department, Department),\r\n    Count = iff(Department == '', 0, Count)\r\n| join kind = inner (data\r\n    | make-series Trend = count() default = 0 on CreationTime_t from ago(90d) to now() step 2d by Department)\r\n    on Department\r\n| project-away Department, CreationTime_t\r\n| extend Department = Department1\r\n| union (\r\n    data \r\n    | summarize Count = count() \r\n    | extend jkey = 1\r\n    | join kind=inner (data\r\n        | make-series Trend = count() default = 0 on CreationTime_t from ago(90d) to now() step 2d\r\n        | extend jkey = 1)\r\n        on jkey     \r\n        | extend Department = 'All',Department1 = 'All'\r\n    )\r\n\r\n| order by Count desc\r\n| take 10\r\n",
+            "size": 4,
+            "timeContext": {
+              "durationMs": 7776000000
+            },
+            "timeContextFromParameter": "TimeRange",
+            "exportFieldName": "Workload_s",
+            "exportParameterName": "SelectedWorkload",
+            "exportDefaultValue": "All",
+            "queryType": 0,
+            "resourceType": "microsoft.operationalinsights/workspaces",
+            "visualization": "tiles",
+            "tileSettings": {
+              "titleContent": {
+                "columnMatch": "Department",
+                "formatter": 1
+              },
+              "leftContent": {
+                "columnMatch": "Count",
+                "formatter": 12,
+                "formatOptions": {
+                  "palette": "auto"
+                },
+                "numberFormat": {
+                  "unit": 17,
+                  "options": {
+                    "maximumSignificantDigits": 3,
+                    "maximumFractionDigits": 2
+                  }
+                }
+              },
+              "secondaryContent": {
+                "columnMatch": "Trend",
+                "formatter": 9,
+                "formatOptions": {
+                  "min": 0,
+                  "palette": "coldHot"
+                }
+              },
+              "showBorder": false
+            }
+          },
+          "customWidth": "100",
+          "name": "query - 10 - Copy"
+        },
+        {
+          "type": 3,
+          "content": {
+            "version": "KqlItem/1.0",
+            "query": "let details = dynamic({OperationDetail});\r\nlet data = (CloudAppEvents\r\n| where ActionType contains \"Sensitivity\" or ObjectName == \"MipLabel\"\r\n//Exclude possible sources of duplication\r\n| where ObjectName != \"Get-AutoSensitivityLabelPolicy\"\r\n| where RawEventData.Application <> \"Outlook\"\r\n| where parse_json(tostring(RawEventData.Common)).ProcessName <> \"OUTLOOK\"\r\n    | extend OldSensitivityLabelId = tostring(parse_json(tostring(RawEventData.SensitivityLabelEventData)).OldSensitivityLabelId)\r\n//Refine further on MIPLabel\r\n    | where parse_json(tostring(RawEventData.SensitivityLabelEventData)).SensitivityLabelId != \"\" or RawEventData.RecordType == 43 or RawEventData.LabelId != \"\" or OldSensitivityLabelId != \"\"\r\n    | summarize arg_max(TimeGenerated, *) by ReportId\r\n    | extend LabelGUID1 = tostring(parse_json(tostring(RawEventData.SensitivityLabelEventData)).SensitivityLabelId)\r\n    | extend LabelGUID2 = iff(isempty(tostring(RawEventData.LabelId)),LabelGUID1, tostring(RawEventData.LabelId))\r\n    | extend LabelGUID = iff(isempty(tostring(LabelGUID2)),OldSensitivityLabelId, tostring(LabelGUID2))\r\n| join kind = leftouter   \r\n ( \r\n_GetWatchlist('Sensitive')\r\n| extend LabelGUID = tostring(SearchKey)\r\n)\r\non LabelGUID\r\n| extend label = iff(isempty(tostring(RawEventData.LabelName)),DisplayName, tostring(RawEventData.LabelName))\r\n| extend UserId = tostring(RawEventData.UserId)\r\n| extend CreationTime_t = todatetime(RawEventData.CreationTime)\r\n| extend Workload_s = tostring(RawEventData.Workload)\r\n| extend ActionSource = tostring(parse_json(tostring(RawEventData.SensitivityLabelEventData)).ActionSource)\r\n| extend LabelDocevent = toint(parse_json(tostring(RawEventData.SensitivityLabelEventData)).LabelEventType)\r\n| extend LabelEmail = tostring(RawEventData.LabelAction)\r\n//Determine Label Action to present\r\n| join kind = leftouter   \r\n(\r\n_GetWatchlist('MipMap')\r\n| extend LabelDocevent = toint(SearchKey)\r\n| extend Type = Type\r\n| where Type == \"LabelEventType\"\r\n)\r\non LabelDocevent\r\n| extend LabelEventType = iff(isempty(LabelEmail), Name, LabelEmail)\r\n//User Account enrichment.\r\n| extend UserId = tolower(UserId)\r\n| join kind=leftouter\r\n(\r\n_GetWatchlist('UserAccounts')\r\n | extend UserId = tolower(SearchKey)\r\n)\r\non UserId);\r\nlet appData = data\r\n    | summarize TotalCount = count() by Department\r\n    | join kind=inner (data\r\n        | make-series Trend = count() default = 0 on TimeGenerated in range(ago(90d), now(), 2d) by Department\r\n        | project-away TimeGenerated)\r\n        on Department\r\n    | order by TotalCount desc, Department asc\r\n    | project Department, TotalCount, Trend\r\n    | serialize Id = row_number();\r\ndata\r\n    | where \"{dep:label}\" ==\"All\" or Department in ({dep})\r\n    | where \"{Labels:label}\" ==\"All\" or label in ({Labels})\r\n| summarize TotalCount = count() by UserId, Department,DisplayName\r\n| join kind=inner (data\r\n    | make-series Trend = count() default = 0 on TimeGenerated in range(ago(90d), now(), 2d) by Department, UserId,DisplayName\r\n    | project-away TimeGenerated)\r\n    on Department, UserId, DisplayName\r\n| order by TotalCount desc, Department asc\r\n| project Department, UserId,DisplayName, TotalCount, Trend\r\n| serialize Id = row_number(1000000)\r\n| join kind=inner (appData) on Department\r\n| project\r\n    Id,\r\n    Name = UserId,\r\n    Type = 'UserId',\r\n    DisplayName,\r\n    ['Department Count'] = TotalCount,\r\n    Trend,\r\n    ParentId = Id1\r\n| union (appData \r\n    | project\r\n        Id,\r\n        Name = Department,\r\n        Type = 'Department',\r\n        ['Department Count'] = TotalCount,\r\n        Trend)\r\n| order by ['Department Count'] desc, Name asc",
+            "size": 1,
+            "showAnalytics": true,
+            "timeContext": {
+              "durationMs": 7776000000
+            },
+            "timeContextFromParameter": "TimeRange",
+            "exportParameterName": "OperationDetail",
+            "exportDefaultValue": "{ \"Name\":\"\", \"Type\":\"*\"}",
+            "showExportToExcel": true,
+            "queryType": 0,
+            "resourceType": "microsoft.operationalinsights/workspaces",
+            "visualization": "table",
+            "gridSettings": {
+              "formatters": [
+                {
+                  "columnMatch": "Id",
+                  "formatter": 5,
+                  "formatOptions": {
+                    "showIcon": true
+                  }
+                },
+                {
+                  "columnMatch": "Operations Count",
+                  "formatter": 8,
+                  "formatOptions": {
+                    "min": 0,
+                    "palette": "orange",
+                    "showIcon": true
+                  }
+                },
+                {
+                  "columnMatch": "Trend",
+                  "formatter": 9,
+                  "formatOptions": {
+                    "min": 0,
+                    "palette": "gray",
+                    "showIcon": true
+                  }
+                },
+                {
+                  "columnMatch": "ParentId",
+                  "formatter": 5,
+                  "formatOptions": {
+                    "showIcon": true
+                  }
+                }
+              ],
+              "filter": true,
+              "hierarchySettings": {
+                "idColumn": "Id",
+                "parentColumn": "ParentId",
+                "treeType": 0,
+                "expanderColumn": "Name"
+              }
+            },
+            "graphSettings": {
+              "type": 0,
+              "topContent": {
+                "columnMatch": "DisplayName",
+                "formatter": 1
+              },
+              "centerContent": {
+                "columnMatch": "TotalCount",
+                "formatter": 1,
+                "numberFormat": {
+                  "unit": 17,
+                  "options": {
+                    "maximumSignificantDigits": 3,
+                    "maximumFractionDigits": 2
+                  }
+                }
+              }
+            }
+          },
+          "name": "query - 3 - Copy"
+        },
+        {
+          "type": 3,
+          "content": {
+            "version": "KqlItem/1.0",
+            "query": "let details = dynamic({OperationDetail});\r\nlet data = (CloudAppEvents\r\n| where ActionType contains \"Sensitivity\" or ObjectName == \"MipLabel\"\r\n//Exclude possible sources of duplication\r\n| where ObjectName != \"Get-AutoSensitivityLabelPolicy\"\r\n| where RawEventData.Application <> \"Outlook\"\r\n| where parse_json(tostring(RawEventData.Common)).ProcessName <> \"OUTLOOK\"\r\n    | extend OldSensitivityLabelId = tostring(parse_json(tostring(RawEventData.SensitivityLabelEventData)).OldSensitivityLabelId)\r\n//Refine further on MIPLabel\r\n    | where parse_json(tostring(RawEventData.SensitivityLabelEventData)).SensitivityLabelId != \"\" or RawEventData.RecordType == 43 or RawEventData.LabelId != \"\" or OldSensitivityLabelId != \"\"\r\n    | summarize arg_max(TimeGenerated, *) by ReportId\r\n    | extend LabelGUID1 = tostring(parse_json(tostring(RawEventData.SensitivityLabelEventData)).SensitivityLabelId)\r\n    | extend LabelGUID2 = iff(isempty(tostring(RawEventData.LabelId)),LabelGUID1, tostring(RawEventData.LabelId))\r\n    | extend LabelGUID = iff(isempty(tostring(LabelGUID2)),OldSensitivityLabelId, tostring(LabelGUID2))\r\n| join kind = leftouter   \r\n ( \r\n_GetWatchlist('Sensitive')\r\n| extend LabelGUID = tostring(SearchKey)\r\n)\r\non LabelGUID\r\n| extend label = iff(isempty(tostring(RawEventData.LabelName)),DisplayName, tostring(RawEventData.LabelName))\r\n| extend UserId = tostring(RawEventData.UserId)\r\n| extend CreationTime_t = todatetime(RawEventData.CreationTime)\r\n| extend Workload_s = tostring(RawEventData.Workload)\r\n| extend ActionSource = tostring(parse_json(tostring(RawEventData.SensitivityLabelEventData)).ActionSource)\r\n| extend LabelDocevent = toint(parse_json(tostring(RawEventData.SensitivityLabelEventData)).LabelEventType)\r\n| extend LabelEmail = tostring(RawEventData.LabelAction)\r\n//Determine Label Action to present\r\n| join kind = leftouter   \r\n(\r\n_GetWatchlist('MipMap')\r\n| extend LabelDocevent = toint(SearchKey)\r\n| extend Type = Type\r\n| where Type == \"LabelEventType\"\r\n)\r\non LabelDocevent\r\n| extend LabelEventType = iff(isempty(LabelEmail), Name, LabelEmail)\r\n//User Account enrichment.\r\n| extend UserId = tolower(UserId)\r\n| join kind=leftouter\r\n(\r\n_GetWatchlist('UserAccounts')\r\n | extend UserId = tolower(SearchKey)\r\n)\r\non UserId);\r\nlet appData = data\r\n| summarize TotalCount = count() by LabelEventType\r\n| join kind=inner (data\r\n    | make-series Trend = count() default = 0 on TimeGenerated in range({TimeRange:start}, {TimeRange:end}, {TimeRange:grain}) by LabelEventType\r\n    | project-away TimeGenerated) on LabelEventType\r\n| order by TotalCount desc, LabelEventType asc\r\n| project LabelEventType, TotalCount, Trend\r\n| serialize Id = row_number();\r\ndata\r\n    | where \"{dep:label}\" ==\"All\" or Department in ({dep})\r\n    | where \"{Labels:label}\" ==\"All\" or label in ({Labels})\r\n| summarize TotalCount = count() by Department , LabelEventType\r\n| join kind=inner (data\r\n    | make-series Trend = count() default = 0 on TimeGenerated in range({TimeRange:start}, {TimeRange:end}, {TimeRange:grain}) by LabelEventType, Department\r\n    | project-away TimeGenerated) on LabelEventType, Department\r\n| order by TotalCount desc, LabelEventType asc\r\n| project LabelEventType, Department, TotalCount, Trend\r\n| serialize Id = row_number(1000000)\r\n| join kind=inner (appData) on LabelEventType\r\n| project Id, Name = Department, LabelEventType = 'Department', ['LabelEventTypes Count'] = TotalCount, Trend,  ParentId = Id1\r\n| union (appData \r\n    | project Id, Name = LabelEventType, LabelEventType = 'LabelEventType', ['LabelEventTypes Count'] = TotalCount,  Trend)\r\n| order by ['LabelEventTypes Count'] desc, Name asc",
+            "size": 0,
+            "title": "Label operations",
+            "timeContext": {
+              "durationMs": 7776000000
+            },
+            "timeContextFromParameter": "TimeRange",
+            "exportParameterName": "FileOperations",
+            "exportDefaultValue": "{ \"Name\":\"\", \"Type\":\"*\"}",
+            "queryType": 0,
+            "resourceType": "microsoft.operationalinsights/workspaces",
+            "gridSettings": {
+              "formatters": [
+                {
+                  "columnMatch": "Id",
+                  "formatter": 5,
+                  "formatOptions": {
+                    "showIcon": true
+                  }
+                },
+                {
+                  "columnMatch": "Operations Count",
+                  "formatter": 8,
+                  "formatOptions": {
+                    "min": 0,
+                    "palette": "blue",
+                    "showIcon": true
+                  }
+                },
+                {
+                  "columnMatch": "Trend",
+                  "formatter": 10,
+                  "formatOptions": {
+                    "min": 0,
+                    "palette": "greenDark",
+                    "showIcon": true
+                  }
+                },
+                {
+                  "columnMatch": "ParentId",
+                  "formatter": 5,
+                  "formatOptions": {
+                    "showIcon": true
+                  }
+                }
+              ],
+              "filter": true,
+              "hierarchySettings": {
+                "idColumn": "Id",
+                "parentColumn": "ParentId",
+                "treeType": 0,
+                "expanderColumn": "Name"
+              }
+            }
+          },
+          "name": "query - 8"
+        },
+        {
+          "type": 3,
+          "content": {
+            "version": "KqlItem/1.0",
+            "query": "let details = dynamic({OperationDetail});\r\nlet data = CloudAppEvents\r\n| where ActionType contains \"Sensitivity\" or ObjectName == \"MipLabel\"\r\n//Exclude possible sources of duplication\r\n| where ObjectName != \"Get-AutoSensitivityLabelPolicy\"\r\n| where RawEventData.Application <> \"Outlook\"\r\n| where parse_json(tostring(RawEventData.Common)).ProcessName <> \"OUTLOOK\"\r\n    | extend OldSensitivityLabelId = tostring(parse_json(tostring(RawEventData.SensitivityLabelEventData)).OldSensitivityLabelId)\r\n//Refine further on MIPLabel\r\n    | where parse_json(tostring(RawEventData.SensitivityLabelEventData)).SensitivityLabelId != \"\" or RawEventData.RecordType == 43 or RawEventData.LabelId != \"\" or OldSensitivityLabelId != \"\"\r\n    | summarize arg_max(TimeGenerated, *) by ReportId\r\n    | extend LabelGUID1 = tostring(parse_json(tostring(RawEventData.SensitivityLabelEventData)).SensitivityLabelId)\r\n    | extend LabelGUID2 = iff(isempty(tostring(RawEventData.LabelId)),LabelGUID1, tostring(RawEventData.LabelId))\r\n    | extend LabelGUID = iff(isempty(tostring(LabelGUID2)),OldSensitivityLabelId, tostring(LabelGUID2))\r\n| join kind = leftouter   \r\n ( \r\n_GetWatchlist('Sensitive')\r\n| extend LabelGUID = tostring(SearchKey)\r\n)\r\non LabelGUID\r\n| extend label = iff(isempty(tostring(RawEventData.LabelName)),DisplayName, tostring(RawEventData.LabelName))\r\n| extend UserId = tostring(RawEventData.UserId)\r\n| extend CreationTime_t = todatetime(RawEventData.CreationTime)\r\n| extend Workload_s = tostring(RawEventData.Workload)\r\n| extend ActionSource = tostring(parse_json(tostring(RawEventData.SensitivityLabelEventData)).ActionSource)\r\n| extend LabelDocevent = toint(parse_json(tostring(RawEventData.SensitivityLabelEventData)).LabelEventType)\r\n| extend LabelEmail = tostring(RawEventData.LabelAction)\r\n//Determine Label Action to present\r\n| join kind = leftouter   \r\n(\r\n_GetWatchlist('MipMap')\r\n| extend LabelDocevent = toint(SearchKey)\r\n| extend Type = Type\r\n| where Type == \"LabelEventType\"\r\n)\r\non LabelDocevent\r\n| extend LabelEventType = iff(isempty(LabelEmail), Name, LabelEmail)\r\n//User Account enrichment.\r\n| extend UserId = tolower(UserId)\r\n| join kind=leftouter\r\n(\r\n_GetWatchlist('UserAccounts')\r\n | extend UserId = tolower(SearchKey)\r\n)\r\non UserId\r\n    | where \"{dep:label}\" ==\"All\" or Department in ({dep})\r\n    | where \"{Labels:label}\" ==\"All\" or label in ({Labels})\r\n| summarize Calls = count() by App = LabelEventType, Request = label  , Dependency = Department\r\n| extend RequestId = strcat(App, '::', Request);\r\nlet links = data\r\n| summarize Calls = sum(Calls) by App, RequestId\r\n| project SourceId = App, TargetId = RequestId, Calls, Kind = 'App -> Request'\r\n| union (data\r\n    | project SourceId = RequestId, TargetId = Dependency, Calls, Kind = 'Request -> Dependency');\r\nlet nodes = data\r\n| summarize Calls = sum(Calls) by App\r\n| project Id = App, Name = App, Calls, Kind = 'App'\r\n| union (data\r\n    | summarize Calls = sum(Calls) by RequestId, Request\r\n    | project Id = RequestId, Name = Request, Calls, Kind = 'Request')\r\n| union (data\r\n    | summarize Calls = sum(Calls) by Dependency\r\n    | project Id = Dependency, Name = Dependency, Calls, Kind = 'Dependency');\r\nnodes\r\n| union (links)",
+            "size": 0,
+            "timeContext": {
+              "durationMs": 7776000000
+            },
+            "timeContextFromParameter": "TimeRange",
+            "queryType": 0,
+            "resourceType": "microsoft.operationalinsights/workspaces",
+            "visualization": "graph",
+            "tileSettings": {
+              "showBorder": false
+            },
+            "graphSettings": {
+              "type": 0,
+              "topContent": {
+                "columnMatch": "Name",
+                "formatter": 12,
+                "formatOptions": {
+                  "showIcon": true
+                }
+              },
+              "centerContent": {
+                "columnMatch": "SourceId",
+                "formatter": 1,
+                "formatOptions": {
+                  "showIcon": true
+                },
+                "numberFormat": {
+                  "unit": 17,
+                  "options": {
+                    "style": "decimal",
+                    "maximumFractionDigits": 2,
+                    "maximumSignificantDigits": 3
+                  }
+                }
+              },
+              "bottomContent": {
+                "columnMatch": "Name",
+                "formatOptions": {
+                  "showIcon": true
+                }
+              },
+              "nodeIdField": "Id",
+              "sourceIdField": "SourceId",
+              "targetIdField": "TargetId",
+              "edgeSize": "Calls",
+              "nodeSize": null,
+              "staticNodeSize": 100,
+              "colorSettings": {
+                "nodeColorField": "Kind",
+                "type": 1,
+                "colorPalette": "pastel",
+                "emptyValueColor": "redBright"
+              },
+              "hivesMargin": 5
+            }
+          },
+          "customWidth": "100",
+          "name": "query - 12"
+        }
+      ],
+      "isLocked": false,
+      "fallbackResourceIds": [
+        "/subscriptions/c3d92c0e-4056-47b2-8cc6-0d835d000b6d/resourcegroups/siem/providers/microsoft.operationalinsights/workspaces/privacy"
+      ],
+      "fromTemplateId": "sentinel-UserWorkbook"
+    }
+  },
+  "resources": [
+    {
+      "name": "[parameters('workbookId')]",
+      "type": "microsoft.insights/workbooks",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2021-03-08",
+      "dependsOn": [],
+      "kind": "shared",
+      "properties": {
+        "displayName": "[parameters('workbookDisplayName')]",
+        "serializedData": "[string(variables('workbookContent'))]",
+        "version": "1.0",
+        "sourceId": "[concat(resourceGroup().id,'/providers/microsoft.operationalinsights/workspaces/',parameters('sentinelworkspace'))]",
+        "category": "sentinel"
+      }
+    }
+  ],
+  "outputs": {
+    "workbookId": {
+      "type": "string",
+      "value": "[resourceId( 'microsoft.insights/workbooks', parameters('workbookId'))]"
+    }
+  },
+  "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#"
+}
