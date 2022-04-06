@@ -1,0 +1,403 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "workspace": {
+            "type": "String"
+        }
+    },
+    "resources": [
+        {
+            "id": "[concat(resourceId('Microsoft.OperationalInsights/workspaces/providers', parameters('workspace'), 'Microsoft.SecurityInsights'),'/alertRules/e7bdfe2f-6402-4896-8a42-6b28fb8d5b31')]",
+            "name": "[concat(parameters('workspace'),'/Microsoft.SecurityInsights/e7bdfe2f-6402-4896-8a42-6b28fb8d5b31')]",
+            "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+            "kind": "Scheduled",
+            "apiVersion": "2021-09-01-preview",
+            "properties": {
+                "displayName": "Label downgrade chained with DLP alerts",
+                "description": "",
+                "severity": "Medium",
+                "enabled": true,
+                "query": "let timeframe=7d;\r\nlet data = (CloudAppEvents\r\n| where ActionType contains \"Sensitivity\" or ObjectName == \"MipLabel\"\r\n//Exclude possible sources of duplication\r\n| where ObjectName != \"Get-AutoSensitivityLabelPolicy\"\r\n| where RawEventData.Application <> \"Outlook\"\r\n| where parse_json(tostring(RawEventData.Common)).ProcessName <> \"OUTLOOK\"\r\n    | extend OldSensitivityLabelId = tostring(parse_json(tostring(RawEventData.SensitivityLabelEventData)).OldSensitivityLabelId)\r\n//Refine further on MIPLabel\r\n    | where parse_json(tostring(RawEventData.SensitivityLabelEventData)).SensitivityLabelId != \"\" or RawEventData.RecordType == 43 or RawEventData.LabelId != \"\" or OldSensitivityLabelId != \"\"\r\n    | summarize arg_max(TimeGenerated, *) by ReportId\r\n    | extend LabelGUID1 = tostring(parse_json(tostring(RawEventData.SensitivityLabelEventData)).SensitivityLabelId)\r\n    | extend LabelGUID2 = iff(isempty(tostring(RawEventData.LabelId)),LabelGUID1, tostring(RawEventData.LabelId))\r\n    | extend LabelGUID = iff(isempty(tostring(LabelGUID2)),OldSensitivityLabelId, tostring(LabelGUID2))\r\n| join kind = leftouter   \r\n ( \r\n_GetWatchlist('Sensitive')\r\n| extend LabelGUID = tostring(SearchKey)\r\n)\r\non LabelGUID\r\n| extend label = iff(isempty(tostring(RawEventData.LabelName)),DisplayName, tostring(RawEventData.LabelName))\r\n| extend UserId = tostring(RawEventData.UserId)\r\n| extend CreationTime_t = todatetime(RawEventData.CreationTime)\r\n| extend Workload_s = tostring(RawEventData.Workload)\r\n| extend ActionSource = tostring(parse_json(tostring(RawEventData.SensitivityLabelEventData)).ActionSource)\r\n| extend LabelDocevent = toint(parse_json(tostring(RawEventData.SensitivityLabelEventData)).LabelEventType)\r\n| extend LabelEmail = tostring(RawEventData.LabelAction)\r\n//Determine Label Action to present\r\n| join kind = leftouter   \r\n(\r\n_GetWatchlist('MipMap')\r\n| extend LabelDocevent = toint(SearchKey)\r\n| extend Type = Type\r\n| where Type == \"LabelEventType\"\r\n)\r\non LabelDocevent\r\n| extend LabelEventType = iff(isempty(LabelEmail), Name, LabelEmail)\r\n| extend OldLabel = OldSensitivityLabelId\r\n| join kind = leftouter   \r\n(\r\n_GetWatchlist('Sensitive')\r\n| extend OldLabel = SearchKey\r\n)\r\non OldLabel\r\n| extend OldLabel = DisplayName1\r\n| extend ActionSourceDoc = ActionSource\r\n| join kind = leftouter   \r\n(\r\n_GetWatchlist('MipMap')\r\n| extend ActionSourceDoc = (SearchKey)\r\n| extend Type = Type\r\n| where Type == \"ActionSource\"\r\n)\r\non ActionSourceDoc\r\n| extend ActionSource = Name1\r\n//User Account enrichment.\r\n| join kind=leftouter\r\n(\r\n_GetWatchlist('UserAccounts')\r\n | extend UserId = tostring(SearchKey)\r\n)\r\non UserId\r\n//Document and email subject Logic\r\n| extend ItemName_ = tostring(RawEventData.ItemName)\r\n| extend ObjectId_ = tostring(RawEventData.ObjectId)\r\n| extend DocumentorSubject = iff(isempty(tostring(ItemName_)),ObjectId_, tostring(ItemName_))\r\n| where LabelEventType == \"LabelRemoved\" or LabelEventType == \"LabelDowngraded\"\r\n);\r\n//Validate if there are any known SecurityEvents associated with the user\r\nlet events = (CloudAppEvents\r\n| where ActivityType == \"Securityevent\"\r\n| where TimeGenerated >= ago(timeframe)\r\n| extend UserId = tolower(RawEventData.UserId)\r\n| join kind=inner \r\n    (data\r\n    | where LabelEventType == \"LabelRemoved\" or LabelEventType == \"LabelDowngraded\"\r\n    )\r\n    on UserId\r\n| extend PolicyName = tostring(parse_json(tostring(RawEventData.PolicyDetails))[0].PolicyName)\r\n| summarize count = count() by PolicyName, ActionType, ObjectName);\r\nunion with_source=Combine events,data    \r\n    | extend SensitivityLabelJustificationText_ = tostring(RawEventData.SensitivityLabelJustificationText)\r\n    | extend Justification = replace_regex(SensitivityLabelJustificationText_, \"%20\", \" \")\r\n    | extend Device = tostring(parse_json(tostring(RawEventData.Common)).DeviceName)\r\n    | extend accountsplit = split(UserId, \"@\")\r\n    | project\r\n        UserId,\r\n        DocumentorSubject,\r\n        OSPlatform,\r\n        IPAddress,\r\n        label,\r\n        OldLabel,\r\n        ActionSource,\r\n        TimeGenerated,\r\n        LabelEventType,\r\n        Justification,\r\n        accountsplit[0],\r\n        accountsplit[1],\r\n        Department,\r\n        Country,\r\n        ActionType,\r\n        Device,\r\n        PolicyName",
+                "queryFrequency": "PT5H",
+                "queryPeriod": "PT5H",
+                "triggerOperator": "GreaterThan",
+                "triggerThreshold": 0,
+                "suppressionDuration": "PT5H",
+                "suppressionEnabled": false,
+                "tactics": [
+                    "Exfiltration"
+                ],
+                "techniques": [],
+                "alertRuleTemplateName": null,
+                "incidentConfiguration": {
+                    "createIncident": true,
+                    "groupingConfiguration": {
+                        "enabled": true,
+                        "reopenClosedIncident": false,
+                        "lookbackDuration": "PT5H",
+                        "matchingMethod": "Selected",
+                        "groupByEntities": [
+                            "Account"
+                        ],
+                        "groupByAlertDetails": [
+                            "DisplayName"
+                        ],
+                        "groupByCustomDetails": []
+                    }
+                },
+                "eventGroupingSettings": {
+                    "aggregationKind": "AlertPerResult"
+                },
+                "alertDetailsOverride": {
+                    "alertDisplayNameFormat": "Label downgrade DLP alerts department, {{Department}} ",
+                    "alertDescriptionFormat": "The alert is for {{Department}}, {{Country}} the previous label was {{OldLabel}}.",
+                    "alertTacticsColumnName": null,
+                    "alertSeverityColumnName": null
+                },
+                "customDetails": {
+                    "OldLabel": "OldLabel",
+                    "Justification": "Justification",
+                    "ActionSource": "ActionSource",
+                    "PolicyViolated": "ActionType",
+                    "ContentViolations": "DocumentorSubject"
+                },
+                "entityMappings": [
+                    {
+                        "entityType": "Account",
+                        "fieldMappings": [
+                            {
+                                "identifier": "Name",
+                                "columnName": "accountsplit_0"
+                            },
+                            {
+                                "identifier": "UPNSuffix",
+                                "columnName": "accountsplit_1"
+                            }
+                        ]
+                    },
+                    {
+                        "entityType": "File",
+                        "fieldMappings": [
+                            {
+                                "identifier": "Name",
+                                "columnName": "DocumentorSubject"
+                            }
+                        ]
+                    },
+                    {
+                        "entityType": "IP",
+                        "fieldMappings": [
+                            {
+                                "identifier": "Address",
+                                "columnName": "IPAddress"
+                            }
+                        ]
+                    },
+                    {
+                        "entityType": "Host",
+                        "fieldMappings": [
+                            {
+                                "identifier": "HostName",
+                                "columnName": "Device"
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "id": "[concat(resourceId('Microsoft.OperationalInsights/workspaces/providers', parameters('workspace'), 'Microsoft.SecurityInsights'),'/alertRules/c6e13edd-2b59-4e14-bc89-47285595fe67')]",
+            "name": "[concat(parameters('workspace'),'/Microsoft.SecurityInsights/c6e13edd-2b59-4e14-bc89-47285595fe67')]",
+            "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+            "kind": "Scheduled",
+            "apiVersion": "2021-09-01-preview",
+            "properties": {
+                "displayName": "Label downgrade file shared SPO,ODB",
+                "description": "",
+                "severity": "Medium",
+                "enabled": true,
+                "query": "let timeframe=31d;\r\nlet data = (CloudAppEvents\r\n    | where ActionType contains \"Sensitivity\" or ObjectName == \"MipLabel\"\r\n    //Exclude possible sources of duplication\r\n    | where ObjectName != \"Get-AutoSensitivityLabelPolicy\"\r\n    | where RawEventData.Application <> \"Outlook\"\r\n    | where parse_json(tostring(RawEventData.Common)).ProcessName <> \"OUTLOOK\"\r\n    | extend OldSensitivityLabelId = tostring(parse_json(tostring(RawEventData.SensitivityLabelEventData)).OldSensitivityLabelId)\r\n    //Refine further on MIPLabel\r\n    | where parse_json(tostring(RawEventData.SensitivityLabelEventData)).SensitivityLabelId != \"\"\r\n        or RawEventData.RecordType == 43\r\n        or RawEventData.LabelId != \"\"\r\n        or OldSensitivityLabelId != \"\"\r\n    | summarize arg_max(TimeGenerated, *) by ReportId\r\n    | extend LabelGUID1 = tostring(parse_json(tostring(RawEventData.SensitivityLabelEventData)).SensitivityLabelId)\r\n    | extend LabelGUID2 = iff(isempty(tostring(RawEventData.LabelId)), LabelGUID1, tostring(RawEventData.LabelId))\r\n    | extend LabelGUID = iff(isempty(tostring(LabelGUID2)), OldSensitivityLabelId, tostring(LabelGUID2))\r\n    | join kind = leftouter   \r\n        ( \r\n        _GetWatchlist('Sensitive')\r\n        | extend LabelGUID = tostring(SearchKey)\r\n        )\r\n        on LabelGUID\r\n    | extend label = iff(isempty(tostring(RawEventData.LabelName)), DisplayName, tostring(RawEventData.LabelName))\r\n    | extend UserId = tostring(RawEventData.UserId)\r\n    | extend CreationTime_t = todatetime(RawEventData.CreationTime)\r\n    | extend Workload_s = tostring(RawEventData.Workload)\r\n    | extend ActionSource = tostring(parse_json(tostring(RawEventData.SensitivityLabelEventData)).ActionSource)\r\n    | extend LabelDocevent = toint(parse_json(tostring(RawEventData.SensitivityLabelEventData)).LabelEventType)\r\n    | extend LabelEmail = tostring(RawEventData.LabelAction)\r\n    | extend UserId = tolower(UserId)\r\n    //Determine Label Action to present\r\n    | join kind = leftouter   \r\n        (\r\n        _GetWatchlist('MipMap')\r\n        | extend LabelDocevent = toint(SearchKey)\r\n        | extend Type = Type\r\n        | where Type == \"LabelEventType\"\r\n        )\r\n        on LabelDocevent\r\n    | extend LabelEventType = iff(isempty(LabelEmail), Name, LabelEmail)\r\n    | extend OldLabel = OldSensitivityLabelId\r\n    | join kind = leftouter   \r\n        (\r\n        _GetWatchlist('Sensitive')\r\n        | extend OldLabel = SearchKey\r\n        )\r\n        on OldLabel\r\n    | extend OldLabel = DisplayName1\r\n    | extend ActionSourceDoc = ActionSource\r\n    | join kind = leftouter   \r\n        (\r\n        _GetWatchlist('MipMap')\r\n        | extend ActionSourceDoc = (SearchKey)\r\n        | extend Type = Type\r\n        | where Type == \"ActionSource\"\r\n        )\r\n        on ActionSourceDoc\r\n    | extend ActionSource = Name1\r\n    //User Account enrichment.\r\n    | extend UserId = tolower(UserId)\r\n    | join kind=leftouter\r\n        (\r\n        _GetWatchlist('UserAccounts')\r\n        | extend UserId = tolower(SearchKey)\r\n        )\r\n        on UserId\r\n    //Document and email subject Logic\r\n    | extend ItemName_ = tostring(RawEventData.ItemName)\r\n    | extend ObjectId_ = tostring(RawEventData.ObjectId)\r\n    | extend DocumentorSubject = iff(isempty(tostring(ItemName_)), ObjectId_, tostring(ItemName_))\r\n| where OldSensitivityLabelId != \"\"\r\n| extend PolicyName = tostring(parse_json(tostring(RawEventData.PolicyDetails))[0].PolicyName)\r\n| extend Device = tostring(parse_json(tostring(RawEventData.Common)).DeviceName)\r\n//| extend DocumentorSubject1 = split(DocumentorSubject, \"/\")[-1]\r\n//| extend DocumentorSubject2 = split(DocumentorSubject, \"\\\\\")[-1]\r\n//| extend DocumentorSubject = iff(isnotempty(Device), DocumentorSubject2, DocumentorSubject1)\r\n| extend DocumentorSubject = tolower(DocumentorSubject));\r\n//Was the document shared?\r\nCloudAppEvents\r\n| where ActivityType == \"Share\"\r\n| where TimeGenerated >= ago(timeframe)\r\n| extend DocumentorSubject = tolower(ObjectName) \r\n| join kind=inner \r\n    (data\r\n   | where LabelEventType == \"LabelRemoved\" or LabelEventType == \"LabelDowngraded\"\r\n    )\r\n    on DocumentorSubject\r\n| where OldSensitivityLabelId != \"\"\r\n| extend PolicyName = tostring(parse_json(tostring(RawEventData.PolicyDetails))[0].PolicyName)\r\n| extend SensitivityLabelJustificationText_ = tostring(RawEventData.SensitivityLabelJustificationText)\r\n| extend Justification = replace_regex(SensitivityLabelJustificationText_, \"%20\", \" \")\r\n| extend accountsplit = split(UserId, \"@\")\r\n| project\r\n    UserId,\r\n    DocumentorSubject,\r\n    OSPlatform,\r\n    IPAddress,\r\n    label,\r\n    OldLabel,\r\n    ActionSource,\r\n    TimeGenerated,\r\n    LabelEventType,\r\n    Justification,\r\n    accountsplit[0],\r\n    accountsplit[1],\r\n    Department,\r\n    Country,\r\n    Device",
+                "queryFrequency": "PT5H",
+                "queryPeriod": "PT5H",
+                "triggerOperator": "GreaterThan",
+                "triggerThreshold": 0,
+                "suppressionDuration": "PT5H",
+                "suppressionEnabled": false,
+                "tactics": [
+                    "Exfiltration"
+                ],
+                "techniques": [],
+                "alertRuleTemplateName": null,
+                "incidentConfiguration": {
+                    "createIncident": true,
+                    "groupingConfiguration": {
+                        "enabled": true,
+                        "reopenClosedIncident": false,
+                        "lookbackDuration": "PT5H",
+                        "matchingMethod": "Selected",
+                        "groupByEntities": [
+                            "Account"
+                        ],
+                        "groupByAlertDetails": [
+                            "DisplayName"
+                        ],
+                        "groupByCustomDetails": []
+                    }
+                },
+                "eventGroupingSettings": {
+                    "aggregationKind": "AlertPerResult"
+                },
+                "alertDetailsOverride": {
+                    "alertDisplayNameFormat": "Label downgraded then shared department, {{Department}} ",
+                    "alertDescriptionFormat": "The alert is for {{Department}}, {{Country}} the previous label was {{OldLabel}}.",
+                    "alertTacticsColumnName": null,
+                    "alertSeverityColumnName": null
+                },
+                "customDetails": {
+                    "OldLabel": "OldLabel",
+                    "Currentlabel": "label",
+                    "Justification": "Justification",
+                    "ActionSource": "ActionSource"
+                },
+                "entityMappings": [
+                    {
+                        "entityType": "Account",
+                        "fieldMappings": [
+                            {
+                                "identifier": "Name",
+                                "columnName": "accountsplit_0"
+                            },
+                            {
+                                "identifier": "UPNSuffix",
+                                "columnName": "accountsplit_1"
+                            }
+                        ]
+                    },
+                    {
+                        "entityType": "File",
+                        "fieldMappings": [
+                            {
+                                "identifier": "Name",
+                                "columnName": "DocumentorSubject"
+                            }
+                        ]
+                    },
+                    {
+                        "entityType": "IP",
+                        "fieldMappings": [
+                            {
+                                "identifier": "Address",
+                                "columnName": "IPAddress"
+                            }
+                        ]
+                    },
+                    {
+                        "entityType": "Host",
+                        "fieldMappings": [
+                            {
+                                "identifier": "HostName",
+                                "columnName": "Device"
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "id": "[concat(resourceId('Microsoft.OperationalInsights/workspaces/providers', parameters('workspace'), 'Microsoft.SecurityInsights'),'/alertRules/b8a5ac2b-4d0c-4a12-8f53-b74849424980')]",
+            "name": "[concat(parameters('workspace'),'/Microsoft.SecurityInsights/b8a5ac2b-4d0c-4a12-8f53-b74849424980')]",
+            "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+            "kind": "Scheduled",
+            "apiVersion": "2021-09-01-preview",
+            "properties": {
+                "displayName": "Label downgrade Risky Device",
+                "description": "",
+                "severity": "Medium",
+                "enabled": true,
+                "query": "let timeframe=31d;\r\nlet data = (CloudAppEvents\r\n    | where ActionType contains \"Sensitivity\" or ObjectName == \"MipLabel\"\r\n    //Exclude possible sources of duplication\r\n    | where ObjectName != \"Get-AutoSensitivityLabelPolicy\"\r\n    | where RawEventData.Application <> \"Outlook\"\r\n    | where parse_json(tostring(RawEventData.Common)).ProcessName <> \"OUTLOOK\"\r\n    | extend OldSensitivityLabelId = tostring(parse_json(tostring(RawEventData.SensitivityLabelEventData)).OldSensitivityLabelId)\r\n    //Refine further on MIPLabel\r\n    | where parse_json(tostring(RawEventData.SensitivityLabelEventData)).SensitivityLabelId != \"\"\r\n        or RawEventData.RecordType == 43\r\n        or RawEventData.LabelId != \"\"\r\n        or OldSensitivityLabelId != \"\"\r\n    | summarize arg_max(TimeGenerated, *) by ReportId\r\n    | extend LabelGUID1 = tostring(parse_json(tostring(RawEventData.SensitivityLabelEventData)).SensitivityLabelId)\r\n    | extend LabelGUID2 = iff(isempty(tostring(RawEventData.LabelId)), LabelGUID1, tostring(RawEventData.LabelId))\r\n    | extend LabelGUID = iff(isempty(tostring(LabelGUID2)), OldSensitivityLabelId, tostring(LabelGUID2))\r\n    | join kind = leftouter   \r\n        ( \r\n        _GetWatchlist('Sensitive')\r\n        | extend LabelGUID = tostring(SearchKey)\r\n        )\r\n        on LabelGUID\r\n    | extend label = iff(isempty(tostring(RawEventData.LabelName)), DisplayName, tostring(RawEventData.LabelName))\r\n    | extend UserId = tostring(RawEventData.UserId)\r\n    | extend CreationTime_t = todatetime(RawEventData.CreationTime)\r\n    | extend Workload_s = tostring(RawEventData.Workload)\r\n    | extend ActionSource = tostring(parse_json(tostring(RawEventData.SensitivityLabelEventData)).ActionSource)\r\n    | extend LabelDocevent = toint(parse_json(tostring(RawEventData.SensitivityLabelEventData)).LabelEventType)\r\n    | extend LabelEmail = tostring(RawEventData.LabelAction)\r\n    | extend UserId = tolower(UserId)\r\n    //Determine Label Action to present\r\n    | join kind = leftouter   \r\n        (\r\n        _GetWatchlist('MipMap')\r\n        | extend LabelDocevent = toint(SearchKey)\r\n        | extend Type = Type\r\n        | where Type == \"LabelEventType\"\r\n        )\r\n        on LabelDocevent\r\n    | extend LabelEventType = iff(isempty(LabelEmail), Name, LabelEmail)\r\n    | extend OldLabel = OldSensitivityLabelId\r\n    | join kind = leftouter   \r\n        (\r\n        _GetWatchlist('Sensitive')\r\n        | extend OldLabel = SearchKey\r\n        )\r\n        on OldLabel\r\n    | extend OldLabel = DisplayName1\r\n    | extend ActionSourceDoc = ActionSource\r\n    | join kind = leftouter   \r\n        (\r\n        _GetWatchlist('MipMap')\r\n        | extend ActionSourceDoc = (SearchKey)\r\n        | extend Type = Type\r\n        | where Type == \"ActionSource\"\r\n        )\r\n        on ActionSourceDoc\r\n    | extend ActionSource = Name1\r\n    //User Account enrichment.\r\n    | extend UserId = tolower(UserId)\r\n    | join kind=leftouter\r\n        (\r\n        _GetWatchlist('UserAccounts')\r\n        | extend UserId = tolower(SearchKey)\r\n        )\r\n        on UserId\r\n    //Document and email subject Logic\r\n    | extend ItemName_ = tostring(RawEventData.ItemName)\r\n    | extend ObjectId_ = tostring(RawEventData.ObjectId)\r\n    | extend DocumentorSubject = iff(isempty(tostring(ItemName_)), ObjectId_, tostring(ItemName_))\r\n    );\r\ndata\r\n| where OldSensitivityLabelId != \"\"\r\n| where LabelEventType == \"LabelRemoved\" or LabelEventType == \"LabelDowngraded\"\r\n| extend PolicyName = tostring(parse_json(tostring(RawEventData.PolicyDetails))[0].PolicyName)\r\n| extend Device = tostring(parse_json(tostring(RawEventData.Common)).DeviceName)\r\n| extend DocumentorSubject1 = split(DocumentorSubject, \"/\")[-1]\r\n| extend DocumentorSubject2 = split(DocumentorSubject, \"\\\\\")[-1]\r\n| extend DocumentorSubject = iff(isnotempty(Device), DocumentorSubject2, DocumentorSubject1)\r\n//Was it shared via email?\r\n| join kind=inner\r\n    (\r\n    SecurityAlert\r\n    | where TimeGenerated >= ago(timeframe)\r\n    | extend Device = CompromisedEntity\r\n    )\r\n    on Device\r\n| where Device !=\"\"    \r\n| extend SensitivityLabelJustificationText_ = tostring(RawEventData.SensitivityLabelJustificationText)\r\n| extend Justification = replace_regex(SensitivityLabelJustificationText_, \"%20\", \" \")\r\n| extend accountsplit = split(UserId, \"@\")\r\n| project\r\n    UserId,\r\n    DocumentorSubject,\r\n    OSPlatform,\r\n    IPAddress,\r\n    label,\r\n    OldLabel,\r\n    ActionSource,\r\n    TimeGenerated,\r\n    LabelEventType,\r\n    Justification,\r\n    accountsplit[0],\r\n    accountsplit[1],\r\n    Department,\r\n    Country,\r\n    Device",
+                "queryFrequency": "PT5H",
+                "queryPeriod": "PT5H",
+                "triggerOperator": "GreaterThan",
+                "triggerThreshold": 0,
+                "suppressionDuration": "PT5H",
+                "suppressionEnabled": false,
+                "tactics": [
+                    "Exfiltration"
+                ],
+                "techniques": [],
+                "alertRuleTemplateName": null,
+                "incidentConfiguration": {
+                    "createIncident": true,
+                    "groupingConfiguration": {
+                        "enabled": true,
+                        "reopenClosedIncident": false,
+                        "lookbackDuration": "PT5H",
+                        "matchingMethod": "Selected",
+                        "groupByEntities": [
+                            "Account"
+                        ],
+                        "groupByAlertDetails": [
+                            "DisplayName"
+                        ],
+                        "groupByCustomDetails": []
+                    }
+                },
+                "eventGroupingSettings": {
+                    "aggregationKind": "AlertPerResult"
+                },
+                "alertDetailsOverride": {
+                    "alertDisplayNameFormat": "Label downgraded Risky Device department, {{Department}} ",
+                    "alertDescriptionFormat": "The alert is for {{Department}}, {{Country}} the previous label was {{OldLabel}}.",
+                    "alertTacticsColumnName": null,
+                    "alertSeverityColumnName": null
+                },
+                "customDetails": {
+                    "OldLabel": "OldLabel",
+                    "Justification": "Justification",
+                    "ActionSource": "ActionSource"
+                },
+                "entityMappings": [
+                    {
+                        "entityType": "Account",
+                        "fieldMappings": [
+                            {
+                                "identifier": "Name",
+                                "columnName": "accountsplit_0"
+                            },
+                            {
+                                "identifier": "UPNSuffix",
+                                "columnName": "accountsplit_1"
+                            }
+                        ]
+                    },
+                    {
+                        "entityType": "File",
+                        "fieldMappings": [
+                            {
+                                "identifier": "Name",
+                                "columnName": "DocumentorSubject"
+                            }
+                        ]
+                    },
+                    {
+                        "entityType": "IP",
+                        "fieldMappings": [
+                            {
+                                "identifier": "Address",
+                                "columnName": "IPAddress"
+                            }
+                        ]
+                    },
+                    {
+                        "entityType": "Host",
+                        "fieldMappings": [
+                            {
+                                "identifier": "HostName",
+                                "columnName": "Device"
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "id": "[concat(resourceId('Microsoft.OperationalInsights/workspaces/providers', parameters('workspace'), 'Microsoft.SecurityInsights'),'/alertRules/c7f2d603-fed1-4877-a1fc-2d937ef1124d')]",
+            "name": "[concat(parameters('workspace'),'/Microsoft.SecurityInsights/c7f2d603-fed1-4877-a1fc-2d937ef1124d')]",
+            "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+            "kind": "Scheduled",
+            "apiVersion": "2021-09-01-preview",
+            "properties": {
+                "displayName": "Label downgrade shared e-mail",
+                "description": "",
+                "severity": "Medium",
+                "enabled": true,
+                "query": "let timeframe=31d;\r\nlet data = (CloudAppEvents\r\n    | where ActionType contains \"Sensitivity\" or ObjectName == \"MipLabel\"\r\n    //Exclude possible sources of duplication\r\n    | where ObjectName != \"Get-AutoSensitivityLabelPolicy\"\r\n    | where RawEventData.Application <> \"Outlook\"\r\n    | where parse_json(tostring(RawEventData.Common)).ProcessName <> \"OUTLOOK\"\r\n    | extend OldSensitivityLabelId = tostring(parse_json(tostring(RawEventData.SensitivityLabelEventData)).OldSensitivityLabelId)\r\n    //Refine further on MIPLabel\r\n    | where parse_json(tostring(RawEventData.SensitivityLabelEventData)).SensitivityLabelId != \"\"\r\n        or RawEventData.RecordType == 43\r\n        or RawEventData.LabelId != \"\"\r\n        or OldSensitivityLabelId != \"\"\r\n    | summarize arg_max(TimeGenerated, *) by ReportId\r\n    | extend LabelGUID1 = tostring(parse_json(tostring(RawEventData.SensitivityLabelEventData)).SensitivityLabelId)\r\n    | extend LabelGUID2 = iff(isempty(tostring(RawEventData.LabelId)), LabelGUID1, tostring(RawEventData.LabelId))\r\n    | extend LabelGUID = iff(isempty(tostring(LabelGUID2)), OldSensitivityLabelId, tostring(LabelGUID2))\r\n    | join kind = leftouter   \r\n        ( \r\n        _GetWatchlist('Sensitive')\r\n        | extend LabelGUID = tostring(SearchKey)\r\n        )\r\n        on LabelGUID\r\n    | extend label = iff(isempty(tostring(RawEventData.LabelName)), DisplayName, tostring(RawEventData.LabelName))\r\n    | extend UserId = tostring(RawEventData.UserId)\r\n    | extend CreationTime_t = todatetime(RawEventData.CreationTime)\r\n    | extend Workload_s = tostring(RawEventData.Workload)\r\n    | extend ActionSource = tostring(parse_json(tostring(RawEventData.SensitivityLabelEventData)).ActionSource)\r\n    | extend LabelDocevent = toint(parse_json(tostring(RawEventData.SensitivityLabelEventData)).LabelEventType)\r\n    | extend LabelEmail = tostring(RawEventData.LabelAction)\r\n    | extend UserId = tolower(UserId)\r\n    //Determine Label Action to present\r\n    | join kind = leftouter   \r\n        (\r\n        _GetWatchlist('MipMap')\r\n        | extend LabelDocevent = toint(SearchKey)\r\n        | extend Type = Type\r\n        | where Type == \"LabelEventType\"\r\n        )\r\n        on LabelDocevent\r\n    | extend LabelEventType = iff(isempty(LabelEmail), Name, LabelEmail)\r\n    | extend OldLabel = OldSensitivityLabelId\r\n    | join kind = leftouter   \r\n        (\r\n        _GetWatchlist('Sensitive')\r\n        | extend OldLabel = SearchKey\r\n        )\r\n        on OldLabel\r\n    | extend OldLabel = DisplayName1\r\n    | extend ActionSourceDoc = ActionSource\r\n    | join kind = leftouter   \r\n        (\r\n        _GetWatchlist('MipMap')\r\n        | extend ActionSourceDoc = (SearchKey)\r\n        | extend Type = Type\r\n        | where Type == \"ActionSource\"\r\n        )\r\n        on ActionSourceDoc\r\n    | extend ActionSource = Name1\r\n    //User Account enrichment.\r\n    | extend UserId = tolower(UserId)\r\n    | join kind=leftouter\r\n        (\r\n        _GetWatchlist('UserAccounts')\r\n        | extend UserId = tolower(SearchKey)\r\n        )\r\n        on UserId\r\n    //Document and email subject Logic\r\n    | extend ItemName_ = tostring(RawEventData.ItemName)\r\n    | extend ObjectId_ = tostring(RawEventData.ObjectId)\r\n    | extend DocumentorSubject = iff(isempty(tostring(ItemName_)), ObjectId_, tostring(ItemName_))\r\n    );\r\ndata\r\n| where OldSensitivityLabelId != \"\"\r\n| extend PolicyName = tostring(parse_json(tostring(RawEventData.PolicyDetails))[0].PolicyName)\r\n| extend Device = tostring(parse_json(tostring(RawEventData.Common)).DeviceName)\r\n| extend DocumentorSubject1 = split(DocumentorSubject, \"/\")[-1]\r\n| extend DocumentorSubject2 = split(DocumentorSubject, \"\\\\\")[-1]\r\n| extend DocumentorSubject = iff(isnotempty(Device), DocumentorSubject2, DocumentorSubject1)\r\n//Was it shared via email?\r\n| join kind=inner\r\n    (\r\n    CloudAppEvents\r\n    | where Application == \"Microsoft Exchange Online\"\r\n    | where tostring(parse_json(tostring(RawEventData.Item)).Attachments) != \"\"\r\n    | where RawEventData.Operation == \"Send\"\r\n    | extend Attachments = tostring(parse_json(tostring(RawEventData.Item)).Attachments)\r\n    | extend UserId = tolower(RawEventData.UserId)\r\n    )\r\n    on UserId\r\n| where Attachments contains DocumentorSubject\r\n| extend SensitivityLabelJustificationText_ = tostring(RawEventData.SensitivityLabelJustificationText)\r\n| extend Justification = replace_regex(SensitivityLabelJustificationText_,\"%20\",\" \")\r\n| extend accountsplit = split(UserId, \"@\")\r\n| project UserId,DocumentorSubject,OSPlatform,IPAddress,label,OldLabel,ActionSource,TimeGenerated,LabelEventType,Justification,accountsplit[0],accountsplit[1],Department,Country,Device",
+                "queryFrequency": "PT5H",
+                "queryPeriod": "PT5H",
+                "triggerOperator": "GreaterThan",
+                "triggerThreshold": 0,
+                "suppressionDuration": "PT5H",
+                "suppressionEnabled": false,
+                "tactics": [
+                    "Exfiltration"
+                ],
+                "techniques": [],
+                "alertRuleTemplateName": null,
+                "incidentConfiguration": {
+                    "createIncident": true,
+                    "groupingConfiguration": {
+                        "enabled": true,
+                        "reopenClosedIncident": false,
+                        "lookbackDuration": "PT5H",
+                        "matchingMethod": "Selected",
+                        "groupByEntities": [
+                            "Account"
+                        ],
+                        "groupByAlertDetails": [
+                            "DisplayName"
+                        ],
+                        "groupByCustomDetails": []
+                    }
+                },
+                "eventGroupingSettings": {
+                    "aggregationKind": "AlertPerResult"
+                },
+                "alertDetailsOverride": {
+                    "alertDisplayNameFormat": "Label downgraded and e-mailed department, {{Department}} ",
+                    "alertDescriptionFormat": "The alert is for {{Department}}, {{Country}} the previous label was {{OldLabel}}.",
+                    "alertTacticsColumnName": null,
+                    "alertSeverityColumnName": null
+                },
+                "customDetails": {
+                    "OldLabel": "OldLabel",
+                    "Currentlabel": "label",
+                    "Justification": "Justification",
+                    "ActionSource": "ActionSource"
+                },
+                "entityMappings": [
+                    {
+                        "entityType": "Account",
+                        "fieldMappings": [
+                            {
+                                "identifier": "Name",
+                                "columnName": "accountsplit_0"
+                            },
+                            {
+                                "identifier": "UPNSuffix",
+                                "columnName": "accountsplit_1"
+                            }
+                        ]
+                    },
+                    {
+                        "entityType": "File",
+                        "fieldMappings": [
+                            {
+                                "identifier": "Name",
+                                "columnName": "DocumentorSubject"
+                            }
+                        ]
+                    },
+                    {
+                        "entityType": "IP",
+                        "fieldMappings": [
+                            {
+                                "identifier": "Address",
+                                "columnName": "IPAddress"
+                            }
+                        ]
+                    },
+                    {
+                        "entityType": "Host",
+                        "fieldMappings": [
+                            {
+                                "identifier": "HostName",
+                                "columnName": "Device"
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    ]
+}
