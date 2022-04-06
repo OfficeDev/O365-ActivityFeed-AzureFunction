@@ -1,6 +1,6 @@
-Deploy MIP Label report [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://raw.githubusercontent.com/OfficeDev/O365-ActivityFeed-AzureFunction/master/Sentinel_CloudApp/Label%20Statistics.json)
+Deploy MIP Label report [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com/OfficeDev/O365-ActivityFeed-AzureFunction/master/Sentinel_CloudApp/Label%20Statistics.json)
 
----
+---/
 page_type: sample
 products:
 - Microsoft 365
