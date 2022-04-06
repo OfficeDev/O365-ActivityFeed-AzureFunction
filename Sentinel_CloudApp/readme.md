@@ -12,21 +12,14 @@ description: "This sample can be used to create MIP events in Sentinel."
 ---
 
 
-# Ingesting Micrsoft MIP events to Sentinel
-
-Use the endpointdlp preview steps to deploy the code. https://github.com/OfficeDev/O365-ActivityFeed-AzureFunction/tree/master/Sentinel/EndPointDLP_preview
-
-**During the deployment specify all content types in the dialog, deploy to Azure** 
-  - DLP.ALL,Audit.General,Audit.Exchange,Audit.SharePoint (Alt. after deployment under configuration of the Function App)
-
-**Replace STEP 5. by using the zip file in this repo.**
+# Utilizing MIP events in CloudAppEvents to visualise usage
 
 ### Prerequisites
 
-- You need to have an Azure Subscription
-- Ability to create an Azure Function App. 
-- A Sentinel Workspace and access to the Keys
-- You need permissions to make a new App registration. 
+- Microsoft Sentinel
+- Microsoft Defender for Cloud
+- Microsoft Information Protection
+- Microsoft Endpoint Protection or Endpoint DLP
 
 ### Installing
 Permissions needed for the app
@@ -42,10 +35,9 @@ Documentation for Watchlists https://docs.microsoft.com/en-us/azure/sentinel/wat
 If you happen to get hyphens in the csv header fields, remove the hyphens since the WL engine cannot process. 
 2. Create a new Microsoft Sentinel Watchlist call it **Sensitive**, set the ImmutableId as the index field.
 3. Create a new Microsoft Sentinel Watchlist call it **MipMap**, set the Value field as the index field, import the mipmap.csv file in this repo. (File to translate MIP operations)
-4. Create a new Microsoft Sentinel Watchlist call it UserAccounts, Import your account list, **for reporting to work well you need to include, userprincipalname,department,FullName,Title (The more detail you add the cooler you can make the report dashboard or any alerts)**
+4. Create a new Microsoft Sentinel Watchlist call it UserAccounts, Import your account list, **for reporting to work well you need to include, Userprincipalname,Department,FullName,Title,Country (The more detail you add the cooler you can make the report dashboard or any alerts), there is no normalization of the header so please capitalize the first letter as above or change the template.**
    - The Indexing field should be the UserPrincipalName, we use it as a key to enrich the items
-   - You can start with a small csv file, for bulk uploading a lot of data please see importwatch.ps1 in this repo it works in PS and PS Core. It supports incremental uploads as well as updating existing objects in the list.
-   - .\importwatch.ps1 -csv C:\tmp\UserAccounts.csv -Watchlist UserAccounts -Workspace usinstance -errlog c:\wlupload.log
+   - Use the Microsoft Sentinel Large Watchlist to upload the list of users it scales well to 100's of thousands of users.
 
 ### Deploy the Label Statistics Workbook
 Deploy the workbook Sensitivitylabels.json in this repo by simply copying the code across to a new Azure Workbook. 
