@@ -43,7 +43,7 @@ If you happen to get hyphens in the csv header fields, remove the hyphens since 
    - The Indexing field should be the UserPrincipalName, we use it as a key to enrich the items
    - Use the Microsoft Sentinel Large Watchlist to upload the list of users it scales well to 100's of thousands of users.
 
-### Deploy the Label Statistics Workbook
+### To manually deploy the workbooks
 Deploy the workbook Sensitivitylabels.json in this repo by simply copying the code across to a new Azure Workbook. 
 1. [Open] Workbooks from the Sentinel Workspace where you intend to install the workbooks / portal.azure.com
 2. [Click] "Add workbook" 
