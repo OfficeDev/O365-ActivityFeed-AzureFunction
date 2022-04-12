@@ -93,7 +93,7 @@
                   "allowCustom": true
                 }
               },
-  {
+                {
                 "id": "4e1b6539-9788-43e2-a283-4891f33f1677",
                 "version": "KqlParameterItem/1.0",
                 "name": "Labels",
@@ -260,6 +260,73 @@
             "json": "## Label Usage Overview"
           },
           "name": "text - 11"
+        },
+        {
+          "type": 3,
+          "content": {
+            "version": "KqlItem/1.0",
+            "query": "let data = (CloudAppEvents\r\n| extend LabelGUID = tostring(RawEventData.SensitivityLabelId)  \r\n| where LabelGUID !=\"\"\r\n| extend UserId = tostring(RawEventData.UserId)\r\n| extend CreationTime_t =  todatetime(RawEventData.CreationTime)\r\n| extend Workload_s = tostring(RawEventData.Workload)\r\n | join kind = leftouter   \r\n        ( \r\n        _GetWatchlist('Sensitive')\r\n        | extend LabelGUID = tostring(SearchKey)\r\n        )\r\n        on LabelGUID\r\n    | extend label = iff(isempty(tostring(RawEventData.LabelName)), DisplayName, tostring(RawEventData.LabelName))\r\n    | extend UserId = tostring(RawEventData.UserId)\r\n    | extend CreationTime_t =  todatetime(RawEventData.CreationTime)\r\n    | extend Workload_s = tostring(RawEventData.Workload)\r\n    );\r\ndata\r\n| extend city = City\r\n| extend country = CountryCode\r\n| extend Level = label\r\n| summarize count()  by Level, city, country,ActivityType\r\n| join kind=leftouter (\r\ndata\r\n| extend city = City\r\n| make-series TrendList = count() on TimeGenerated in range({TimeRange:start}, {TimeRange:end}, {TimeRange:grain}) by city) \r\non city\r\n| project ActivityType,Level, country, city, [\"Total events\"] = count_, TrendLine = TrendList\r\n| top 10 by [\"Total events\"] desc\r\n\r\n \r\n\r\n",
+            "size": 3,
+            "title": "Top 10 Label content access",
+            "timeContextFromParameter": "TimeRange",
+            "queryType": 0,
+            "resourceType": "microsoft.operationalinsights/workspaces",
+            "visualization": "table",
+            "gridSettings": {
+              "formatters": [
+                {
+                  "columnMatch": "Total events",
+                  "formatter": 4,
+                  "formatOptions": {
+                    "palette": "blue"
+                  }
+                },
+                {
+                  "columnMatch": "TrendLine",
+                  "formatter": 9,
+                  "formatOptions": {
+                    "palette": "redGreen"
+                  }
+                }
+              ]
+            },
+            "sortBy": []
+          },
+          "customWidth": "40",
+          "name": "query - 1 - Copy"
+        },
+        {
+          "type": 3,
+          "content": {
+            "version": "KqlItem/1.0",
+            "query": "let data = (CloudAppEvents\r\n    | extend LabelGUID = tostring(RawEventData.SensitivityLabelId)  \r\n    | where LabelGUID != \"\"\r\n    | where ActivityType == \"Share\"\r\n| extend UserId = tostring(RawEventData.UserId)\r\n| extend CreationTime_t =  todatetime(RawEventData.CreationTime)\r\n| extend Workload_s = tostring(RawEventData.Workload)\r\n | join kind = leftouter   \r\n        ( \r\n        _GetWatchlist('Sensitive')\r\n        | extend LabelGUID = tostring(SearchKey)\r\n        )\r\n        on LabelGUID\r\n    | extend label = iff(isempty(tostring(RawEventData.LabelName)), DisplayName, tostring(RawEventData.LabelName))\r\n    | extend UserId = tostring(RawEventData.UserId)\r\n    | extend CreationTime_t =  todatetime(RawEventData.CreationTime)\r\n    | extend Workload_s = tostring(RawEventData.Workload)\r\n    );\r\ndata\r\n| extend city = City\r\n| extend country = CountryCode\r\n| extend Level = label\r\n| summarize count()  by Level, city, country,ActionType\r\n| join kind=leftouter (\r\ndata\r\n| extend city = City\r\n| make-series TrendList = count() on TimeGenerated in range({TimeRange:start}, {TimeRange:end}, {TimeRange:grain}) by city) \r\non city\r\n| project ActionType,Level, country, city, [\"Total events\"] = count_, TrendLine = TrendList\r\n| top 10 by [\"Total events\"] desc\r\n",
+            "size": 3,
+            "title": "Top 10 Sharing Operations",
+            "queryType": 0,
+            "resourceType": "microsoft.operationalinsights/workspaces",
+            "visualization": "table",
+            "gridSettings": {
+              "formatters": [
+                {
+                  "columnMatch": "Total events",
+                  "formatter": 4,
+                  "formatOptions": {
+                    "palette": "blue"
+                  }
+                },
+                {
+                  "columnMatch": "TrendLine",
+                  "formatter": 9,
+                  "formatOptions": {
+                    "palette": "redGreen"
+                  }
+                }
+              ]
+            },
+            "sortBy": []
+          },
+          "customWidth": "40",
+          "name": "query - 1 - Copy - Copy"
         },
         {
           "type": 3,
