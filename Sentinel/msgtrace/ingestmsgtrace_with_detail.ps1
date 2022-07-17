@@ -97,9 +97,12 @@ while ($runs -ge 1) {
     if ($messagetrace.count -gt 0) {
 
         $messagetrace_detail_array = @();
-        foreach ($elem in $messagetrace) {
+        $messagetrace | ForEach-Object -Parallel {
+            $elem = $_
             $messagetrace_detail = Get-MessageTraceDetail -MessageTraceId $elem.MessageTraceId -RecipientAddress $elem.RecipientAddress
-            foreach ($detail_elem in $messagetrace_detail) {
+            $messagetrace_detail | ForEach-Object -Parallel {
+                $detail_elem = $_
+                $messagetrace_detail_array = $using:messagetrace_detail_array
                 $elem | Add-Member -MemberType NoteProperty -Name Event -Value $detail_elem.Event -Force
                 $elem | Add-Member -MemberType NoteProperty -Name Action -Value $detail_elem.Action -Force
                 $elem | Add-Member -MemberType NoteProperty -Name Detail -Value $detail_elem.Detail -Force
