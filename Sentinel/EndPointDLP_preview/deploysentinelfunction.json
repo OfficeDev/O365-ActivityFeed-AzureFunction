@@ -47,7 +47,7 @@
                   
                     "ContentTypes": {
                     "type": "string",    
-                    "defaultValue": "DLP.ALL,Audit.General"
+                    "defaultValue": "DLP.ALL"
                   },
                                     
                     "domains": {
@@ -169,7 +169,7 @@
               },
               {
                 "name": "FUNCTIONS_EXTENSION_VERSION",
-                "value": "~3"
+                "value": "~4"
               },
               {
                 "name": "APPINSIGHTS_INSTRUMENTATIONKEY",
@@ -239,8 +239,8 @@
               "name": "SentinelWorkspace",
               "value": "[parameters('SentinelWorkspace')]"
             }
-
-            ]
+            ],
+                "powerShellVersion": "7.2"
           }
         }
       },
