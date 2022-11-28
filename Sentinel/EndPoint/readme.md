@@ -11,11 +11,14 @@ The best way to update is using Kudu
 ![Kudu](./Kudu.jpg)
 
 
-In the file functions.zip, you can find a few sample functions that can be customized for your workflow requirements.
+In the file functions.zip, you can find a few sample functions that can be customized for your workflow requirements. They are merely a starting point.
 
 •	ExportContent, exports evidence around the individual in the case from Office Activities etc…
-•	NotifyManager is the one that sends the approval email etc…. and updates the case.
-•	StartTeams, creates a Teams conversation in the channel designated
+
+•	NotifyManager, sends the approval email to line manager as an example and updates the Sentinel incident.
+
+•	StartTeams, creates a Teams conversation in the channel designated in the app.
+
 •	WeeklyDlp, sends a weekly digest to the managers about DLP events in their organization.
 
 You run the import of the templates by using https://portal.azure.com/#create/Microsoft.Template, build your own template and load file.
