@@ -7,7 +7,8 @@ b.	Replace the endpointruletemplate with endpointruletemplate.yaml.
 When the files have been replaced, reset the date in lastofficepolicy.log and lastendpointpolicy.log to 2005-08-18T15:32:04.000Z and manually run the synchdlp functions. The updated templates make use of the most recent features in Sentinel and allows for dynamic importance and many other settings.
 
 The best way to update is using Kudu   
-![Kudu](./kudu.jpg)
+
+![Kudu](./Kudu.jpg)
 
 
 In the file functions.zip, you can find a few sample functions that can be customized for your workflow requirements.
