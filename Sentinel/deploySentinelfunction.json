@@ -240,8 +240,7 @@
               "value": "[parameters('SentinelWorkspace')]"
             }
 
-            ],
-           "powerShellVersion": "7.2", 
+            ]
           }
         }
       },
