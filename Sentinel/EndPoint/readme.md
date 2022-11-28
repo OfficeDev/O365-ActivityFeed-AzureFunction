@@ -1,4 +1,18 @@
-The reason we haven’t pushed this to the core repo, it can break existing setups when running the enablement script. 
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FOfficeDev%2FO365-ActivityFeed-AzureFunction%2Fmaster%2FSentinel%2FEndPointDLP_preview%2Fdeploysentinelfunction.json)
+
+---
+page_type: sample
+products:
+- office-365
+- Sentinel
+languages:
+- powershellcore
+extensions:
+  - contentType: samples
+  - createdDate: 09/21/2022 3:00:56 PM
+---
+
+The reason we haven’t pushed this to the core repo, the new code can break existing setups when running the enablement script. 
 
 1.	Setup the service according to this blog post https://techcommunity.microsoft.com/t5/security-compliance-and-identity/advanced-incident-management-for-office-and-endpoint-dlp-using/ba-p/1811497, replace the endpointdlpservice.zip, with the dlpservice.zip in this repo, you can check the zip for any custom code. (This is step 9. in the blog post) The SHA256 hash is C54BE51AD9609685F8FCD0825453B7CADDFE329A2334CE71A66694B50CDA6FBF. (Check with PowerShell Get-FileHash)
 2.	At the end of setting everything up, update the ruletemplate.yaml, and do not run the enablement function again since it will pull the templates from the repo. (The enablement function was meant to simplify but has become a bit of liability since it may brake older implementations)
