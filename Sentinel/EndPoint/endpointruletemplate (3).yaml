@@ -1,37 +1,131 @@
 {
+   "etag": "\"ruleGuid\"",
+  "type": "Microsoft.SecurityInsights/alertRules",
   "kind": "Scheduled",
-  "etag": "\"ruleGuid\"",
   "properties": {
-    "severity": "UpdateSeverity",
-    "query": "endpointdlp_CL \r\n| where TimeGenerated >= ago(5m) \r\n| mv-apply SensitiveInfoTypeId = todynamic(SensitiveInfoTypeData_s) on (where SensitiveInfoTypeData_s != \"\" 
-)\r\n| extend SensitiveInfoTypeIdnew = tostring(parse_json(SensitiveInfoTypeId).SensitiveInfoTypeId)\r\n| join kind = inner \r\n ( \r\n DLPSensitivity_CL \r\n | where TimeGenerated >= ago(24h) \r\n | extend SensitiveInfoTypeIdnew = tostring(Id_g)\r\n | summarize arg_max(TimeGenerated, *) by SensitiveInfoTypeIdnew \r\n )\r\n on SensitiveInfoTypeIdnew\r\n| where PolicyMatchInfo_RuleId_g == \"ImmutableID\"\r\n| where Operation_s contains \"FileCopiedToRemovableMedia\" or Operation_s contains \"FileUploadedToCloud\" or Operation_s contains \"FileCopiedToClipboard\" or Operation_s contains \"FilePrinted\" or Operation_s contains \"FileCopiedToNetworkShare\"\r\n| extend AccountCustomEntity = UserKey_s\r\n| extend HostCustomEntity = DeviceName_s\r\n| extend IPCustomEntity = ClientIP_s\r\n| project department_s, AccountCustomEntity, Name_s, DocumentName_s, HostCustomEntity, IPCustomEntity,Operation_s, RMSEncrypted_b, Application_s",
-    "queryFrequency": "PT5M",
-    "queryPeriod": "P1D",
-    "triggerOperator": "GreaterThan",
-    "triggerThreshold": 0,
-    "suppressionDuration": "PT2H",
-    "suppressionEnabled": false,
-    "incidentConfiguration": {
-      "createIncident": true,
-      "groupingConfiguration": {
-        "enabled": true,
-        "reopenClosedIncident": false,
-        "lookbackDuration": "PT45M",
-        "entitiesMatchingMethod": "Custom",
-        "groupByEntities": [
-          "Account"
-        ]
-      }
-    },
-    "eventGroupingSettings": {
-      "aggregationKind": "AlertPerResult"
-    },
-    "displayName": "DLPPOLICYName_EndPoint",
-    "enabled": true,
-    "description": "",
-    "tactics": [
-      "Exfiltration"
-    ],
-    "alertRuleTemplateName": null
-  }
-}
+                "displayName": "DLPPOLICYName_EndPoint",
+                "description": "",
+                "severity": "UpdateSeverity",
+                "enabled": true,
+                "query": "let EndPointAction = datatable(ActionName: string, Action: int) [\r\n    \"None\", \"0\",\r\n    \"Audit\", \"1\",\r\n    \"Warn\", \"2\",\r\n    \"WarnAndBypass\", \"3\",\r\n    \"Block\", \"4\",\r\n    \"Allow\", \"5\"\r\n];\r\nO365DLP_CL\r\n| extend RuleName = tostring(parse_json(tostring(parse_json(PolicyDetails_s)[0].Rules))[0].RuleName)\r\n| extend PolicyName = tostring(parse_json(PolicyDetails_s)[0].PolicyName)\r\n| where PolicyName == \"DLPPOLICYName\"\r\n| extend PolicyId = tostring(parse_json(PolicyDetails_s)[0].PolicyId)\r\n| extend RuleId = tostring(parse_json(tostring(parse_json(PolicyDetails_s)[0].Rules))[0].RuleId)\r\n| where RuleId == \"ImmutableID\"\r\n| extend SensitiveInfoTypeName1 = tostring(parse_json(EndpointMetaData_SensitiveInfoTypeData_s)[0].SensitiveInfoTypeName)\r\n| extend Detected1 = tostring(parse_json(tostring(parse_json(tostring(parse_json(EndpointMetaData_SensitiveInfoTypeData_s)[0].SensitiveInformationDetectionsInfo)).DetectedValues)))\r\n| extend Detected = array_slice(todynamic(Detected1), 0, 5)\r\n| extend Deeplink = strcat(\"https://compliance.microsoft.com/datalossprevention/alerts/eventdeeplink?eventid=\", Id_g, \"&creationtime=\", CreationTime_t)\r\n| extend Action = toint(EndpointMetaData_EnforcementMode_d)\r\n| extend accountsplit = split(UserId_s, \"@\")\r\n| join kind= inner\r\n    (\r\n    EndPointAction\r\n    )\r\n    on Action\r\n| project\r\n    PolicyId,\r\n    SensitiveInfoTypeName1,\r\n    UserKey_s,\r\n    DocumentName_s,\r\n    ObjectId_s,\r\n    ClientIP_s,\r\n    EndpointMetaData_RMSEncrypted_b,\r\n    EndpointMetaData_EnforcementMode_d,\r\n    EndpointMetaData_DeviceName_s,\r\n    EndpointMetaData_OriginatingDomain_s,\r\n    EndpointMetaData_SourceLocationType_d,\r\n    PolicyName,\r\n    RuleName,\r\n    usageLocation_s,\r\n    EndpointMetaData_EndpointOperation_s,\r\n    EndpointMetaData_Sha256_s,\r\n    department_s,\r\n    manager_s,\r\n    ActionName,\r\n    Detected,\r\n    Workload_s,\r\n    Deeplink,\r\n    jobTitle_s,\r\n    UserId_s,\r\n    accountsplit[0],\r\n    accountsplit[1]",
+                "queryFrequency": "PT5M",
+                "queryPeriod": "PT5M",
+                "triggerOperator": "GreaterThan",
+                "triggerThreshold": 0,
+                "suppressionDuration": "PT2H",
+                "suppressionEnabled": false,
+                "startTimeUtc": null,
+                "tactics": [
+                    "Exfiltration"
+                ],
+                "techniques": [],
+                "alertRuleTemplateName": null,
+                "incidentConfiguration": {
+                    "createIncident": true,
+                    "groupingConfiguration": {
+                        "enabled": true,
+                        "reopenClosedIncident": false,
+                        "lookbackDuration": "PT45M",
+                        "matchingMethod": "Selected",
+                        "groupByEntities": [
+                            "Account"
+                        ],
+                        "groupByAlertDetails": [
+                            "DisplayName"
+                        ],
+                        "groupByCustomDetails": []
+                    }
+                },
+                "eventGroupingSettings": {
+                    "aggregationKind": "AlertPerResult"
+                },
+                "alertDetailsOverride": {
+                    "alertDisplayNameFormat": "{{RuleName}}",
+                    "alertDescriptionFormat": "{{UserId_s}}, {{DocumentName_s}}",
+                    "alertDynamicProperties": [
+                        {
+                            "alertProperty": "AlertLink",
+                            "value": "Deeplink"
+                        },
+                        {
+                            "alertProperty": "ProductName",
+                            "value": "Workload_s"
+                        },
+                        {
+                            "alertProperty": "ProviderName",
+                            "value": "PolicyName"
+                        },
+                        {
+                            "alertProperty": "ProductComponentName",
+                            "value": "RuleName"
+                        }
+                    ]
+                },
+                "customDetails": {
+                    "User": "UserId_s",
+                    "Department": "department_s",
+                    "Location": "usageLocation_s",
+                    "Detected": "SensitiveInfoTypeName1",
+                    "Action": "EndpointMetaData_EndpointOperation_s",
+                    "DocumentName": "DocumentName_s",
+                    "BlockAction": "ActionName",
+                    "Encrypted": "EndpointMetaData_RMSEncrypted_b",
+                    "Manager": "manager_s",
+                    "DataMatch": "Detected",
+                    "Deeplink": "Deeplink",
+                    "jobtitle": "jobTitle_s"
+                },
+                "entityMappings": [
+                    {
+                        "entityType": "Account",
+                        "fieldMappings": [
+                            {
+                                "identifier": "Name",
+                                "columnName": "accountsplit_0"
+                            },
+                            {
+                                "identifier": "UPNSuffix",
+                                "columnName": "accountsplit_1"
+                            }
+                        ]
+                    },
+                    {
+                        "entityType": "File",
+                        "fieldMappings": [
+                            {
+                                "identifier": "Name",
+                                "columnName": "DocumentName_s"
+                            },
+                            {
+                                "identifier": "Directory",
+                                "columnName": "ObjectId_s"
+                            }
+                        ]
+                    },
+                    {
+                        "entityType": "Host",
+                        "fieldMappings": [
+                            {
+                                "identifier": "DnsDomain",
+                                "columnName": "EndpointMetaData_OriginatingDomain_s"
+                            },
+                            {
+                                "identifier": "HostName",
+                                "columnName": "EndpointMetaData_DeviceName_s"
+                            }
+                        ]
+                    },
+                    {
+                        "entityType": "IP",
+                        "fieldMappings": [
+                            {
+                                "identifier": "Address",
+                                "columnName": "ClientIP_s"
+                            }
+                        ]
+                    }
+                ],
+                "sentinelEntitiesMappings": null,
+                "templateVersion": null
+            }
+        }
