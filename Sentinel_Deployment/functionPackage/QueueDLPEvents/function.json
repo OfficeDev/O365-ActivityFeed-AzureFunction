@@ -1,0 +1,11 @@
+﻿{
+  "bindings": [
+    {
+      "name": "Timer",
+      "type": "timerTrigger",
+      "direction": "in",
+      "schedule": "0 */1 * * * *"
+    }
+  ],
+  "disabled": false
+}

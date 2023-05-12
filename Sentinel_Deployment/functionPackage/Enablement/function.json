@@ -1,0 +1,11 @@
+﻿{
+  "bindings": [
+    {
+      "name": "Enablement",
+      "type": "timerTrigger",
+      "direction": "in",
+      "schedule": "0 */1 1 1 1 *"
+    }
+  ],
+  "disabled": true
+}

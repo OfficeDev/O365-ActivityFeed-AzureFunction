@@ -9,6 +9,13 @@ Start-Sleep -Seconds 60
 Invoke-WebRequest -Uri $PackageUri -OutFile functionPackage.zip
 Publish-AzWebapp -ResourceGroupName $ResourceGroupName -Name $FunctionAppName -ArchivePath functionPackage.zip -Force
 
+Start-Sleep -Seconds 10
+
+#Run Enablement function.
+$functionAppHostName = (Get-AzFunctionApp -Name $FunctionAppName -ResourceGroupName $ResourceGroupName).DefaultHostName
+$key = ((Invoke-AzRestMethod -SubscriptionId $SubscriptionId -ResourceGroupName $ResourceGroupName -ResourceProviderName Microsoft.Web -ResourceType sites -Name ("$FunctionAppName/host/default/listkeys") -ApiVersion 2022-03-01 -Method POST).Content | ConvertFrom-Json).masterKey
+Invoke-RestMethod -Method Post -Uri ("https://$funcationAppHostName/admin/functions/Enablement") -Headers (@{"Content-Type" = "application/json"; "x-functions-key" = $key}) -Body {}
+
 #Add IP restrictions on Function App if specified.
 if ($RestrictedIPs -eq 'None') {
     $resource = Get-AzResource -ResourceType Microsoft.Web/sites -ResourceGroupName $ResourceGroupName -ResourceName $FunctionAppName

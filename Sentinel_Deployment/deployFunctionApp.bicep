@@ -1,47 +1,40 @@
 @description('The name of the function app that you wish to create.')
-param appName string
-
+param FunctionAppName string
 @description('Select to enable Application Insights for the Function App. This will allow you to monitor the status of the Function App for any errors. The Log Analytics Workspace specified in the "Log Analytics Resource Id" Parameter will be used to store the Application Insights data.')
 param DeployApplicationInsights bool = true
-
 @description('The name of the Key Vault to store Function App secrets.')
-param keyVaultName string
-
-@description('Location for all resources.')
-param location string = resourceGroup().location
-
-@description('Application Client ID')
-param ClientID string = 'Provide the client ID'
+param KeyVaultName string
+@description('App Registration Client ID.')
+param ClientID string
 @secure()
+@description('App Registration Client secret.')
 param ClientSecret string
-param ContentTypes string = 'DLP.ALL'
-param tenantDomain string = 'Yourtenant.onmicrosoft.com'
-param TenantGuid string = 'Your Tenant GUID'
-param domains string = 'youradditionaldomain.com,yourdomain.com,yourtenant.onmicrosoft.com'
-
+@description('Azure AD tenant domain in which DLP instance resides.')
+param TenantDomain string = 'Yourtenant.onmicrosoft.com'
+@description('Azure AD tenant ID in which DLP instance resides.')
+param TenantID string
+@description('Trusted domain names.')
+param TrustedDomains string = 'youradditionaldomain.com,yourdomain.com,yourtenant.onmicrosoft.com'
 @description('Provide the Document library where you want to store the full email. IMPORTANT full path, with trailing /')
-param SPUS string = 'https://tenant.sharepoint.com/sites/DLPArchive/'
-param storageQueue string = 'dlpqueue'
-param workspaceId string = 'LogAnalytics Workspace Id'
+param SharepointDocumentLibrary string = 'https://tenant.sharepoint.com/sites/DLPArchive/'
+@description('Log Analytics Workspace ID for the Sentinel instance you wish to use.')
+param LogAnalayticsWorkspaceID string
 @secure()
-param workspaceKey string
-param SentinelWorkspace string = 'Sentinel Workspace Name'
-
-@description('Azure Resource Id of the Log Analytics Workspace where you like the DLP and optional Function App Application Insights data to reside. The format is: "/subscriptions/xxxxxxxx-xxxxxxxx-xxxxxxxx-xxxxxxxx-xxxxxxxx/resourcegroups/xxxxxxxx/providers/microsoft.operationalinsights/workspaces/xxxxxxxx"')
-param LogAnalyticsWorkspaceResourceId string
-
+@description('Log Analytics Workspace key for the Sentinel instance you wish to use.')
+param LogAnalyticsWorkspaceKey string
+@description('Log Analytics Workspace name for the Sentinel instance you wish to use.')
+param LogAnalyticsWorkspaceName string
+@description('Azure Resource ID of the Log Analytics Workspace where you would like the DLP and optional Function App Application Insights data to reside. The format is: "/subscriptions/xxxxxxxx-xxxxxxxx-xxxxxxxx-xxxxxxxx-xxxxxxxx/resourcegroups/xxxxxxxx/providers/microsoft.operationalinsights/workspaces/xxxxxxxx"')
+param LogAnalyticsWorkspaceResourceID string
 @description('Uri where the post deployment script is located. This is used to publish the Function App code after the resources have been deploted. Use default value unless you are hosting the script somewhere else.')
-param DeploymentScriptUri string = 'https://raw.githubusercontent.com/anders-alex/O365-ActivityFeed-AzureFunction/Sentinel_Deployment/Sentinel_Deployment/deploymentScript.ps1'
 
-@description('Uri where the post deployment script is located. This is used to publish the Function App code after the resources have been deploted. Use default value unless you are hosting the script somewhere else.')
-param FunctionAppPackageUri string = 'https://raw.githubusercontent.com/anders-alex/O365-ActivityFeed-AzureFunction/Sentinel_Deployment/Sentinel_Deployment/functionPackage.zip'
-
-var functionAppName = appName
-var hostingPlanName = appName
-var storageAccountName = '${uniqueString(resourceGroup().id)}azfunctions'
+var storageAccountName = 'functionapp${uniqueString(resourceGroup().id)}'
+var location = resourceGroup().location
+var functionAppPackageUri = 'https://raw.githubusercontent.com/anders-alex/O365-ActivityFeed-AzureFunction/Sentinel_Deployment/Sentinel_Deployment/functionPackage.zip'
+var deploymentScriptUri = 'https://raw.githubusercontent.com/anders-alex/O365-ActivityFeed-AzureFunction/Sentinel_Deployment/Sentinel_Deployment/deploymentScript.ps1'
 
 resource userAssignedMi 'Microsoft.ManagedIdentity/userAssignedIdentities@2022-01-31-preview' = {
-  name: 'uami-${appName}'
+  name: 'uami-${FunctionAppName}'
   location: location
 }
 
@@ -58,15 +51,11 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2021-08-01' = {
 }
 
 resource fileShare 'Microsoft.Storage/storageAccounts/fileServices/shares@2022-09-01' = {
-  name: '${storageAccount.name}/default/${toLower(appName)}'
-}
-
-resource dlpQueue 'Microsoft.Storage/storageAccounts/queueServices/queues@2022-09-01' = {
-  name: '${storageAccount.name}/default/${storageQueue}'
+  name: '${storageAccount.name}/default/${toLower(FunctionAppName)}'
 }
 
 resource keyVault 'Microsoft.KeyVault/vaults@2022-07-01' = {
-  name: keyVaultName
+  name: KeyVaultName
   location: location
   properties: {
     sku: {
@@ -107,7 +96,7 @@ module keyVaultUpdateNetworAcl 'modules/keyVault.bicep' = {
 }
 
 resource hostingPlan 'Microsoft.Web/serverfarms@2021-03-01' = {
-  name: hostingPlanName
+  name: FunctionAppName
   location: location
   sku: {
     name: 'Y1'
@@ -135,12 +124,12 @@ resource keyVaultSecretLawKey 'Microsoft.KeyVault/vaults/secrets@2022-07-01' = {
   parent: keyVault
   name: 'LawKey'
   properties: {
-    value: workspaceKey
+    value: LogAnalyticsWorkspaceKey
   }
 }
 
 resource functionApp 'Microsoft.Web/sites@2022-03-01' = {
-  name: functionAppName
+  name: FunctionAppName
   location: location
   identity: {
     type: 'UserAssigned'
@@ -159,11 +148,11 @@ resource functionApp 'Microsoft.Web/sites@2022-03-01' = {
       appSettings: [
         {
           name: 'AzureWebJobsStorage'
-          value: '@Microsoft.KeyVault(VaultName=${keyVaultName};SecretName=StorageAccountConnectionString)'
+          value: '@Microsoft.KeyVault(VaultName=${KeyVaultName};SecretName=StorageAccountConnectionString)'
         }
         {
           name: 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING'
-          value: '@Microsoft.KeyVault(VaultName=${keyVaultName};SecretName=StorageAccountConnectionString)'
+          value: '@Microsoft.KeyVault(VaultName=${KeyVaultName};SecretName=StorageAccountConnectionString)'
         }
         {
           name: 'AzureWebJobsSecretStorageType'
@@ -171,7 +160,7 @@ resource functionApp 'Microsoft.Web/sites@2022-03-01' = {
         }
         {
           name: 'AzureWebJobsSecretStorageKeyVaultUri'
-          value: 'https://${keyVaultName}.vault.azure.net/'
+          value: 'https://${KeyVaultName}.vault.azure.net/'
         }
         {
           name: 'AzureWebJobsSecretStorageKeyVaultClientId'
@@ -179,7 +168,7 @@ resource functionApp 'Microsoft.Web/sites@2022-03-01' = {
         }
         {
           name: 'WEBSITE_CONTENTSHARE'
-          value: toLower(appName)
+          value: toLower(FunctionAppName)
         }
         {
           name: 'WEBSITE_SKIP_CONTENTSHARE_VALIDATION'
@@ -199,6 +188,10 @@ resource functionApp 'Microsoft.Web/sites@2022-03-01' = {
         }
         {
           name: 'WEBSITE_RUN_FROM_PACKAGE'
+          value: '0'
+        }
+        {
+          name: 'AzureWebJobs.Enablement.Disabled'
           value: '1'
         }
         {
@@ -207,11 +200,11 @@ resource functionApp 'Microsoft.Web/sites@2022-03-01' = {
         }
         {
           name: 'ClientSecret'
-          value: '@Microsoft.KeyVault(VaultName=${keyVaultName};SecretName=ClientSecret)'
+          value: '@Microsoft.KeyVault(VaultName=${KeyVaultName};SecretName=ClientSecret)'
         }
         {
           name: 'ContentTypes'
-          value: ContentTypes
+          value: 'DLP.ALL'
         }
         {
           name: 'customLogName'
@@ -219,15 +212,15 @@ resource functionApp 'Microsoft.Web/sites@2022-03-01' = {
         }
         {
           name: 'domains'
-          value: domains
+          value: TrustedDomains
         }
         {
           name: 'SPUS'
-          value: SPUS
+          value: SharepointDocumentLibrary
         }
         {
           name: 'storageQueue'
-          value: storageQueue
+          value: 'dlpqueue'
         }
         {
           name: 'endpointstorageQueue'
@@ -235,23 +228,27 @@ resource functionApp 'Microsoft.Web/sites@2022-03-01' = {
         }
         {
           name: 'tenantDomain'
-          value: tenantDomain
+          value: TenantDomain
         }
         {
           name: 'TenantGuid'
-          value: TenantGuid
+          value: TenantID
         }
         {
           name: 'workspaceId'
-          value: workspaceId
+          value: LogAnalayticsWorkspaceID
         }
         {
           name: 'workspaceKey'
-          value: '@Microsoft.KeyVault(VaultName=${keyVaultName};SecretName=LawKey)'
+          value: '@Microsoft.KeyVault(VaultName=${KeyVaultName};SecretName=LawKey)'
         }
         {
           name: 'SentinelWorkspace'
-          value: SentinelWorkspace
+          value: LogAnalyticsWorkspaceName
+        }
+        {
+          name: 'UamiClientId'
+          value: userAssignedMi.properties.clientId
         }
       ]
       powerShellVersion: '7.2'
@@ -264,18 +261,17 @@ resource functionApp 'Microsoft.Web/sites@2022-03-01' = {
     keyVaultSecretStorageAccountConnectionString
     storageAccount
     fileShare
-    dlpQueue
   ]
 }
 
 resource applicationInsights 'Microsoft.Insights/components@2020-02-02' = if (DeployApplicationInsights == true) {
-  name: 'appInsights-${appName}'
+  name: 'appInsights-${FunctionAppName}'
   location: location
   kind: 'web'
   properties: {
     Application_Type: 'web'
     Request_Source: 'rest'
-    WorkspaceResourceId: LogAnalyticsWorkspaceResourceId
+    WorkspaceResourceId: LogAnalyticsWorkspaceResourceID
   }
 }
 
@@ -290,12 +286,12 @@ resource roleAssignmentFa 'Microsoft.Authorization/roleAssignments@2022-04-01' =
 }
 
 module roleAssignmentLaw 'modules/lawRoleAssignment.bicep' = {
-  scope: resourceGroup(split(LogAnalyticsWorkspaceResourceId, '/')[2], split(LogAnalyticsWorkspaceResourceId, '/')[4])
+  scope: resourceGroup(split(LogAnalyticsWorkspaceResourceID, '/')[2], split(LogAnalyticsWorkspaceResourceID, '/')[4])
   name: 'rbacAssignmentLaw'
   params: {
     principalId: userAssignedMi.properties.principalId
     roleDefId: '/providers/Microsoft.Authorization/roleDefinitions/ab8e14d6-4a74-4a29-9ba8-549422addade'
-    scopedResourceName: split(LogAnalyticsWorkspaceResourceId, '/')[8]
+    scopedResourceName: split(LogAnalyticsWorkspaceResourceID, '/')[8]
   }
 }
 
@@ -314,7 +310,7 @@ resource deploymentScript 'Microsoft.Resources/deploymentScripts@2020-10-01' = {
     retentionInterval: 'PT1H'
     timeout: 'PT5M'
     cleanupPreference: 'Always'
-    primaryScriptUri: DeploymentScriptUri
-    arguments: '-PackageUri ${FunctionAppPackageUri} -SubscriptionId ${split(subscription().id, '/')[2]} -ResourceGroupName ${resourceGroup().name} -FunctionAppName ${functionApp.name} -FAScope ${functionApp.id} -UAMIPrincipalId ${userAssignedMi.properties.principalId}'
+    primaryScriptUri: deploymentScriptUri
+    arguments: '-PackageUri ${functionAppPackageUri} -SubscriptionId ${split(subscription().id, '/')[2]} -ResourceGroupName ${resourceGroup().name} -FunctionAppName ${functionApp.name} -FAScope ${functionApp.id} -UAMIPrincipalId ${userAssignedMi.properties.principalId}'
   }
 }
