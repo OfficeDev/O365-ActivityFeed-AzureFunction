@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.17.1.54307",
-      "templateHash": "10640746001056573711"
+      "templateHash": "10524261519897770286"
     }
   },
   "parameters": {
@@ -1203,7 +1203,7 @@
     {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
-      "name": "sentinelWatchlists",
+      "name": "sentinelRules",
       "subscriptionId": "[split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[2]]",
       "resourceGroup": "[split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[4]]",
       "properties": {

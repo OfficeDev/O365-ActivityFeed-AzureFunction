@@ -372,7 +372,7 @@ module sentinelWatchlists 'modules/sentinelWatchlists.bicep' = {
 }
 
 module sentinelRules 'modules/sentinelRules.bicep' = {
-  name: 'sentinelWatchlists'
+  name: 'sentinelRules'
   scope: resourceGroup(split(LogAnalyticsWorkspaceResourceID, '/')[2], split(LogAnalyticsWorkspaceResourceID, '/')[4])
   dependsOn: [
     createCustomTables 
