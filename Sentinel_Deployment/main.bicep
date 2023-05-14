@@ -15,13 +15,6 @@ param ClientSecret string
 param InternalDomainNames string = 'youradditionaldomain.com,yourdomain.com,yourtenant.onmicrosoft.com'
 @description('Provide the Document library where you want to store the full email. IMPORTANT full path, with trailing /')
 param SharepointDocumentLibrary string = 'https://tenant.sharepoint.com/sites/DLPArchive/'
-@description('Log Analytics Workspace ID for the Sentinel instance you wish to use.')
-param LogAnalayticsWorkspaceID string
-@secure()
-@description('Log Analytics Workspace key for the Sentinel instance you wish to use.')
-param LogAnalyticsWorkspaceKey string
-@description('Log Analytics Workspace name for the Sentinel instance you wish to use.')
-param LogAnalyticsWorkspaceName string
 @description('Name for Data Collection Endpoint used to ingest data into Log Analytics workspace.')
 param DataCollectionEndpointName string = 'dce-${uniqueString(resourceGroup().id)}'
 @description('Name for Data Collection Rule used to ingest data into Log Analytics workspace.')
@@ -184,14 +177,6 @@ resource keyVaultSecretClientSecret 'Microsoft.KeyVault/vaults/secrets@2022-07-0
   }
 }
 
-resource keyVaultSecretLawKey 'Microsoft.KeyVault/vaults/secrets@2022-07-01' = {
-  parent: keyVault
-  name: 'LawKey'
-  properties: {
-    value: LogAnalyticsWorkspaceKey
-  }
-}
-
 resource hostingPlan 'Microsoft.Web/serverfarms@2021-03-01' = {
   name: FunctionAppName
   location: location
@@ -296,16 +281,12 @@ resource functionApp 'Microsoft.Web/sites@2022-03-01' = {
           value: TenantID
         }
         {
-          name: 'workspaceId'
-          value: LogAnalayticsWorkspaceID
-        }
-        {
           name: 'workspaceKey'
           value: '@Microsoft.KeyVault(VaultName=${KeyVaultName};SecretName=LawKey)'
         }
         {
           name: 'SentinelWorkspace'
-          value: LogAnalyticsWorkspaceName
+          value: split(LogAnalyticsWorkspaceResourceID, '/')[8]
         }
         {
           name: 'UamiClientId'

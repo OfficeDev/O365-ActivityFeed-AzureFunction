@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.17.1.54307",
-      "templateHash": "9755186496350946309"
+      "templateHash": "6680653619685484530"
     }
   },
   "parameters": {
@@ -58,24 +58,6 @@
       "defaultValue": "https://tenant.sharepoint.com/sites/DLPArchive/",
       "metadata": {
         "description": "Provide the Document library where you want to store the full email. IMPORTANT full path, with trailing /"
-      }
-    },
-    "LogAnalayticsWorkspaceID": {
-      "type": "string",
-      "metadata": {
-        "description": "Log Analytics Workspace ID for the Sentinel instance you wish to use."
-      }
-    },
-    "LogAnalyticsWorkspaceKey": {
-      "type": "securestring",
-      "metadata": {
-        "description": "Log Analytics Workspace key for the Sentinel instance you wish to use."
-      }
-    },
-    "LogAnalyticsWorkspaceName": {
-      "type": "string",
-      "metadata": {
-        "description": "Log Analytics Workspace name for the Sentinel instance you wish to use."
       }
     },
     "DataCollectionEndpointName": {
@@ -265,17 +247,6 @@
       ]
     },
     {
-      "type": "Microsoft.KeyVault/vaults/secrets",
-      "apiVersion": "2022-07-01",
-      "name": "[format('{0}/{1}', parameters('KeyVaultName'), 'LawKey')]",
-      "properties": {
-        "value": "[parameters('LogAnalyticsWorkspaceKey')]"
-      },
-      "dependsOn": [
-        "[resourceId('Microsoft.KeyVault/vaults', parameters('KeyVaultName'))]"
-      ]
-    },
-    {
       "type": "Microsoft.Web/serverfarms",
       "apiVersion": "2021-03-01",
       "name": "[parameters('FunctionAppName')]",
@@ -382,16 +353,12 @@
               "value": "[parameters('TenantID')]"
             },
             {
-              "name": "workspaceId",
-              "value": "[parameters('LogAnalayticsWorkspaceID')]"
-            },
-            {
               "name": "workspaceKey",
               "value": "[format('@Microsoft.KeyVault(VaultName={0};SecretName=LawKey)', parameters('KeyVaultName'))]"
             },
             {
               "name": "SentinelWorkspace",
-              "value": "[parameters('LogAnalyticsWorkspaceName')]"
+              "value": "[split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[8]]"
             },
             {
               "name": "UamiClientId",
