@@ -262,7 +262,7 @@ resource functionApp 'Microsoft.Web/sites@2022-03-01' = {
         }
         {
           name: 'customLogName'
-          value: 'O365DLP'
+          value: 'PurviewDLP'
         }
         {
           name: 'domains'
@@ -360,14 +360,25 @@ resource roleAssignmentFa 'Microsoft.Authorization/roleAssignments@2022-04-01' =
   }
 }
 
-module sentinelArtifacts 'modules/sentinelArtifacts.bicep' = {
-  name: 'sentinelArtifcats'
+module sentinelWatchlists 'modules/sentinelWatchlists.bicep' = {
+  name: 'sentinelWatchlists'
   scope: resourceGroup(split(LogAnalyticsWorkspaceResourceID, '/')[2], split(LogAnalyticsWorkspaceResourceID, '/')[4])
   dependsOn: [
     createCustomTables 
   ]
   params: {
     lawName: split(LogAnalyticsWorkspaceResourceID, '/')[8]
+  }
+}
+
+module sentinelRules 'modules/sentinelRules.bicep' = {
+  name: 'sentinelWatchlists'
+  scope: resourceGroup(split(LogAnalyticsWorkspaceResourceID, '/')[2], split(LogAnalyticsWorkspaceResourceID, '/')[4])
+  dependsOn: [
+    createCustomTables 
+  ]
+  params: {
+    workspace: split(LogAnalyticsWorkspaceResourceID, '/')[8]
   }
 }
 
