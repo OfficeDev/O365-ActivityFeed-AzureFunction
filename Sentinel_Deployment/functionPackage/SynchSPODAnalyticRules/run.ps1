@@ -31,19 +31,18 @@ $instance = Get-AzResource -Name $workspace.value -ResourceType Microsoft.Operat
 $WorkspaceID = (Get-AzOperationalInsightsWorkspace -Name $instance.Name -ResourceGroupName $Instance.ResourceGroupName).CustomerID
 
 # Get the DLP Policies in store
-$q = 'O365DLP_CL
+$q = 'PurviewDLP_CL
 | where TimeGenerated > ago(90d)
-| extend PolicyName_ = tostring(parse_json(PolicyDetails_s)[0].PolicyName)
-| where PolicyName_ !=""
-| extend Name = PolicyName_
-| summarize by Name,Workload_s'
+| extend Name = tostring(PolicyDetails[0].PolicyName)
+| where Name != ""
+| summarize by Name,Workload'
 $response = Invoke-AzOperationalInsightsQuery -WorkspaceId $WorkspaceID -Query $q
 
 #Get the Watchlist so that we don't store duplicates
 $q2 = '(_GetWatchlist("Policy") | project SearchKey)'
 $watchlist = Invoke-AzOperationalInsightsQuery -WorkspaceId $WorkspaceID -Query $q2
 
-$policies = $response.results | where {($_.Workload_s -contains "OneDrive") -or ($_.Workload_s -contains "SharePoint")}
+$policies = $response.results | where {($_.Workload -contains "OneDrive") -or ($_.Workload -contains "SharePoint")}
 $policies = $policies | Select-Object -Unique Name  
 
 $processedPolicies = @()

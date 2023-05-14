@@ -6,4 +6,5 @@
     'Az.Accounts' = '2.*'
     'Az.Storage' = '5.*'
     'Az.OperationalInsights' = '3.*'
+    'Az.Resources' = '6.*'
  }

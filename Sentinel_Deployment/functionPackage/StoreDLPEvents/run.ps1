@@ -25,8 +25,10 @@ $AllContent = @{"Countries" = "ALLContent"; "Workspacekey" = $env:workspaceKey; 
 # Specify the name of the record type that you'll be creating
 $LogType = $env:customLogName
 
-# Specify the table used for Endpoint
-$logTypeEndpoint = "endpointdlp"
+#Define Azure Monitor variables
+$dcrImmutableId = $env:DcrImmutableId
+$dceUri = $env:DceUri
+$uamiClientId = $env:UamiClientId
 
 #SharePoint Site US
 $SPUS = $env:SPUS
@@ -65,60 +67,22 @@ function Test-Command {
     }
 }
 
-# You can use an optional field to specify the timestamp from the data. If the time field is not specified, Azure Monitor assumes the time is the message ingestion time
-$TimeStampField = (Get-Date)
-
-# Create the function to create the authorization signature
-Function Build-Signature ($customerId, $sharedKey, $date, $contentLength, $method, $contentType, $resource) {
-    $xHeaders = "x-ms-date:" + $date
-    $stringToHash = $method + "`n" + $contentLength + "`n" + $contentType + "`n" + $xHeaders + "`n" + $resource
-
-    $bytesToHash = [Text.Encoding]::UTF8.GetBytes($stringToHash)
-    $keyBytes = [Convert]::FromBase64String($sharedKey)
-
-    $sha256 = New-Object System.Security.Cryptography.HMACSHA256
-    $sha256.Key = $keyBytes
-    $calculatedHash = $sha256.ComputeHash($bytesToHash)
-    $encodedHash = [Convert]::ToBase64String($calculatedHash)
-    $authorization = 'SharedKey {0}:{1}' -f $customerId, $encodedHash
-    return $authorization
+#Function to split data into specified batch sizes (so we do not exceed the maximum body size) and send to Azure Monitor.
+function Send-DataToAzureMonitor {
+    param ($Data, $BatchSize, $TableName, $JsonDepth)
+    $skip = 0
+    do {
+        $batchedData = $Data | Select-Object -Skip $skip | Select-Object -First $BatchSize
+        $logIngestionClient.Upload($dcrImmutableId, $TableName, ($batchedData | ConvertTo-Json -Depth $JsonDepth -AsArray))
+        $skip += $BatchSize
+    } until (
+        $skip -ge $Data.Count
+    )
 }
-
-# Create the function to create and post the request
-Function Post-LogAnalyticsData($customerId, $sharedKey, $body, $logType) {
-    $method = "POST"
-    $contentType = "application/json"
-    $resource = "/api/logs"
-    $rfc1123date = [DateTime]::UtcNow.ToString("r")
-    $contentLength = $body.Length
-    $signature = Build-Signature `
-        -customerId $customerId `
-        -sharedKey $sharedKey `
-        -date $rfc1123date `
-        -contentLength $contentLength `
-        -method $method `
-        -contentType $contentType `
-        -resource $resource
-    $uri = "https://" + $customerId + ".ods.opinsights.azure.com" + $resource + "?api-version=2016-04-01"
-
-    $headers = @{
-        "Authorization"        = $signature;
-        "Log-Type"             = $logType;
-        "x-ms-date"            = $rfc1123date;
-        "time-generated-field" = $TimeStampField;
-        #        "x-ms-AzureResourceId" = $resourceId;
-    }
-
-    $response = Invoke-WebRequest -Uri $uri -Method $method -ContentType $contentType -Headers $headers -Body $body -UseBasicParsing
-    return $response.StatusCode
-
-}
-
 
 $clientID = "$env:clientID"
 $clientSecret = "$env:clientSecret"
 $loginURL = "https://login.microsoftonline.com"
-$tenantdomain = "$env:tenantdomain"
 $tenantGUID = "$env:TenantGuid"
 $resource = "https://manage.office.com"
 
@@ -127,7 +91,7 @@ $resource = "https://manage.office.com"
 $body = @{grant_type = "client_credentials"; resource = $resource; client_id = $ClientID; client_secret = $ClientSecret }
 
 #oauthtoken in the header
-$oauth = Invoke-RestMethod -Method Post -Uri $loginURL/$tenantdomain/oauth2/token?api-version=1.0 -Body $body 
+$oauth = Invoke-RestMethod -Method Post -Uri $loginURL/$tenantGUID/oauth2/token?api-version=1.0 -Body $body 
 $headerParams = @{'Authorization' = "$($oauth.token_type) $($oauth.access_token)" }
 
 #$message = $queueitem | convertfrom-json
@@ -152,7 +116,7 @@ $records.count
 #Make the GRAPH Call to get additional information, require different audience tag.
 $resourceG = "https://graph.microsoft.com"
 $bodyG = @{grant_type = "client_credentials"; resource = $resourceG; client_id = $ClientID; client_secret = $ClientSecret }
-$oauthG = Invoke-RestMethod -Method Post -Uri $loginURL/$tenantdomain/oauth2/token?api-version=1.0 -Body $bodyG 
+$oauthG = Invoke-RestMethod -Method Post -Uri $loginURL/$tenantGUID/oauth2/token?api-version=1.0 -Body $bodyG 
 $headerParamsG = @{'Authorization' = "$($oauthG.token_type) $($oauthG.access_token)" }
 
 
@@ -269,6 +233,16 @@ Foreach ($user in $records) {
 }    
 
 
+#Add required .Net assemblies to handle the Azure Monitor ingestion.
+Add-Type -Path .\StoreDLPEvents\lib\Azure.Monitor.Ingestion.dll
+Add-Type -Path .\StoreDLPEvents\lib\Azure.Identity.dll
+
+#Create Azure.Identity credential via User Assigned Managed Identity.
+$credential = New-Object Azure.Identity.ManagedIdentityCredential($uamiClientId)
+
+#Create LogsIngestionClient to handle sending data to Azure Monitor.
+$logIngestionClient = New-Object Azure.Monitor.Ingestion.LogsIngestionClient($dceURI, $credential)
+
 
 #Determine which Sentinel Workspace to route the information,
 $uploadWS = @{}
@@ -293,17 +267,32 @@ if ($workspace) {
     foreach ($workspace in $workspaces.GetEnumerator()) {
         $activeWS = $workspace.name
         if ($uploadWS.$activeWS) {
-            $json = $uploadWS.$activeWS | convertTo-Json -depth 100
-            Post-LogAnalyticsData -customerId $workspace.value.workspace -sharedKey $workspace.value.workspacekey -body ([System.Text.Encoding]::UTF8.GetBytes($json)) -logType $logType
+            #Add required TimeGenerated field and create alias for Id field since that name is not allowed by Azure Monitor.
+            $uploadWS.$activeWS | Add-Member -MemberType AliasProperty -Name TimeGenerated -Value CreationTime
+            $uploadWS.$activeWS | Add-Member -MemberType AliasProperty -Name Identifier -Value Id
+
+            #Send received data to Azure Monitor.
+            Send-DataToAzureMonitor -Data $uploadWS.$activeWS -BatchSize 500 -TableName ("Custom-$LogType" + "_CL") -JsonDepth 100
         }
 
     }
-}                       
+}
+
 #Uploading everything to a unified Workspace
 $allWS += $exupload
 $allWS += $spoupload
 $allWS += $endpointupload
-$alljson = $allWS | convertTo-Json -depth 100
-if ($alljson) {
-    Post-LogAnalyticsData -customerId $AllContent.workspace -sharedKey $AllContent.workspacekey -body ([System.Text.Encoding]::UTF8.GetBytes($alljson)) -logType $logType
+if ($allWS) {
+    #Add required TimeGenerated field and create alias for Id field since that name is not allowed by Azure Monitor.
+    $allWS | Add-Member -MemberType AliasProperty -Name TimeGenerated -Value CreationTime
+    $allWS | Add-Member -MemberType AliasProperty -Name Identifier -Value Id
+
+    #Send received data to Azure Monitor.
+    Send-DataToAzureMonitor -Data $allWS -BatchSize 500 -TableName ("Custom-$LogType" + "_CL") -JsonDepth 100
 }
+
+
+
+
+
+

@@ -4,17 +4,15 @@ param FunctionAppName string
 param DeployApplicationInsights bool = true
 @description('The name of the Key Vault to store Function App secrets.')
 param KeyVaultName string
+@description('Azure AD tenant ID in which DLP instance resides.')
+param TenantID string
 @description('App Registration Client ID.')
 param ClientID string
 @secure()
 @description('App Registration Client secret.')
 param ClientSecret string
-@description('Azure AD tenant domain in which DLP instance resides.')
-param TenantDomain string = 'Yourtenant.onmicrosoft.com'
-@description('Azure AD tenant ID in which DLP instance resides.')
-param TenantID string
-@description('Trusted domain names.')
-param TrustedDomains string = 'youradditionaldomain.com,yourdomain.com,yourtenant.onmicrosoft.com'
+@description('Internal domain names.')
+param InternalDomainNames string = 'youradditionaldomain.com,yourdomain.com,yourtenant.onmicrosoft.com'
 @description('Provide the Document library where you want to store the full email. IMPORTANT full path, with trailing /')
 param SharepointDocumentLibrary string = 'https://tenant.sharepoint.com/sites/DLPArchive/'
 @description('Log Analytics Workspace ID for the Sentinel instance you wish to use.')
@@ -24,9 +22,80 @@ param LogAnalayticsWorkspaceID string
 param LogAnalyticsWorkspaceKey string
 @description('Log Analytics Workspace name for the Sentinel instance you wish to use.')
 param LogAnalyticsWorkspaceName string
+@description('Name for Data Collection Endpoint used to ingest data into Log Analytics workspace.')
+param DataCollectionEndpointName string = 'dce-${uniqueString(resourceGroup().id)}'
+@description('Name for Data Collection Rule used to ingest data into Log Analytics workspace.')
+param DataCollectionRuleName string = 'dcr-${uniqueString(resourceGroup().id)}'
 @description('Azure Resource ID of the Log Analytics Workspace where you would like the DLP and optional Function App Application Insights data to reside. The format is: "/subscriptions/xxxxxxxx-xxxxxxxx-xxxxxxxx-xxxxxxxx-xxxxxxxx/resourcegroups/xxxxxxxx/providers/microsoft.operationalinsights/workspaces/xxxxxxxx"')
 param LogAnalyticsWorkspaceResourceID string
-@description('Uri where the post deployment script is located. This is used to publish the Function App code after the resources have been deploted. Use default value unless you are hosting the script somewhere else.')
+@description('Azure location/region of the Log Analytics Workspace referenced in the LogAnalyticsWorkspaceResourceId parameter.')
+@allowed(
+  [
+    'asia'
+    'asiapacific'
+    'australia'
+    'australiacentral'
+    'australiacentral2'
+    'australiaeast'
+    'australiasoutheast'
+    'brazil'
+    'brazilsouth'
+    'brazilsoutheast'
+    'canada'
+    'canadacentral'
+    'canadaeast'
+    'centralindia'
+    'centralus'
+    'centraluseuap'
+    'eastasia'
+    'eastus'
+    'eastus2'
+    'eastus2euap'
+    'europe'
+    'france'
+    'francecentral'
+    'francesouth'
+    'germany'
+    'germanynorth'
+    'germanywestcentral'
+    'global'
+    'india'
+    'japan'
+    'japaneast'
+    'japanwest'
+    'korea'
+    'koreacentral'
+    'koreasouth'
+    'northcentralus'
+    'northeurope'
+    'norway'
+    'norwayeast'
+    'norwaywest'
+    'qatarcentral'
+    'southafrica'
+    'southafricanorth'
+    'southafricawest'
+    'southcentralus'
+    'southeastasia'
+    'southindia'
+    'swedencentral'
+    'switzerland'
+    'switzerlandnorth'
+    'switzerlandwest'
+    'uaecentral'
+    'uaenorth'
+    'uksouth'
+    'ukwest'
+    'unitedstates'
+    'westcentralus'
+    'westeurope'
+    'westindia'
+    'westus'
+    'westus2'
+    'westus3'
+  ]
+)
+param LogAnalyticsWorkspaceLocation string
 
 var storageAccountName = 'functionapp${uniqueString(resourceGroup().id)}'
 var location = resourceGroup().location
@@ -52,6 +121,10 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2021-08-01' = {
 
 resource fileShare 'Microsoft.Storage/storageAccounts/fileServices/shares@2022-09-01' = {
   name: '${storageAccount.name}/default/${toLower(FunctionAppName)}'
+}
+
+resource queue 'Microsoft.Storage/storageAccounts/queueServices/queues@2022-09-01' = {
+  name: '${storageAccount.name}/default/dlpqueue}'
 }
 
 resource keyVault 'Microsoft.KeyVault/vaults@2022-07-01' = {
@@ -95,15 +168,6 @@ module keyVaultUpdateNetworAcl 'modules/keyVault.bicep' = {
   }
 }
 
-resource hostingPlan 'Microsoft.Web/serverfarms@2021-03-01' = {
-  name: FunctionAppName
-  location: location
-  sku: {
-    name: 'Y1'
-    tier: 'Dynamic'
-  }
-}
-
 resource keyVaultSecretStorageAccountConnectionString 'Microsoft.KeyVault/vaults/secrets@2022-07-01' = {
   parent: keyVault
   name: 'StorageAccountConnectionString'
@@ -125,6 +189,15 @@ resource keyVaultSecretLawKey 'Microsoft.KeyVault/vaults/secrets@2022-07-01' = {
   name: 'LawKey'
   properties: {
     value: LogAnalyticsWorkspaceKey
+  }
+}
+
+resource hostingPlan 'Microsoft.Web/serverfarms@2021-03-01' = {
+  name: FunctionAppName
+  location: location
+  sku: {
+    name: 'Y1'
+    tier: 'Dynamic'
   }
 }
 
@@ -191,10 +264,6 @@ resource functionApp 'Microsoft.Web/sites@2022-03-01' = {
           value: '0'
         }
         {
-          name: 'AzureWebJobs.Enablement.Disabled'
-          value: '1'
-        }
-        {
           name: 'ClientID'
           value: ClientID
         }
@@ -212,7 +281,7 @@ resource functionApp 'Microsoft.Web/sites@2022-03-01' = {
         }
         {
           name: 'domains'
-          value: TrustedDomains
+          value: InternalDomainNames
         }
         {
           name: 'SPUS'
@@ -221,14 +290,6 @@ resource functionApp 'Microsoft.Web/sites@2022-03-01' = {
         {
           name: 'storageQueue'
           value: 'dlpqueue'
-        }
-        {
-          name: 'endpointstorageQueue'
-          value: 'endpointqueue'
-        }
-        {
-          name: 'tenantDomain'
-          value: TenantDomain
         }
         {
           name: 'TenantGuid'
@@ -249,6 +310,18 @@ resource functionApp 'Microsoft.Web/sites@2022-03-01' = {
         {
           name: 'UamiClientId'
           value: userAssignedMi.properties.clientId
+        }
+        {
+          name: 'DcrImmutableId'
+          value: createCustomTables.outputs.DcrImmutableId
+        }
+        {
+          name: 'DceUri'
+          value: createCustomTables.outputs.DceUri
+        }
+        {
+          name: 'LawResourceId'
+          value: LogAnalyticsWorkspaceResourceID
         }
       ]
       powerShellVersion: '7.2'
@@ -275,6 +348,27 @@ resource applicationInsights 'Microsoft.Insights/components@2020-02-02' = if (De
   }
 }
 
+module createCustomTables 'modules/customDcrTables.bicep' = {
+  name: 'createCustomTables'
+  params: {
+    LogAnalyticsWorkspaceLocation: LogAnalyticsWorkspaceLocation 
+    LogAnalyticsWorkspaceResourceId: LogAnalyticsWorkspaceResourceID
+    DataCollectionEndpointName: DataCollectionEndpointName
+    DataCollectionRuleName: DataCollectionRuleName
+    ServicePrincipalId: userAssignedMi.properties.principalId  
+  }  
+}
+
+module roleAssignmentLaw 'modules/lawRoleAssignment.bicep' = {
+  scope: resourceGroup(split(LogAnalyticsWorkspaceResourceID, '/')[2], split(LogAnalyticsWorkspaceResourceID, '/')[4])
+  name: 'rbacAssignmentLaw'
+  params: {
+    principalId: userAssignedMi.properties.principalId
+    roleDefId: '/providers/Microsoft.Authorization/roleDefinitions/ab8e14d6-4a74-4a29-9ba8-549422addade'
+    scopedResourceName: split(LogAnalyticsWorkspaceResourceID, '/')[8]
+  }
+}
+
 resource roleAssignmentFa 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   name: guid(subscription().id, resourceGroup().id, functionApp.id)
   scope: functionApp
@@ -285,13 +379,14 @@ resource roleAssignmentFa 'Microsoft.Authorization/roleAssignments@2022-04-01' =
   }
 }
 
-module roleAssignmentLaw 'modules/lawRoleAssignment.bicep' = {
+module sentinelArtifacts 'modules/sentinelArtifacts.bicep' = {
+  name: 'sentinelArtifcats'
   scope: resourceGroup(split(LogAnalyticsWorkspaceResourceID, '/')[2], split(LogAnalyticsWorkspaceResourceID, '/')[4])
-  name: 'rbacAssignmentLaw'
+  dependsOn: [
+    createCustomTables 
+  ]
   params: {
-    principalId: userAssignedMi.properties.principalId
-    roleDefId: '/providers/Microsoft.Authorization/roleDefinitions/ab8e14d6-4a74-4a29-9ba8-549422addade'
-    scopedResourceName: split(LogAnalyticsWorkspaceResourceID, '/')[8]
+    lawName: split(LogAnalyticsWorkspaceResourceID, '/')[8]
   }
 }
 
@@ -311,6 +406,9 @@ resource deploymentScript 'Microsoft.Resources/deploymentScripts@2020-10-01' = {
     timeout: 'PT5M'
     cleanupPreference: 'Always'
     primaryScriptUri: deploymentScriptUri
-    arguments: '-PackageUri ${functionAppPackageUri} -SubscriptionId ${split(subscription().id, '/')[2]} -ResourceGroupName ${resourceGroup().name} -FunctionAppName ${functionApp.name} -FAScope ${functionApp.id} -UAMIPrincipalId ${userAssignedMi.properties.principalId}'
+    arguments: '-PackageUri ${functionAppPackageUri} -SubscriptionId ${split(subscription().id, '/')[2]} -ResourceGroupName ${resourceGroup().name} -FunctionAppName ${functionApp.name} -FAScope ${functionApp.id} -ClientId ${ClientID} -TenantId ${TenantID} -KeyVaultName ${KeyVaultName} -UAMIPrincipalId ${userAssignedMi.properties.principalId}'
   }
 }
+
+output UserAssignedManagedIdentityPrincipalId string = userAssignedMi.properties.principalId
+output UserAssignedManagedIdentityPrincipalName string = userAssignedMi.name

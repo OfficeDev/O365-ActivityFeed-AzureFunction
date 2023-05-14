@@ -9,7 +9,6 @@ param($Timer)
 $clientID = "$env:clientID"
 $clientSecret = "$env:clientSecret"
 $loginURL = "https://login.microsoftonline.com"
-$tenantdomain = "$env:tenantdomain"
 $tenantGUID = "$env:TenantGuid"
 $resource = "https://manage.office.com"
 
@@ -21,7 +20,6 @@ Foreach ($workload in $workloads) {
 
 #Storage Account Settings
 if ($workload -eq "dlp.all") {$storageQueue = "$env:storageQueue"}
-if ($workload -eq "audit.general") {$storageQueue = "$env:endpointstorageQueue"}
 
 #Load the Storage Queue
 $storeAuthContext = New-AzStorageContext -ConnectionString $env:AzureWebJobsStorage
@@ -30,7 +28,15 @@ $messageSize = 10
     if (-not ($myQueue)) {throw 'Failed to connect to Storage Queue'}
 
 $Tracker = "D:\home\$workload.log" # change to location of choice this is the root.
-$storedTime = Get-content $Tracker 
+if ((Test-Path -Path $Tracker) -eq $true) {
+    $storedTime = Get-content $Tracker
+}
+else {
+    $date = Get-date -format "yyyy-MM-ddTHH:mm:ss.fffZ"
+    out-file d:\home\$workload.log -InputObject $date
+    $storedTime = Get-content $Tracker
+}
+
 #$StoredTime = "2020-01-27T20:00:35.464Z"
 
 #If events are longer apart than 24 hours
@@ -44,7 +50,7 @@ If ($adjustTime.TotalHours -gt 24) {
     $body = @{grant_type="client_credentials";resource=$resource;client_id=$ClientID;client_secret=$ClientSecret}
 
     #oauthtoken in the header
-    $oauth = Invoke-RestMethod -Method Post -Uri $loginURL/$tenantdomain/oauth2/token?api-version=1.0 -Body $body 
+    $oauth = Invoke-RestMethod -Method Post -Uri $loginURL/$tenantGUID/oauth2/token?api-version=1.0 -Body $body 
     $headerParams  = @{'Authorization'="$($oauth.token_type) $($oauth.access_token)"}
 
     #Make the request

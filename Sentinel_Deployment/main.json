@@ -1,0 +1,1233 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.17.1.54307",
+      "templateHash": "17757901006389565265"
+    }
+  },
+  "parameters": {
+    "FunctionAppName": {
+      "type": "string",
+      "metadata": {
+        "description": "The name of the function app that you wish to create."
+      }
+    },
+    "DeployApplicationInsights": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "Select to enable Application Insights for the Function App. This will allow you to monitor the status of the Function App for any errors. The Log Analytics Workspace specified in the \"Log Analytics Resource Id\" Parameter will be used to store the Application Insights data."
+      }
+    },
+    "KeyVaultName": {
+      "type": "string",
+      "metadata": {
+        "description": "The name of the Key Vault to store Function App secrets."
+      }
+    },
+    "TenantID": {
+      "type": "string",
+      "metadata": {
+        "description": "Azure AD tenant ID in which DLP instance resides."
+      }
+    },
+    "ClientID": {
+      "type": "string",
+      "metadata": {
+        "description": "App Registration Client ID."
+      }
+    },
+    "ClientSecret": {
+      "type": "securestring",
+      "metadata": {
+        "description": "App Registration Client secret."
+      }
+    },
+    "InternalDomainNames": {
+      "type": "string",
+      "defaultValue": "youradditionaldomain.com,yourdomain.com,yourtenant.onmicrosoft.com",
+      "metadata": {
+        "description": "Internal domain names."
+      }
+    },
+    "SharepointDocumentLibrary": {
+      "type": "string",
+      "defaultValue": "https://tenant.sharepoint.com/sites/DLPArchive/",
+      "metadata": {
+        "description": "Provide the Document library where you want to store the full email. IMPORTANT full path, with trailing /"
+      }
+    },
+    "LogAnalayticsWorkspaceID": {
+      "type": "string",
+      "metadata": {
+        "description": "Log Analytics Workspace ID for the Sentinel instance you wish to use."
+      }
+    },
+    "LogAnalyticsWorkspaceKey": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Log Analytics Workspace key for the Sentinel instance you wish to use."
+      }
+    },
+    "LogAnalyticsWorkspaceName": {
+      "type": "string",
+      "metadata": {
+        "description": "Log Analytics Workspace name for the Sentinel instance you wish to use."
+      }
+    },
+    "DataCollectionEndpointName": {
+      "type": "string",
+      "defaultValue": "[format('dce-{0}', uniqueString(resourceGroup().id))]",
+      "metadata": {
+        "description": "Name for Data Collection Endpoint used to ingest data into Log Analytics workspace."
+      }
+    },
+    "DataCollectionRuleName": {
+      "type": "string",
+      "defaultValue": "[format('dcr-{0}', uniqueString(resourceGroup().id))]",
+      "metadata": {
+        "description": "Name for Data Collection Rule used to ingest data into Log Analytics workspace."
+      }
+    },
+    "LogAnalyticsWorkspaceResourceID": {
+      "type": "string",
+      "metadata": {
+        "description": "Azure Resource ID of the Log Analytics Workspace where you would like the DLP and optional Function App Application Insights data to reside. The format is: \"/subscriptions/xxxxxxxx-xxxxxxxx-xxxxxxxx-xxxxxxxx-xxxxxxxx/resourcegroups/xxxxxxxx/providers/microsoft.operationalinsights/workspaces/xxxxxxxx\""
+      }
+    },
+    "LogAnalyticsWorkspaceLocation": {
+      "type": "string",
+      "allowedValues": [
+        "asia",
+        "asiapacific",
+        "australia",
+        "australiacentral",
+        "australiacentral2",
+        "australiaeast",
+        "australiasoutheast",
+        "brazil",
+        "brazilsouth",
+        "brazilsoutheast",
+        "canada",
+        "canadacentral",
+        "canadaeast",
+        "centralindia",
+        "centralus",
+        "centraluseuap",
+        "eastasia",
+        "eastus",
+        "eastus2",
+        "eastus2euap",
+        "europe",
+        "france",
+        "francecentral",
+        "francesouth",
+        "germany",
+        "germanynorth",
+        "germanywestcentral",
+        "global",
+        "india",
+        "japan",
+        "japaneast",
+        "japanwest",
+        "korea",
+        "koreacentral",
+        "koreasouth",
+        "northcentralus",
+        "northeurope",
+        "norway",
+        "norwayeast",
+        "norwaywest",
+        "qatarcentral",
+        "southafrica",
+        "southafricanorth",
+        "southafricawest",
+        "southcentralus",
+        "southeastasia",
+        "southindia",
+        "swedencentral",
+        "switzerland",
+        "switzerlandnorth",
+        "switzerlandwest",
+        "uaecentral",
+        "uaenorth",
+        "uksouth",
+        "ukwest",
+        "unitedstates",
+        "westcentralus",
+        "westeurope",
+        "westindia",
+        "westus",
+        "westus2",
+        "westus3"
+      ],
+      "metadata": {
+        "description": "Azure location/region of the Log Analytics Workspace referenced in the LogAnalyticsWorkspaceResourceId parameter."
+      }
+    }
+  },
+  "variables": {
+    "storageAccountName": "[format('functionapp{0}', uniqueString(resourceGroup().id))]",
+    "location": "[resourceGroup().location]",
+    "functionAppPackageUri": "https://raw.githubusercontent.com/anders-alex/O365-ActivityFeed-AzureFunction/Sentinel_Deployment/Sentinel_Deployment/functionPackage.zip",
+    "deploymentScriptUri": "https://raw.githubusercontent.com/anders-alex/O365-ActivityFeed-AzureFunction/Sentinel_Deployment/Sentinel_Deployment/deploymentScript.ps1"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+      "apiVersion": "2022-01-31-preview",
+      "name": "[format('uami-{0}', parameters('FunctionAppName'))]",
+      "location": "[variables('location')]"
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "apiVersion": "2021-08-01",
+      "name": "[variables('storageAccountName')]",
+      "location": "[variables('location')]",
+      "kind": "StorageV2",
+      "sku": {
+        "name": "Standard_LRS"
+      },
+      "properties": {
+        "allowBlobPublicAccess": false
+      }
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts/fileServices/shares",
+      "apiVersion": "2022-09-01",
+      "name": "[format('{0}/default/{1}', variables('storageAccountName'), toLower(parameters('FunctionAppName')))]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts/queueServices/queues",
+      "apiVersion": "2022-09-01",
+      "name": "[format('{0}/default/dlpqueue}}', variables('storageAccountName'))]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults",
+      "apiVersion": "2022-07-01",
+      "name": "[parameters('KeyVaultName')]",
+      "location": "[variables('location')]",
+      "properties": {
+        "sku": {
+          "family": "A",
+          "name": "premium"
+        },
+        "tenantId": "[subscription().tenantId]",
+        "accessPolicies": [
+          {
+            "objectId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('uami-{0}', parameters('FunctionAppName'))), '2022-01-31-preview').principalId]",
+            "permissions": {
+              "secrets": [
+                "get",
+                "set",
+                "list",
+                "delete"
+              ]
+            },
+            "tenantId": "[subscription().tenantId]"
+          }
+        ]
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('uami-{0}', parameters('FunctionAppName')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2022-07-01",
+      "name": "[format('{0}/{1}', parameters('KeyVaultName'), 'StorageAccountConnectionString')]",
+      "properties": {
+        "value": "[format('DefaultEndpointsProtocol=https;AccountName={0};EndpointSuffix={1};AccountKey={2}', variables('storageAccountName'), environment().suffixes.storage, listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), '2021-08-01').keys[0].value)]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', parameters('KeyVaultName'))]",
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2022-07-01",
+      "name": "[format('{0}/{1}', parameters('KeyVaultName'), 'ClientSecret')]",
+      "properties": {
+        "value": "[parameters('ClientSecret')]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', parameters('KeyVaultName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2022-07-01",
+      "name": "[format('{0}/{1}', parameters('KeyVaultName'), 'LawKey')]",
+      "properties": {
+        "value": "[parameters('LogAnalyticsWorkspaceKey')]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', parameters('KeyVaultName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Web/serverfarms",
+      "apiVersion": "2021-03-01",
+      "name": "[parameters('FunctionAppName')]",
+      "location": "[variables('location')]",
+      "sku": {
+        "name": "Y1",
+        "tier": "Dynamic"
+      }
+    },
+    {
+      "type": "Microsoft.Web/sites",
+      "apiVersion": "2022-03-01",
+      "name": "[parameters('FunctionAppName')]",
+      "location": "[variables('location')]",
+      "identity": {
+        "type": "UserAssigned",
+        "userAssignedIdentities": {
+          "[format('{0}', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('uami-{0}', parameters('FunctionAppName'))))]": {}
+        }
+      },
+      "kind": "functionapp",
+      "properties": {
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', parameters('FunctionAppName'))]",
+        "keyVaultReferenceIdentity": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('uami-{0}', parameters('FunctionAppName')))]",
+        "httpsOnly": true,
+        "clientCertEnabled": true,
+        "clientCertMode": "OptionalInteractiveUser",
+        "siteConfig": {
+          "appSettings": [
+            {
+              "name": "AzureWebJobsStorage",
+              "value": "[format('@Microsoft.KeyVault(VaultName={0};SecretName=StorageAccountConnectionString)', parameters('KeyVaultName'))]"
+            },
+            {
+              "name": "WEBSITE_CONTENTAZUREFILECONNECTIONSTRING",
+              "value": "[format('@Microsoft.KeyVault(VaultName={0};SecretName=StorageAccountConnectionString)', parameters('KeyVaultName'))]"
+            },
+            {
+              "name": "AzureWebJobsSecretStorageType",
+              "value": "keyvault"
+            },
+            {
+              "name": "AzureWebJobsSecretStorageKeyVaultUri",
+              "value": "[format('https://{0}.vault.azure.net/', parameters('KeyVaultName'))]"
+            },
+            {
+              "name": "AzureWebJobsSecretStorageKeyVaultClientId",
+              "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('uami-{0}', parameters('FunctionAppName'))), '2022-01-31-preview').clientId]"
+            },
+            {
+              "name": "WEBSITE_CONTENTSHARE",
+              "value": "[toLower(parameters('FunctionAppName'))]"
+            },
+            {
+              "name": "WEBSITE_SKIP_CONTENTSHARE_VALIDATION",
+              "value": "1"
+            },
+            {
+              "name": "FUNCTIONS_EXTENSION_VERSION",
+              "value": "~4"
+            },
+            {
+              "name": "APPINSIGHTS_INSTRUMENTATIONKEY",
+              "value": "[if(equals(parameters('DeployApplicationInsights'), true()), reference(resourceId('Microsoft.Insights/components', format('appInsights-{0}', parameters('FunctionAppName'))), '2020-02-02').InstrumentationKey, '')]"
+            },
+            {
+              "name": "FUNCTIONS_WORKER_RUNTIME",
+              "value": "powershell"
+            },
+            {
+              "name": "WEBSITE_RUN_FROM_PACKAGE",
+              "value": "0"
+            },
+            {
+              "name": "ClientID",
+              "value": "[parameters('ClientID')]"
+            },
+            {
+              "name": "ClientSecret",
+              "value": "[format('@Microsoft.KeyVault(VaultName={0};SecretName=ClientSecret)', parameters('KeyVaultName'))]"
+            },
+            {
+              "name": "ContentTypes",
+              "value": "DLP.ALL"
+            },
+            {
+              "name": "customLogName",
+              "value": "O365DLP"
+            },
+            {
+              "name": "domains",
+              "value": "[parameters('InternalDomainNames')]"
+            },
+            {
+              "name": "SPUS",
+              "value": "[parameters('SharepointDocumentLibrary')]"
+            },
+            {
+              "name": "storageQueue",
+              "value": "dlpqueue"
+            },
+            {
+              "name": "TenantGuid",
+              "value": "[parameters('TenantID')]"
+            },
+            {
+              "name": "workspaceId",
+              "value": "[parameters('LogAnalayticsWorkspaceID')]"
+            },
+            {
+              "name": "workspaceKey",
+              "value": "[format('@Microsoft.KeyVault(VaultName={0};SecretName=LawKey)', parameters('KeyVaultName'))]"
+            },
+            {
+              "name": "SentinelWorkspace",
+              "value": "[parameters('LogAnalyticsWorkspaceName')]"
+            },
+            {
+              "name": "UamiClientId",
+              "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('uami-{0}', parameters('FunctionAppName'))), '2022-01-31-preview').clientId]"
+            },
+            {
+              "name": "DcrImmutableId",
+              "value": "[reference(resourceId('Microsoft.Resources/deployments', 'createCustomTables'), '2022-09-01').outputs.DcrImmutableId.value]"
+            },
+            {
+              "name": "DceUri",
+              "value": "[reference(resourceId('Microsoft.Resources/deployments', 'createCustomTables'), '2022-09-01').outputs.DceUri.value]"
+            },
+            {
+              "name": "LawResourceId",
+              "value": "[parameters('LogAnalyticsWorkspaceResourceID')]"
+            }
+          ],
+          "powerShellVersion": "7.2",
+          "minTlsVersion": "1.2",
+          "ftpsState": "Disabled",
+          "use32BitWorkerProcess": false
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Insights/components', format('appInsights-{0}', parameters('FunctionAppName')))]",
+        "[resourceId('Microsoft.Resources/deployments', 'createCustomTables')]",
+        "[resourceId('Microsoft.Storage/storageAccounts/fileServices/shares', split(format('{0}/default/{1}', variables('storageAccountName'), toLower(parameters('FunctionAppName'))), '/')[0], split(format('{0}/default/{1}', variables('storageAccountName'), toLower(parameters('FunctionAppName'))), '/')[1], split(format('{0}/default/{1}', variables('storageAccountName'), toLower(parameters('FunctionAppName'))), '/')[2])]",
+        "[resourceId('Microsoft.Web/serverfarms', parameters('FunctionAppName'))]",
+        "[resourceId('Microsoft.KeyVault/vaults/secrets', parameters('KeyVaultName'), 'StorageAccountConnectionString')]",
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]",
+        "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('uami-{0}', parameters('FunctionAppName')))]"
+      ]
+    },
+    {
+      "condition": "[equals(parameters('DeployApplicationInsights'), true())]",
+      "type": "Microsoft.Insights/components",
+      "apiVersion": "2020-02-02",
+      "name": "[format('appInsights-{0}', parameters('FunctionAppName'))]",
+      "location": "[variables('location')]",
+      "kind": "web",
+      "properties": {
+        "Application_Type": "web",
+        "Request_Source": "rest",
+        "WorkspaceResourceId": "[parameters('LogAnalyticsWorkspaceResourceID')]"
+      }
+    },
+    {
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[format('Microsoft.Web/sites/{0}', parameters('FunctionAppName'))]",
+      "name": "[guid(subscription().id, resourceGroup().id, resourceId('Microsoft.Web/sites', parameters('FunctionAppName')))]",
+      "properties": {
+        "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('uami-{0}', parameters('FunctionAppName'))), '2022-01-31-preview').principalId]",
+        "roleDefinitionId": "/providers/Microsoft.Authorization/roleDefinitions/8e3af657-a8ff-443c-a75c-2fe8c4bcb635",
+        "principalType": "ServicePrincipal"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/sites', parameters('FunctionAppName'))]",
+        "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('uami-{0}', parameters('FunctionAppName')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deploymentScripts",
+      "apiVersion": "2020-10-01",
+      "name": "deployCode",
+      "location": "[variables('location')]",
+      "kind": "AzurePowerShell",
+      "identity": {
+        "type": "UserAssigned",
+        "userAssignedIdentities": {
+          "[format('{0}', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('uami-{0}', parameters('FunctionAppName'))))]": {}
+        }
+      },
+      "properties": {
+        "azPowerShellVersion": "8.3",
+        "retentionInterval": "PT1H",
+        "timeout": "PT5M",
+        "cleanupPreference": "Always",
+        "primaryScriptUri": "[variables('deploymentScriptUri')]",
+        "arguments": "[format('-PackageUri {0} -SubscriptionId {1} -ResourceGroupName {2} -FunctionAppName {3} -FAScope {4} -ClientId {5} -TenantId {6} -KeyVaultName {7} -UAMIPrincipalId {8}', variables('functionAppPackageUri'), split(subscription().id, '/')[2], resourceGroup().name, parameters('FunctionAppName'), resourceId('Microsoft.Web/sites', parameters('FunctionAppName')), parameters('ClientID'), parameters('TenantID'), parameters('KeyVaultName'), reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('uami-{0}', parameters('FunctionAppName'))), '2022-01-31-preview').principalId)]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/sites', parameters('FunctionAppName'))]",
+        "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('uami-{0}', parameters('FunctionAppName')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "keyVaultUpdateNetworkAcl",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "kvName": {
+            "value": "[parameters('KeyVaultName')]"
+          },
+          "location": {
+            "value": "[reference(resourceId('Microsoft.KeyVault/vaults', parameters('KeyVaultName')), '2022-07-01', 'full').location]"
+          },
+          "skuFamily": {
+            "value": "[reference(resourceId('Microsoft.KeyVault/vaults', parameters('KeyVaultName')), '2022-07-01').sku.family]"
+          },
+          "skuName": {
+            "value": "[reference(resourceId('Microsoft.KeyVault/vaults', parameters('KeyVaultName')), '2022-07-01').sku.name]"
+          },
+          "principalId": {
+            "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('uami-{0}', parameters('FunctionAppName'))), '2022-01-31-preview').principalId]"
+          },
+          "aclBypass": {
+            "value": "None"
+          },
+          "aclDefaultAction": {
+            "value": "Deny"
+          },
+          "aclIpRules": {
+            "value": "[reference(resourceId('Microsoft.Web/sites', parameters('FunctionAppName')), '2022-03-01').possibleOutboundIpAddresses]"
+          },
+          "secretPermissions": {
+            "value": "[reference(resourceId('Microsoft.KeyVault/vaults', parameters('KeyVaultName')), '2022-07-01').accessPolicies[0].permissions.secrets]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.17.1.54307",
+              "templateHash": "380844100257844807"
+            }
+          },
+          "parameters": {
+            "kvName": {
+              "type": "string"
+            },
+            "location": {
+              "type": "string"
+            },
+            "skuFamily": {
+              "type": "string"
+            },
+            "skuName": {
+              "type": "string"
+            },
+            "principalId": {
+              "type": "string"
+            },
+            "secretPermissions": {
+              "type": "array"
+            },
+            "aclIpRules": {
+              "type": "string",
+              "defaultValue": ""
+            },
+            "aclBypass": {
+              "type": "string",
+              "defaultValue": "None"
+            },
+            "aclDefaultAction": {
+              "type": "string",
+              "defaultValue": "AzureServices"
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.KeyVault/vaults",
+              "apiVersion": "2022-07-01",
+              "name": "[parameters('kvName')]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "sku": {
+                  "family": "[parameters('skuFamily')]",
+                  "name": "[parameters('skuName')]"
+                },
+                "tenantId": "[subscription().tenantId]",
+                "accessPolicies": [
+                  {
+                    "objectId": "[parameters('principalId')]",
+                    "permissions": {
+                      "secrets": "[parameters('secretPermissions')]"
+                    },
+                    "tenantId": "[subscription().tenantId]"
+                  }
+                ],
+                "networkAcls": {
+                  "bypass": "[parameters('aclBypass')]",
+                  "defaultAction": "[parameters('aclDefaultAction')]",
+                  "ipRules": "[if(equals(parameters('aclIpRules'), ''), createArray(), json(format('{0}{1}{2}', '[{\"value\": \"', replace(parameters('aclIpRules'), ',', '\"},{\"value\": \"'), '\"}]')))]"
+                }
+              }
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/sites', parameters('FunctionAppName'))]",
+        "[resourceId('Microsoft.KeyVault/vaults', parameters('KeyVaultName'))]",
+        "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('uami-{0}', parameters('FunctionAppName')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "createCustomTables",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "LogAnalyticsWorkspaceLocation": {
+            "value": "[parameters('LogAnalyticsWorkspaceLocation')]"
+          },
+          "LogAnalyticsWorkspaceResourceId": {
+            "value": "[parameters('LogAnalyticsWorkspaceResourceID')]"
+          },
+          "DataCollectionEndpointName": {
+            "value": "[parameters('DataCollectionEndpointName')]"
+          },
+          "DataCollectionRuleName": {
+            "value": "[parameters('DataCollectionRuleName')]"
+          },
+          "ServicePrincipalId": {
+            "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('uami-{0}', parameters('FunctionAppName'))), '2022-01-31-preview').principalId]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.17.1.54307",
+              "templateHash": "9771648136623410994"
+            }
+          },
+          "parameters": {
+            "DataCollectionEndpointName": {
+              "type": "string",
+              "defaultValue": "[format('dce-mdvm-{0}', uniqueString(resourceGroup().id))]",
+              "metadata": {
+                "description": "Name for Data Collection Endpoint used to ingest data into Log Analytics workspace."
+              }
+            },
+            "DataCollectionRuleName": {
+              "type": "string",
+              "defaultValue": "[format('dcr-mdmv-{0}', uniqueString(resourceGroup().id))]",
+              "metadata": {
+                "description": "Name for Data Collection Rule used to ingest data into Log Analytics workspace."
+              }
+            },
+            "LogAnalyticsWorkspaceResourceId": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure Resource Id of the Log Analytics Workspace where you like the MDVM and optional Function App Application Insights data to reside. The format is: \"/subscriptions/xxxxxxxx-xxxxxxxx-xxxxxxxx-xxxxxxxx-xxxxxxxx/resourcegroups/xxxxxxxx/providers/microsoft.operationalinsights/workspaces/xxxxxxxx\""
+              }
+            },
+            "LogAnalyticsWorkspaceLocation": {
+              "type": "string",
+              "allowedValues": [
+                "asia",
+                "asiapacific",
+                "australia",
+                "australiacentral",
+                "australiacentral2",
+                "australiaeast",
+                "australiasoutheast",
+                "brazil",
+                "brazilsouth",
+                "brazilsoutheast",
+                "canada",
+                "canadacentral",
+                "canadaeast",
+                "centralindia",
+                "centralus",
+                "centraluseuap",
+                "eastasia",
+                "eastus",
+                "eastus2",
+                "eastus2euap",
+                "europe",
+                "france",
+                "francecentral",
+                "francesouth",
+                "germany",
+                "germanynorth",
+                "germanywestcentral",
+                "global",
+                "india",
+                "japan",
+                "japaneast",
+                "japanwest",
+                "korea",
+                "koreacentral",
+                "koreasouth",
+                "northcentralus",
+                "northeurope",
+                "norway",
+                "norwayeast",
+                "norwaywest",
+                "qatarcentral",
+                "southafrica",
+                "southafricanorth",
+                "southafricawest",
+                "southcentralus",
+                "southeastasia",
+                "southindia",
+                "swedencentral",
+                "switzerland",
+                "switzerlandnorth",
+                "switzerlandwest",
+                "uaecentral",
+                "uaenorth",
+                "uksouth",
+                "ukwest",
+                "unitedstates",
+                "westcentralus",
+                "westeurope",
+                "westindia",
+                "westus",
+                "westus2",
+                "westus3"
+              ],
+              "metadata": {
+                "description": "Azure location/region of the Log Analytics Workspace referenced in the LogAnalyticsWorkspaceResourceId parameter."
+              }
+            },
+            "ServicePrincipalId": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Optional: Managed Identity or Service Principal ID to be assigned the Metrics Publisher role on the data collection rule."
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Insights/dataCollectionEndpoints",
+              "apiVersion": "2021-09-01-preview",
+              "name": "[parameters('DataCollectionEndpointName')]",
+              "location": "[parameters('LogAnalyticsWorkspaceLocation')]",
+              "properties": {}
+            },
+            {
+              "condition": "[not(equals(parameters('ServicePrincipalId'), ''))]",
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2020-10-01-preview",
+              "scope": "[format('Microsoft.Insights/dataCollectionRules/{0}', parameters('DataCollectionRuleName'))]",
+              "name": "[guid(resourceId('Microsoft.Insights/dataCollectionRules', parameters('DataCollectionRuleName')), '/providers/Microsoft.Authorization/roleDefinitions/3913510d-42f4-4e42-8a64-420c390055eb')]",
+              "properties": {
+                "roleDefinitionId": "/providers/Microsoft.Authorization/roleDefinitions/3913510d-42f4-4e42-8a64-420c390055eb",
+                "principalId": "[parameters('ServicePrincipalId')]",
+                "principalType": "ServicePrincipal"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Insights/dataCollectionRules', parameters('DataCollectionRuleName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Insights/dataCollectionRules",
+              "apiVersion": "2021-09-01-preview",
+              "name": "[parameters('DataCollectionRuleName')]",
+              "location": "[parameters('LogAnalyticsWorkspaceLocation')]",
+              "properties": {
+                "dataCollectionEndpointId": "[resourceId('Microsoft.Insights/dataCollectionEndpoints', parameters('DataCollectionEndpointName'))]",
+                "streamDeclarations": {
+                  "Custom-PurviewDLP_CL": {
+                    "columns": [
+                      {
+                        "name": "TimeGenerated",
+                        "type": "datetime"
+                      },
+                      {
+                        "name": "CreationTime",
+                        "type": "datetime"
+                      },
+                      {
+                        "name": "Identifier",
+                        "type": "string"
+                      },
+                      {
+                        "name": "Operation",
+                        "type": "string"
+                      },
+                      {
+                        "name": "OrganizationId",
+                        "type": "string"
+                      },
+                      {
+                        "name": "RecordType",
+                        "type": "int"
+                      },
+                      {
+                        "name": "UserKey",
+                        "type": "string"
+                      },
+                      {
+                        "name": "UserType",
+                        "type": "int"
+                      },
+                      {
+                        "name": "Version",
+                        "type": "int"
+                      },
+                      {
+                        "name": "Workload",
+                        "type": "string"
+                      },
+                      {
+                        "name": "ObjectId",
+                        "type": "string"
+                      },
+                      {
+                        "name": "UserId",
+                        "type": "string"
+                      },
+                      {
+                        "name": "IncidentId",
+                        "type": "string"
+                      },
+                      {
+                        "name": "PolicyDetails",
+                        "type": "dynamic"
+                      },
+                      {
+                        "name": "SensitiveInfoDetectionIsIncluded",
+                        "type": "boolean"
+                      },
+                      {
+                        "name": "SharePointMetaData",
+                        "type": "dynamic"
+                      },
+                      {
+                        "name": "ExchangeMetaData",
+                        "type": "dynamic"
+                      },
+                      {
+                        "name": "EndpointMetaData",
+                        "type": "dynamic"
+                      },
+                      {
+                        "name": "EvidenceFile",
+                        "type": "dynamic"
+                      },
+                      {
+                        "name": "Scope",
+                        "type": "int"
+                      },
+                      {
+                        "name": "DocumentName",
+                        "type": "string"
+                      },
+                      {
+                        "name": "usageLocation",
+                        "type": "string"
+                      },
+                      {
+                        "name": "department",
+                        "type": "string"
+                      },
+                      {
+                        "name": "manager",
+                        "type": "string"
+                      },
+                      {
+                        "name": "originalContent",
+                        "type": "string"
+                      }
+                    ]
+                  }
+                },
+                "destinations": {
+                  "logAnalytics": [
+                    {
+                      "name": "[split(parameters('LogAnalyticsWorkspaceResourceId'), '/')[8]]",
+                      "workspaceResourceId": "[parameters('LogAnalyticsWorkspaceResourceId')]"
+                    }
+                  ]
+                },
+                "dataFlows": [
+                  {
+                    "streams": [
+                      "Custom-PurviewDLP_CL"
+                    ],
+                    "destinations": [
+                      "[split(parameters('LogAnalyticsWorkspaceResourceId'), '/')[8]]"
+                    ],
+                    "transformKql": "source",
+                    "outputStream": "Custom-PurviewDLP_CL"
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Insights/dataCollectionEndpoints', parameters('DataCollectionEndpointName'))]",
+                "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', split(parameters('LogAnalyticsWorkspaceResourceId'), '/')[2], split(parameters('LogAnalyticsWorkspaceResourceId'), '/')[4]), 'Microsoft.Resources/deployments', 'tablePurviewDLP')]"
+              ]
+            },
+            {
+              "type": "Microsoft.Resources/deployments",
+              "apiVersion": "2022-09-01",
+              "name": "tablePurviewDLP",
+              "subscriptionId": "[split(parameters('LogAnalyticsWorkspaceResourceId'), '/')[2]]",
+              "resourceGroup": "[split(parameters('LogAnalyticsWorkspaceResourceId'), '/')[4]]",
+              "properties": {
+                "expressionEvaluationOptions": {
+                  "scope": "inner"
+                },
+                "mode": "Incremental",
+                "parameters": {
+                  "lawName": {
+                    "value": "[split(parameters('LogAnalyticsWorkspaceResourceId'), '/')[8]]"
+                  },
+                  "tableName": {
+                    "value": "PurviewDLP_CL"
+                  },
+                  "plan": {
+                    "value": "Analytics"
+                  },
+                  "columns": {
+                    "value": [
+                      {
+                        "name": "TimeGenerated",
+                        "type": "datetime"
+                      },
+                      {
+                        "name": "CreationTime",
+                        "type": "datetime"
+                      },
+                      {
+                        "name": "Identifier",
+                        "type": "string"
+                      },
+                      {
+                        "name": "Operation",
+                        "type": "string"
+                      },
+                      {
+                        "name": "OrganizationId",
+                        "type": "string"
+                      },
+                      {
+                        "name": "RecordType",
+                        "type": "int"
+                      },
+                      {
+                        "name": "UserKey",
+                        "type": "string"
+                      },
+                      {
+                        "name": "UserType",
+                        "type": "int"
+                      },
+                      {
+                        "name": "Version",
+                        "type": "int"
+                      },
+                      {
+                        "name": "Workload",
+                        "type": "string"
+                      },
+                      {
+                        "name": "ObjectId",
+                        "type": "string"
+                      },
+                      {
+                        "name": "UserId",
+                        "type": "string"
+                      },
+                      {
+                        "name": "IncidentId",
+                        "type": "string"
+                      },
+                      {
+                        "name": "PolicyDetails",
+                        "type": "dynamic"
+                      },
+                      {
+                        "name": "SensitiveInfoDetectionIsIncluded",
+                        "type": "boolean"
+                      },
+                      {
+                        "name": "SharePointMetaData",
+                        "type": "dynamic"
+                      },
+                      {
+                        "name": "ExchangeMetaData",
+                        "type": "dynamic"
+                      },
+                      {
+                        "name": "EndpointMetaData",
+                        "type": "dynamic"
+                      },
+                      {
+                        "name": "EvidenceFile",
+                        "type": "dynamic"
+                      },
+                      {
+                        "name": "Scope",
+                        "type": "int"
+                      },
+                      {
+                        "name": "DocumentName",
+                        "type": "string"
+                      },
+                      {
+                        "name": "usageLocation",
+                        "type": "string"
+                      },
+                      {
+                        "name": "department",
+                        "type": "string"
+                      },
+                      {
+                        "name": "manager",
+                        "type": "string"
+                      },
+                      {
+                        "name": "originalContent",
+                        "type": "string"
+                      }
+                    ]
+                  }
+                },
+                "template": {
+                  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+                  "contentVersion": "1.0.0.0",
+                  "metadata": {
+                    "_generator": {
+                      "name": "bicep",
+                      "version": "0.17.1.54307",
+                      "templateHash": "740931331479622398"
+                    }
+                  },
+                  "parameters": {
+                    "lawName": {
+                      "type": "string"
+                    },
+                    "tableName": {
+                      "type": "string"
+                    },
+                    "plan": {
+                      "type": "string"
+                    },
+                    "columns": {
+                      "type": "array"
+                    },
+                    "retention": {
+                      "type": "int",
+                      "defaultValue": -1
+                    }
+                  },
+                  "resources": [
+                    {
+                      "type": "Microsoft.OperationalInsights/workspaces/tables",
+                      "apiVersion": "2022-10-01",
+                      "name": "[format('{0}/{1}', parameters('lawName'), parameters('tableName'))]",
+                      "properties": {
+                        "schema": {
+                          "name": "[parameters('tableName')]",
+                          "columns": "[parameters('columns')]"
+                        },
+                        "plan": "[parameters('plan')]",
+                        "retentionInDays": "[if(not(equals(parameters('retention'), -1)), parameters('retention'), '')]"
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          ],
+          "outputs": {
+            "DcrImmutableId": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Insights/dataCollectionRules', parameters('DataCollectionRuleName')), '2021-09-01-preview').immutableId]"
+            },
+            "DceUri": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Insights/dataCollectionEndpoints', parameters('DataCollectionEndpointName')), '2021-09-01-preview').logsIngestion.endpoint]"
+            },
+            "DcrName": {
+              "type": "string",
+              "value": "[parameters('DataCollectionRuleName')]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('uami-{0}', parameters('FunctionAppName')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "rbacAssignmentLaw",
+      "subscriptionId": "[split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[2]]",
+      "resourceGroup": "[split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[4]]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "principalId": {
+            "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('uami-{0}', parameters('FunctionAppName'))), '2022-01-31-preview').principalId]"
+          },
+          "roleDefId": {
+            "value": "/providers/Microsoft.Authorization/roleDefinitions/ab8e14d6-4a74-4a29-9ba8-549422addade"
+          },
+          "scopedResourceName": {
+            "value": "[split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[8]]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.17.1.54307",
+              "templateHash": "12600371489791518091"
+            }
+          },
+          "parameters": {
+            "scopedResourceName": {
+              "type": "string"
+            },
+            "roleDefId": {
+              "type": "string"
+            },
+            "principalId": {
+              "type": "string"
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2020-10-01-preview",
+              "scope": "[format('Microsoft.OperationalInsights/workspaces/{0}', parameters('scopedResourceName'))]",
+              "name": "[guid(resourceId('Microsoft.OperationalInsights/workspaces', parameters('scopedResourceName')), parameters('roleDefId'), parameters('principalId'))]",
+              "properties": {
+                "roleDefinitionId": "[parameters('roleDefId')]",
+                "principalId": "[parameters('principalId')]",
+                "principalType": "ServicePrincipal"
+              }
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('uami-{0}', parameters('FunctionAppName')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "sentinelArtifcats",
+      "subscriptionId": "[split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[2]]",
+      "resourceGroup": "[split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[4]]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "lawName": {
+            "value": "[split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[8]]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.17.1.54307",
+              "templateHash": "18042284597531461453"
+            }
+          },
+          "parameters": {
+            "lawName": {
+              "type": "string"
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.SecurityInsights/watchlists",
+              "apiVersion": "2023-02-01",
+              "scope": "[format('Microsoft.OperationalInsights/workspaces/{0}', parameters('lawName'))]",
+              "name": "Policy",
+              "properties": {
+                "displayName": "Policy",
+                "itemsSearchKey": "Name",
+                "provider": "DLP",
+                "source": "DLP",
+                "contentType": "text/csv",
+                "numberOfLinesToSkip": 0,
+                "description": "DLP Policies",
+                "rawContent": "Name,Workload\r\nDefault,Exchange\r\n"
+              }
+            },
+            {
+              "type": "Microsoft.SecurityInsights/watchlists",
+              "apiVersion": "2023-02-01",
+              "scope": "[format('Microsoft.OperationalInsights/workspaces/{0}', parameters('lawName'))]",
+              "name": "SensitivityLabels",
+              "properties": {
+                "displayName": "SensitivityLabels",
+                "itemsSearchKey": "id",
+                "provider": "DLP",
+                "source": "DLP",
+                "contentType": "text/csv",
+                "numberOfLinesToSkip": 0,
+                "description": "Sensitivity Labels",
+                "rawContent": "id,name,parent\r\ndefa4170-0d19-0005-000b-bc8871434242,Spefific People, Highly Confidential\r\n"
+              }
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'createCustomTables')]"
+      ]
+    }
+  ],
+  "outputs": {
+    "UserAssignedManagedIdentityPrincipalId": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('uami-{0}', parameters('FunctionAppName'))), '2022-01-31-preview').principalId]"
+    },
+    "UserAssignedManagedIdentityPrincipalName": {
+      "type": "string",
+      "value": "[format('uami-{0}', parameters('FunctionAppName'))]"
+    }
+  }
+}
