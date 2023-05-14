@@ -32,7 +32,7 @@ if ((Test-Path -Path $Tracker) -eq $true) {
     $storedTime = Get-content $Tracker
 }
 else {
-    $date = Get-date -format "yyyy-MM-ddTHH:mm:ss.fffZ"
+    $date = (Get-date).AddMinutes(-5).ToString('yyyy-MM-ddTHH:mm:ss.fffZ')
     out-file d:\home\$workload.log -InputObject $date
     $storedTime = Get-content $Tracker
 }
