@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.17.1.54307",
-      "templateHash": "17757901006389565265"
+      "templateHash": "9755186496350946309"
     }
   },
   "parameters": {
@@ -206,7 +206,7 @@
     {
       "type": "Microsoft.Storage/storageAccounts/queueServices/queues",
       "apiVersion": "2022-09-01",
-      "name": "[format('{0}/default/dlpqueue}}', variables('storageAccountName'))]",
+      "name": "[format('{0}/default/dlpqueue', variables('storageAccountName'))]",
       "dependsOn": [
         "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
       ]
@@ -471,8 +471,22 @@
         "retentionInterval": "PT1H",
         "timeout": "PT5M",
         "cleanupPreference": "Always",
+        "environmentVariables": [
+          {
+            "name": "TenantId",
+            "value": "[parameters('TenantID')]"
+          },
+          {
+            "name": "ClientId",
+            "value": "[parameters('ClientID')]"
+          },
+          {
+            "name": "ClientSecret",
+            "secureValue": "[parameters('ClientSecret')]"
+          }
+        ],
         "primaryScriptUri": "[variables('deploymentScriptUri')]",
-        "arguments": "[format('-PackageUri {0} -SubscriptionId {1} -ResourceGroupName {2} -FunctionAppName {3} -FAScope {4} -ClientId {5} -TenantId {6} -KeyVaultName {7} -UAMIPrincipalId {8}', variables('functionAppPackageUri'), split(subscription().id, '/')[2], resourceGroup().name, parameters('FunctionAppName'), resourceId('Microsoft.Web/sites', parameters('FunctionAppName')), parameters('ClientID'), parameters('TenantID'), parameters('KeyVaultName'), reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('uami-{0}', parameters('FunctionAppName'))), '2022-01-31-preview').principalId)]"
+        "arguments": "[format('-PackageUri {0} -SubscriptionId {1} -ResourceGroupName {2} -FunctionAppName {3} -FAScope {4} -UAMIPrincipalId {5}', variables('functionAppPackageUri'), split(subscription().id, '/')[2], resourceGroup().name, parameters('FunctionAppName'), resourceId('Microsoft.Web/sites', parameters('FunctionAppName')), reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('uami-{0}', parameters('FunctionAppName'))), '2022-01-31-preview').principalId)]"
       },
       "dependsOn": [
         "[resourceId('Microsoft.Web/sites', parameters('FunctionAppName'))]",

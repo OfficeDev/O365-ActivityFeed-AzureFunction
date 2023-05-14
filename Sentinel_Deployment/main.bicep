@@ -124,7 +124,7 @@ resource fileShare 'Microsoft.Storage/storageAccounts/fileServices/shares@2022-0
 }
 
 resource queue 'Microsoft.Storage/storageAccounts/queueServices/queues@2022-09-01' = {
-  name: '${storageAccount.name}/default/dlpqueue}'
+  name: '${storageAccount.name}/default/dlpqueue'
 }
 
 resource keyVault 'Microsoft.KeyVault/vaults@2022-07-01' = {
@@ -405,8 +405,22 @@ resource deploymentScript 'Microsoft.Resources/deploymentScripts@2020-10-01' = {
     retentionInterval: 'PT1H'
     timeout: 'PT5M'
     cleanupPreference: 'Always'
+    environmentVariables: [
+      {
+        name:'TenantId'
+        value: TenantID 
+      }
+      {
+        name:'ClientId'
+        value: ClientID 
+      }
+      {
+        name: 'ClientSecret'
+        secureValue: ClientSecret  
+      } 
+    ] 
     primaryScriptUri: deploymentScriptUri
-    arguments: '-PackageUri ${functionAppPackageUri} -SubscriptionId ${split(subscription().id, '/')[2]} -ResourceGroupName ${resourceGroup().name} -FunctionAppName ${functionApp.name} -FAScope ${functionApp.id} -ClientId ${ClientID} -TenantId ${TenantID} -KeyVaultName ${KeyVaultName} -UAMIPrincipalId ${userAssignedMi.properties.principalId}'
+    arguments: '-PackageUri ${functionAppPackageUri} -SubscriptionId ${split(subscription().id, '/')[2]} -ResourceGroupName ${resourceGroup().name} -FunctionAppName ${functionApp.name} -FAScope ${functionApp.id} -UAMIPrincipalId ${userAssignedMi.properties.principalId}'
   }
 }
 

@@ -1,25 +1,27 @@
-param([string] $PackageUri, [string] $SubscriptionId, [string] $ResourceGroupName, [string] $FunctionAppName, [string] $FAScope, [string] $ClientId, [string] $TenantId, [string] $KeyVaultName, [string] $VnetScope, [string] $UAMIPrincipalId, [string] $RestrictedIPs)
+param([string] $PackageUri, [string] $SubscriptionId, [string] $ResourceGroupName, [string] $FunctionAppName, [string] $FAScope, [string] $VnetScope, [string] $UAMIPrincipalId, [string] $RestrictedIPs)
 
 Set-AzContext -Subscription $SubscriptionId
 
 #Give Function App some time to fully finish provisioning.
 Start-Sleep -Seconds 60
 
-$clientSecret = Get-AzKeyVaultSecret -VaultName $KeyVaultName -Name "ClientSecret" -AsPlainText
+$tenantId = $env:TenantId
+$clientId = $env:ClientId
+$clientSecret = $env:ClientSecret
 $loginURL = "https://login.microsoftonline.com"
 $resource = "https://manage.office.com"
 
 #Get an Oauth 2 access token based on client id, secret and tenant domain
-$body = @{grant_type="client_credentials";resource=$resource;client_id=$ClientId;client_secret=$clientSecret}
-$oauth = Invoke-RestMethod -Method Post -Uri $loginURL/$TenantId/oauth2/token?api-version=1.0 -Body $body
+$body = @{grant_type="client_credentials";resource=$resource;client_id=$clientId;client_secret=$clientSecret}
+$oauth = Invoke-RestMethod -Method Post -Uri $loginURL/$tenantId/oauth2/token?api-version=1.0 -Body $body
 
 #Let's put the oauth token in the header
 $headerParams  = @{'Authorization'="$($oauth.token_type) $($oauth.access_token)"}
 
 #Enable auditing subscriptions if needed.
-$subs = Invoke-RestMethod -Headers $headerParams -Uri "https://manage.office.com/api/v1.0/$TenantId/activity/feed/subscriptions/list"
+$subs = Invoke-RestMethod -Headers $headerParams -Uri "https://manage.office.com/api/v1.0/$tenantId/activity/feed/subscriptions/list"
 if (($subs | Where-Object contentType -eq DLP.All).status -ne 'enabled') {
-    Invoke-RestMethod -Method Post -Headers $headerParams -Uri "https://manage.office.com/api/v1.0/$TenantId/activity/feed/subscriptions/start?contentType=DLP.All"
+    Invoke-RestMethod -Method Post -Headers $headerParams -Uri "https://manage.office.com/api/v1.0/$tenantId/activity/feed/subscriptions/start?contentType=DLP.All"
 }
 
 #Download Function App package and publish.
