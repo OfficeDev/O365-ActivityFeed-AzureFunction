@@ -75,6 +75,7 @@ if ($SPOprocessedrules -notcontains $alreadyprocessed)
             $pattern = '\| where not\(Policy has_any \(policywatchlist\)\) //Do not remove'
             $template.properties.query = $template.properties.query -replace $pattern, "//This rule was updated by code $date"
             $template.properties.displayname = $matchexisting.properties.displayname
+            $template.properties.enabled = $true
             $template.name =  $matchexisting.name
             $template.etag = $matchexisting.etag
             $template.properties.displayname = $policyName2
@@ -94,6 +95,7 @@ if ($SPOprocessedrules -notcontains $alreadyprocessed)
             $pattern = '\| where not\(Policy has_any \(policywatchlist\)\) //Do not remove'
             $template.properties.query = $template.properties.query -replace $pattern, "//This rule was created by code $date"
             $template.properties.displayname = $policyName2
+            $template.properties.enabled = $true
             $template.etag =  $etag.guid
             $template.name =  $etag.guid
             $template.properties.lastModifiedUtc = ""
