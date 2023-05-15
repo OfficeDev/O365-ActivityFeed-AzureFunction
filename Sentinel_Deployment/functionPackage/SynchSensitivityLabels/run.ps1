@@ -5,13 +5,12 @@ param($Timer)
 $clientID = "$env:clientID"
 $clientSecret = "$env:clientSecret"
 $loginURL = "https://login.microsoftonline.com"
-$tenantdomain = "$env:tenantdomain"
 $tenantGUID = "$env:TenantGuid"
 $resource = "https://graph.microsoft.com"
 
 # Get an Oauth 2 access token based on client id, secret and tenant domain
 $body = @{grant_type="client_credentials";resource=$resource;client_id=$ClientID;client_secret=$ClientSecret}
-$oauth = Invoke-RestMethod -Method Post -Uri $loginURL/$tenantdomain/oauth2/token?api-version=1.0 -Body $body
+$oauth = Invoke-RestMethod -Method Post -Uri $loginURL/$tenantGUID/oauth2/token?api-version=1.0 -Body $body
 
 #Let's put the oauth token in the header, where it belongs
 $headerParams  = @{'Authorization'="$($oauth.token_type) $($oauth.access_token)"}
