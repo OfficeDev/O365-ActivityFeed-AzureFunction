@@ -36,7 +36,7 @@ resource watchlistSL 'Microsoft.SecurityInsights/watchlists@2023-02-01' = {
     description: 'Sensitivity Labels'
     rawContent: '''
 id,name,parent
-defa4170-0d19-0005-000b-bc8871434242,Spefific People, Highly Confidential
+defa4170-0d19-0005-000b-bc8871434242,Specific People, Highly Confidential
 '''
   }
 }
