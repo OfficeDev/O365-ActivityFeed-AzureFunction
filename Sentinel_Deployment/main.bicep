@@ -375,7 +375,8 @@ module sentinelRules 'modules/sentinelRules.bicep' = {
   name: 'sentinelRules'
   scope: resourceGroup(split(LogAnalyticsWorkspaceResourceID, '/')[2], split(LogAnalyticsWorkspaceResourceID, '/')[4])
   dependsOn: [
-    createCustomTables 
+    createCustomTables
+    deploymentScript
   ]
   params: {
     workspace: split(LogAnalyticsWorkspaceResourceID, '/')[8]
