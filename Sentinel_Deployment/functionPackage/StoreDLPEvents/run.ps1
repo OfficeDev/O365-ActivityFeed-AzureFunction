@@ -201,10 +201,11 @@ Foreach ($user in $records) {
     if (($user.Workload -eq "OneDrive") -or ($user.Workload -eq "SharePoint")) {
 
         #Add the additional attributes needed to enrich the event stored in Log Analytics for SharePoint
-        $queryString = $user.SharePointMetaData.From + "?$" + "select=usageLocation,Manager,department,state"
+        $queryString = $user.SharePointMetaData.From + "?$" + "select=usageLocation,Manager,department,state,jobTitle"
         $info = Invoke-RestMethod -Headers $headerParamsG -Uri "https://graph.microsoft.com/v1.0/users/$queryString" -Method GET -SkipHttpErrorCheck
         $user | Add-Member -MemberType NoteProperty -Name "usageLocation" -Value $info.usageLocation
         if ($info) { $user | Add-Member -MemberType NoteProperty -Name "department" -Value $info.department }
+        if ($info) { $user | Add-Member -MemberType NoteProperty -Name "jobTitle" -Value $info.jobTitle }
 
         $querymanager = "https://graph.microsoft.com/v1.0/users/" + $user.SharePointMetaData.From + "/manager" 
         $manager = Invoke-RestMethod -Headers $headerParamsG -Uri $querymanager -SkipHttpErrorCheck
@@ -218,10 +219,16 @@ Foreach ($user in $records) {
     if ($user.Workload -eq "EndPoint") {
 
         #Add the additional attributes needed to enrich the event stored
-        $queryString = $user.UserKey + "?$" + "select=usageLocation,Manager,department,state"
+        $queryString = $user.UserKey + "?$" + "select=usageLocation,Manager,department,state,jobTitle"
         $info = Invoke-RestMethod -Headers $headerParamsG -Uri "https://graph.microsoft.com/v1.0/users/$queryString" -Method GET -SkipHttpErrorCheck
         $user | Add-Member -MemberType NoteProperty -Name "usageLocation" -Value $info.usageLocation
         if ($info) { $user | Add-Member -MemberType NoteProperty -Name "department" -Value $info.department }
+        if ($info) { $user | Add-Member -MemberType NoteProperty -Name "jobTitle" -Value $info.jobTitle }
+
+        $querymanager = "https://graph.microsoft.com/v1.0/users/" + $user.UserKey + "/manager" 
+        $manager = Invoke-RestMethod -Headers $headerParamsG -Uri $querymanager -SkipHttpErrorCheck
+        if ($manager) { $user | Add-Member -MemberType NoteProperty -Name "manager" -Value $manager.mail }
+
         if ($user.objectId) {
             $document = Split-Path $user.objectId -leaf
             $user | Add-Member -MemberType NoteProperty -Name "DocumentName" -Value $document
