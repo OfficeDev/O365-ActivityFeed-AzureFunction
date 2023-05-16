@@ -268,7 +268,7 @@ if ($workspace) {
         $activeWS = $workspace.name
         if ($uploadWS.$activeWS) {
             #Add required TimeGenerated field and create alias for Id field since that name is not allowed by Azure Monitor.
-            $uploadWS.$activeWS | Add-Member -MemberType AliasProperty -Name TimeGenerated -Value CreationTime
+            $uploadWS.$activeWS | Add-Member -NotePropertyName 'TimeGenerated' -NotePropertyValue (Get-Date -Format 'yyyy-MM-ddTHH:mm:ssZ' -AsUTC)
             $uploadWS.$activeWS | Add-Member -MemberType AliasProperty -Name Identifier -Value Id
 
             #Send received data to Azure Monitor.
@@ -284,7 +284,7 @@ $allWS += $spoupload
 $allWS += $endpointupload
 if ($allWS) {
     #Add required TimeGenerated field and create alias for Id field since that name is not allowed by Azure Monitor.
-    $allWS | Add-Member -MemberType AliasProperty -Name TimeGenerated -Value CreationTime
+    $allWS | Add-Member -NotePropertyName 'TimeGenerated' -NotePropertyValue (Get-Date -Format 'yyyy-MM-ddTHH:mm:ssZ' -AsUTC)
     $allWS | Add-Member -MemberType AliasProperty -Name Identifier -Value Id
 
     #Send received data to Azure Monitor.

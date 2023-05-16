@@ -12,7 +12,14 @@ $maineu = @{"GlobalWorkspace" = $workspaceId2}
 
 #Path for logging of rule progress
 $EXOruleprocesslog = $filepath + "EXORuleprocess.log"
-$EXOprocessedrules = get-content $EXOruleprocesslog
+
+if ((Test-Path -Path $EXOruleprocesslog) -eq $true) {
+    $EXOprocessedrules = get-content $EXOruleprocesslog
+}
+else {
+    out-file $EXOruleprocesslog
+    $EXOprocessedrules = get-content $EXOruleprocesslog
+}
 
 
 foreach ($workspace in $maineu.GetEnumerator()) {
@@ -92,7 +99,7 @@ foreach ($policy in $policies) {
          if (-not $matchexisting) {
             $etag = New-Guid
             $template.properties.query = $template.properties.query -replace 'Policy != "" //Do Not Remove',  "Policy == '$($policy.name)'"
-            $pattern = '\| where not\(Policy has_any \(_GetWatchlist\(\"Policy\"\)\)\) //Do not remove'
+            $pattern = '\| where not\(Policy has_any \(policywatchlist\)\) //Do not remove'
             $template.properties.query = $template.properties.query -replace $pattern, "//This rule was created by code $date"
             $template.properties.displayname = $policy.name
             $template.properties.enabled = $true

@@ -6,7 +6,14 @@ $filepath = "d:\home\"
 
 #Path for logging of rule progress
 $EPruleprocesslog = $filepath + "EPRuleprocess.log"
-$EPprocessedrules = get-content $EPruleprocesslog
+
+if ((Test-Path -Path $EPruleprocesslog) -eq $true) {
+  $EPprocessedrules = get-content $EPruleprocesslog
+}
+else {
+  out-file $EPruleprocesslog
+  $EPprocessedrules = get-content $EPruleprocesslog
+}
 
 #Sentinel variables for workspaces update for each workspace to include
 #$workspaceId0 = $env:SentinelWorkspaceUS

@@ -6,7 +6,14 @@ $filepath = "d:\home\"
 
 #Path for logging of rule progress
 $SPOruleprocesslog = $filepath + "SPORuleprocess.log"
-$SPOprocessedrules = get-content $SPOruleprocesslog
+
+if ((Test-Path -Path $SPOruleprocesslog) -eq $true) {
+    $SPOprocessedrules = get-content $SPOruleprocesslog
+  }
+  else {
+    out-file $SPOruleprocesslog
+    $SPOprocessedrules = get-content $SPOruleprocesslog
+  }
 
 #Sentinel variables for workspaces update for each workspace to include
 #$workspaceId0 = $env:SentinelWorkspaceUS

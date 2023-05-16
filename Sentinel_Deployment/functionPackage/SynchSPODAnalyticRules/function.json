@@ -2,9 +2,9 @@
   "bindings": [
     {
       "name": "Timer",
-      "type": "timerTrigger",
+      "schedule": "0 0 * * * *",
       "direction": "in",
-      "schedule": "0 */5 * * * *"
+      "type": "timerTrigger"
     }
   ]
 }

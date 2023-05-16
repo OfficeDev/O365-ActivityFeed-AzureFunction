@@ -18,7 +18,7 @@ resource watchlistPolicy 'Microsoft.SecurityInsights/watchlists@2023-02-01' = {
     description: 'DLP Policies'
     rawContent: '''
 Name,Workload
-Default,Exchange
+40489b3c-b060-4122-af94-5dbe51996729,40489b3c-b060-4122-af94-5dbe51996729
 '''
   }
 }
@@ -36,7 +36,7 @@ resource watchlistSL 'Microsoft.SecurityInsights/watchlists@2023-02-01' = {
     description: 'Sensitivity Labels'
     rawContent: '''
 id,name,parent
-defa4170-0d19-0005-000b-bc8871434242,Specific People, Highly Confidential
+40489b3c-b060-4122-af94-5dbe51996729,40489b3c-b060-4122-af94-5dbe51996729,40489b3c-b060-4122-af94-5dbe51996729
 '''
   }
 }

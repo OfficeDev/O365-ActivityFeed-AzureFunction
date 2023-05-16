@@ -202,6 +202,14 @@ resource dcr 'Microsoft.Insights/dataCollectionRules@2021-09-01-preview' = {
             name: 'originalContent'
             type: 'string'
           }
+          {
+            name: 'ExceptionInfo'
+            type: 'dynamic'
+          }
+          {
+            name: 'jobTitle'
+            type: 'string'
+          }
         ]        
       }
     }
@@ -334,6 +342,14 @@ module tablePurviewDLP 'lawCustomTable.bicep' = {
       }
       {
         name: 'originalContent'
+        type: 'string'
+      }
+      {
+        name: 'ExceptionInfo'
+        type: 'dynamic'
+      }
+      {
+        name: 'jobTitle'
         type: 'string'
       }
     ]    
