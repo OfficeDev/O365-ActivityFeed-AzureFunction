@@ -6,6 +6,7 @@ $records = @()
 $exupload = @()
 $spoupload = @()
 $endpointupload = @()
+$powerbiupload = @()
 $allWS = @()
 
 $tolocal = @()
@@ -147,9 +148,34 @@ Foreach ($user in $records) {
         }
     }
 
+    #Endpoint code to capture entries too long for LA store
+    if (($user.EndpointMetaData.SensitiveInfoTypeData.SensitiveInformationDetectionsInfo.detectedvalues.count -gt 30)) {
+        $sit = @()
+        $detected = @()
+        $detectedrows = @()
+        while (($user.EndpointMetaData.SensitiveInfoTypeData.SensitiveInformationDetectionsInfo | convertto-json -depth 20 | measure-object -Character).characters -gt "20000") {
+            $sit = $user.EndpointMetaData.SensitiveInfoTypeData.SensitiveInformationDetectionsInfo.count 
+            for ($i = 0; $i -lt $SIT) {
+                $detectedrows = $user.EndpointMetaData.SensitiveInfoTypeData.SensitiveInformationDetectionsInfo[$i].DetectedValues.count
+                do {
+
+                    $dec = 1
+                    if ($detectedrows -gt 4) { $dec = 2 }
+                    $increment = [math]::truncate($detectedrows / $dec)
+                    $detected = $user.EndpointMetaData.SensitiveInfoTypeData.SensitiveInformationDetectionsInfo[$i].DetectedValues[0..$increment]
+                    $detectedcount = $detected.value | Measure-object -Character
+                    $detectedrows = [math]::truncate($increment * 1.5)
+                } until ($detectedcount.Characters -le "10240" )
+                $user.EndpointMetaData.SensitiveInfoTypeData.SensitiveInformationDetectionsInfo[$i].DetectedValues = $detected
+                $user.EndpointMetaData.SensitiveInfoTypeData.SensitiveInformationDetectionsInfo[$i].DetectedValues.count                                                                                                        
+                $i++
+            }
+        }
+    }
+
     #Exchange and Teams upload data process
     $user.workload
-    if (($user.workload -eq "Exchange") -or ($user.Workload -eq "MicrosoftTeams")) {
+    if (($user.workload -eq "Exchange" -and $user.operation -ne "MipLabel") -or ($user.Workload -eq "MicrosoftTeams")) {
 
         #Determine if the email is from external or internal if from external associate with first recipient on the to line
         if (($env:domains).split(",") -Contains ($user.ExchangeMetaData.from.Split('@'))[1]) { $exuser = $user.ExchangeMetaData.from }
@@ -166,15 +192,17 @@ Foreach ($user in $records) {
             #Add the additional attributes needed to enrich the event stored in Log Analytics for Exchange
             # $queryString = "https://graph.microsoft.com/v1.0/users/" + $exuser + "?" + "$" + "select=usageLocation,Manager,department,state" 
             $queryString = "https://graph.microsoft.com/v1.0/users?" + '$select=department,usageLocation,UserPrincipalName,jobTitle&$filter' + "=proxyAddresses/any(x:startswith(x,'SMTP:$exuser'))"       
-            $info = Invoke-RestMethod -Headers $headerParamsG -Uri $queryString -Method GET -SkipHttpErrorCheck
+            if ($exuser) { $info = Invoke-RestMethod -Headers $headerParamsG -Uri $queryString -Method GET -SkipHttpErrorCheck }
             $info = $info.value
 
             #Add usage location from GRAPH Call
             $user | Add-Member -MemberType NoteProperty -Name "usageLocation" -Value $info.usageLocation
-            if ($info) { $user | Add-Member -MemberType NoteProperty -Name "department" -Value $info.department }
-            if ($info) { $user | Add-Member -MemberType NoteProperty -Name "jobTitle" -Value $info.jobTitle }
+            if ($info) { 
+                $user | Add-Member -MemberType NoteProperty -Name "department" -Value $info.department
+                $user | Add-Member -MemberType NoteProperty -Name "jobTitle" -Value $info.jobTitle
+            }
 
-            #        $querymanager = "https://graph.microsoft.com/v1.0/users/" + $exuser + "/manager"
+            #$querymanager = "https://graph.microsoft.com/v1.0/users/" + $exuser + "/manager"
             $querymanager = "https://graph.microsoft.com/v1.0/users/" + $info.userPrincipalName + "/manager"
             $manager = Invoke-RestMethod -Headers $headerParamsG -Uri $querymanager -SkipHttpErrorCheck
             if ($manager) { $user | Add-Member -MemberType NoteProperty -Name "manager" -Value $manager.mail }
@@ -204,8 +232,10 @@ Foreach ($user in $records) {
         $queryString = $user.SharePointMetaData.From + "?$" + "select=usageLocation,Manager,department,state,jobTitle"
         $info = Invoke-RestMethod -Headers $headerParamsG -Uri "https://graph.microsoft.com/v1.0/users/$queryString" -Method GET -SkipHttpErrorCheck
         $user | Add-Member -MemberType NoteProperty -Name "usageLocation" -Value $info.usageLocation
-        if ($info) { $user | Add-Member -MemberType NoteProperty -Name "department" -Value $info.department }
-        if ($info) { $user | Add-Member -MemberType NoteProperty -Name "jobTitle" -Value $info.jobTitle }
+        if ($info) { 
+            $user | Add-Member -MemberType NoteProperty -Name "department" -Value $info.department
+            $user | Add-Member -MemberType NoteProperty -Name "jobTitle" -Value $info.jobTitle
+        }
 
         $querymanager = "https://graph.microsoft.com/v1.0/users/" + $user.SharePointMetaData.From + "/manager" 
         $manager = Invoke-RestMethod -Headers $headerParamsG -Uri $querymanager -SkipHttpErrorCheck
@@ -222,8 +252,10 @@ Foreach ($user in $records) {
         $queryString = $user.UserKey + "?$" + "select=usageLocation,Manager,department,state,jobTitle"
         $info = Invoke-RestMethod -Headers $headerParamsG -Uri "https://graph.microsoft.com/v1.0/users/$queryString" -Method GET -SkipHttpErrorCheck
         $user | Add-Member -MemberType NoteProperty -Name "usageLocation" -Value $info.usageLocation
-        if ($info) { $user | Add-Member -MemberType NoteProperty -Name "department" -Value $info.department }
-        if ($info) { $user | Add-Member -MemberType NoteProperty -Name "jobTitle" -Value $info.jobTitle }
+        if ($info) { 
+            $user | Add-Member -MemberType NoteProperty -Name "department" -Value $info.department
+            $user | Add-Member -MemberType NoteProperty -Name "jobTitle" -Value $info.jobTitle
+        }
 
         $querymanager = "https://graph.microsoft.com/v1.0/users/" + $user.UserKey + "/manager" 
         $manager = Invoke-RestMethod -Headers $headerParamsG -Uri $querymanager -SkipHttpErrorCheck
@@ -236,8 +268,35 @@ Foreach ($user in $records) {
 
         $endpointupload += $user
         Clear-Variable -name info
-    }                            
-}    
+    }
+    
+    #PowerBI upload
+    if ($user.Workload -eq "PowerBI") {
+
+        #Add the additional attributes needed to enrich the event stored
+        $queryString = $user.UserId + "?$" + "select=usageLocation,Manager,department,state,jobTitle"
+        $info = Invoke-RestMethod -Headers $headerParamsG -Uri "https://graph.microsoft.com/v1.0/users/$queryString" -Method GET -SkipHttpErrorCheck
+        $user | Add-Member -MemberType NoteProperty -Name "usageLocation" -Value $info.usageLocation
+        if ($info) { 
+            $user | Add-Member -MemberType NoteProperty -Name "department" -Value $info.department
+            $user | Add-Member -MemberType NoteProperty -Name "jobTitle" -Value $info.jobTitle
+        }
+
+        $querymanager = "https://graph.microsoft.com/v1.0/users/" + $user.UserId + "/manager" 
+        $manager = Invoke-RestMethod -Headers $headerParamsG -Uri $querymanager -SkipHttpErrorCheck
+        if ($manager) { $user | Add-Member -MemberType NoteProperty -Name "manager" -Value $manager.mail }
+
+        if ($user.objectId) {
+            $document = Split-Path $user.objectId -leaf
+            $user | Add-Member -MemberType NoteProperty -Name "DocumentName" -Value $document
+        }
+
+        $powerbiupload += $user
+        Clear-Variable -name info
+    }
+}
+
+
 
 
 #Add required .Net assemblies to handle the Azure Monitor ingestion.
@@ -265,8 +324,10 @@ if ($workspace) {
         $uploadWS[$workspace.name] += $spoupload | where-object { $workspace.Value.Countries.split(",") -Contains $_.usageLocation }       
                                 
         #EndPoint
-        $uploadWS[$workspace.name] += $endpointupload | where-object { $workspace.Value.Countries.split(",") -Contains $_.usageLocation }    
-
+        $uploadWS[$workspace.name] += $endpointupload | where-object { $workspace.Value.Countries.split(",") -Contains $_.usageLocation }
+        
+        #PowerBi
+        $uploadWS[$workspace.name] += $powerbiupload | where-object  {$workspace.Value.Countries.split(",") -Contains $_.usageLocation} 
     }                  
 
     #Upload to Workspaces
@@ -289,6 +350,7 @@ if ($workspace) {
 $allWS += $exupload
 $allWS += $spoupload
 $allWS += $endpointupload
+$allWS += $powerbiupload
 if ($allWS) {
     #Add required TimeGenerated field and create alias for Id field since that name is not allowed by Azure Monitor.
     $allWS | Add-Member -NotePropertyName 'TimeGenerated' -NotePropertyValue (Get-Date -Format 'yyyy-MM-ddTHH:mm:ssZ' -AsUTC)
