@@ -8,7 +8,7 @@ resource workspace_Microsoft_SecurityInsights_1192ede7_9c2d_465a_8a7a_b0ea1da732
     description: ''
     severity: 'Medium'
     enabled: true
-    query: 'let policywatchlist =(_GetWatchlist(\'Policy\')\n    | project SearchKey);\n\nlet EndPointAction = datatable(ActionName: string, Action: int) [\n    "None", "0",\n    "Audit", "1",\n    "Warn", "2",\n    "WarnAndBypass", "3",\n    "Block", "4",\n    "Allow", "5"\n];\n\nPurviewDLP_CL\n| extend RuleName = tostring(PolicyDetails[0].Rules[0].RuleName)\n| extend Policy = tostring(PolicyDetails[0].PolicyName)\n| extend PolicyId = tostring(PolicyDetails[0].PolicyId)\n| where Policy != "" //Do Not Remove\n| where not(Policy has_any (policywatchlist)) //Do not remove\n| extend RuleId = tostring(PolicyDetails[0].Rules[0].RuleId)\n| extend SensitiveInfoTypeName1 = tostring(EndpointMetaData.SensitiveInfoTypeData[0].SensitiveInfoTypeName)      \n| extend Detected1 = tostring(EndpointMetaData.SensitiveInfoTypeData[0].SensitiveInformationDetectionsInfo.DetectedValues)\n| extend Detected = array_slice(todynamic(Detected1), 0, 5)\n| extend Deeplink = strcat("https://compliance.microsoft.com/datalossprevention/alerts/eventdeeplink?eventid=", Identifier, "&creationtime=", CreationTime)\n| extend Action = toint(EndpointMetaData.EnforcementMode)\n| extend accountsplit = split(UserId, "@")\n| mv-expand EndpointMetaData.SensitiveInfoTypeData\n| summarize\n    MatchCount = sum(toint(EndpointMetaData_SensitiveInfoTypeData.Count)),\n    arg_max(TimeGenerated, *)\n    by Identifier\n| extend ProviderName = "Microsoft Purview Sentinel Solution"\n| extend ProductName = "Microsoft Data Loss Prevention (Advanced)"\n| join kind= inner\n    (\n    EndPointAction\n    )\n    on Action\n| project PolicyId, SensitiveInfoTypeName1, UserKey, DocumentName, ObjectId, EndpointMetaData.ClientIP, EndpointMetaData.RMSEncrypted, EndpointMetaData.EnforcementMode, EndpointMetaData.DeviceName, EndpointMetaData.SourceLocationType, Policy, RuleName, usageLocation, EndpointMetaData.EndpointOperation, EndpointMetaData.Sha256, department, manager, ActionName, Detected,    Workload, jobTitle, Deeplink, UserId, accountsplit[0], accountsplit[1], EvidenceFile.FullUrl, MatchCount, ProviderName, ProductName\n'
+    query: 'let policywatchlist =(_GetWatchlist(\'Policy\')\n    | project SearchKey);\n\nlet EndPointAction = datatable(ActionName: string, Action: int) [\n    "None", "0",\n    "Audit", "1",\n    "Warn", "2",\n    "WarnAndBypass", "3",\n    "Block", "4",\n    "Allow", "5"\n];\n\nPurviewDLP_CL\n| extend RuleName = tostring(PolicyDetails[0].Rules[0].RuleName)\n| extend Policy = tostring(PolicyDetails[0].PolicyName)\n| extend PolicyId = tostring(PolicyDetails[0].PolicyId)\n| where Policy != "" //Do Not Remove\n| where not(Policy has_any (policywatchlist)) //Do not remove\n| extend RuleId = tostring(PolicyDetails[0].Rules[0].RuleId)\n| extend SensitiveInfoTypeName1 = tostring(EndpointMetaData.SensitiveInfoTypeData[0].SensitiveInfoTypeName)      \n| extend Detected1 = tostring(EndpointMetaData.SensitiveInfoTypeData[0].SensitiveInformationDetectionsInfo.DetectedValues)\n| extend Detected = array_slice(todynamic(Detected1), 0, 5)\n| extend Deeplink = strcat("https://compliance.microsoft.com/datalossprevention/alerts/eventdeeplink?eventid=", Identifier, "&creationtime=", CreationTime)\n| extend Action = toint(EndpointMetaData.EnforcementMode)\n| extend accountsplit = split(UserId, "@")\n| mv-expand EndpointMetaData.SensitiveInfoTypeData\n| summarize\n    MatchCount = sum(toint(EndpointMetaData_SensitiveInfoTypeData.Count)),\n    arg_max(TimeGenerated, *)\n    by Identifier\n| extend ProviderName = "Microsoft Purview Sentinel Solution"\n| extend ProductName = "Microsoft Data Loss Prevention (Advanced)"\n| join kind= inner\n    (\n    EndPointAction\n    )\n    on Action\n| project PolicyId, SensitiveInfoTypeName1, UserKey, DocumentName, ObjectId, EndpointMetaData.ClientIP, EndpointMetaData.RMSEncrypted, EndpointMetaData.EnforcementMode, EndpointMetaData.DeviceName, EndpointMetaData.SourceLocationType, Policy, RuleName, usageLocation, EndpointMetaData.EndpointOperation, EndpointMetaData.Sha256, department, manager, ActionName, Detected,    Workload, jobTitle, Deeplink, UserId, accountsplit[0], accountsplit[1], EvidenceFile.FullUrl, MatchCount, Identifier, ProviderName, ProductName\n'
     queryFrequency: 'PT5M'
     queryPeriod: 'PT5M'
     triggerOperator: 'GreaterThan'
@@ -67,12 +67,12 @@ resource workspace_Microsoft_SecurityInsights_1192ede7_9c2d_465a_8a7a_b0ea1da732
       Workload: 'Workload'
       MatchCount: 'MatchCount'
       SensitiveInfoType: 'SensitiveInfoTypeName1'
+      DataDetected: 'Detected'
       Action: 'EndpointMetaData_EndpointOperation'
       BlockAction: 'ActionName'
       Evidence: 'EvidenceFile_FullUrl'
       Encrypted: 'EndpointMetaData_RMSEncrypted'
-      DataShared: 'Detected'
-      Deeplink: 'Deeplink'
+      EventID: 'Identifier'
     }
     entityMappings: [
       {
@@ -196,12 +196,12 @@ resource workspace_Microsoft_SecurityInsights_03507f90_ed2d_420e_8530_e9e66b643b
       MatchCount: 'MatchCount'
       Recipients: 'Recipients'
       SensitiveInfoType: 'SensitiveInformationTypeName'
+      DataDetected: 'Detected'
       Actions: 'Actions'
       DocumentorSubject: 'SubjectDoc'
-      DataShared: 'Detected'
       LocationofDetection: 'SITLocation'
       RuleMatchOther: 'OtherMatch'
-      DeepLink: 'Deeplink'
+      EventID: 'Identifier'
     }
     entityMappings: [
       {
@@ -332,14 +332,14 @@ resource workspace_Microsoft_SecurityInsights_7e6ed702_770a_4945_98b4_a9506bbbd9
       Workload: 'Workload'
       MatchCount: 'MatchCount'
       SensitiveInfoType: 'SensitiveInformationTypeName'
+      DataDetected: 'Detected'
       Actions: 'Actions'
       SharedWith: 'TargetUserOrGroupName'
       Document: 'SubjectDoc'
-      DataShared: 'Detected'
       LocationofDetection: 'SITLocation'
       RuleMatchOther: 'OtherMatch'
       SharePointLabel: 'Label'
-      DeepLink: 'Deeplink'
+      EventID: 'Identifier'
     }
     entityMappings: [
       {
