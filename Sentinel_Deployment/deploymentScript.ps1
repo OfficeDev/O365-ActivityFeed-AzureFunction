@@ -2,8 +2,8 @@ param([string] $PackageUri, [string] $SubscriptionId, [string] $ResourceGroupNam
 
 Set-AzContext -Subscription $SubscriptionId
 
-#Give Function App some time to fully finish provisioning.
-Start-Sleep -Seconds 60
+#Give Function App and Watchlists some time to fully finish provisioning.
+Start-Sleep -Seconds 120
 
 $tenantId = $env:TenantId
 $clientId = $env:ClientId
