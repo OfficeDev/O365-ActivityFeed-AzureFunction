@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.17.1.54307",
-      "templateHash": "5955503721674687319"
+      "templateHash": "9146967709847011775"
     }
   },
   "parameters": {
@@ -349,10 +349,6 @@
             {
               "name": "TenantGuid",
               "value": "[parameters('TenantID')]"
-            },
-            {
-              "name": "workspaceKey",
-              "value": "[format('@Microsoft.KeyVault(VaultName={0};SecretName=LawKey)', parameters('KeyVaultName'))]"
             },
             {
               "name": "SentinelWorkspace",

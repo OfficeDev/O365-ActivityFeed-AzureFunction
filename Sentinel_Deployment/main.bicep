@@ -281,10 +281,6 @@ resource functionApp 'Microsoft.Web/sites@2022-03-01' = {
           value: TenantID
         }
         {
-          name: 'workspaceKey'
-          value: '@Microsoft.KeyVault(VaultName=${KeyVaultName};SecretName=LawKey)'
-        }
-        {
           name: 'SentinelWorkspace'
           value: split(LogAnalyticsWorkspaceResourceID, '/')[8]
         }
