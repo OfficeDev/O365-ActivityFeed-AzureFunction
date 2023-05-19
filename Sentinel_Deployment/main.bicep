@@ -1,8 +1,8 @@
-@description('A globally unique name for the Function App that will run the code to ingest DLP data into Sentinel.')
+@description('A globally unique name for the Function App to be created which will run the code to ingest DLP data into Sentinel.')
 param FunctionAppName string
 @description('Select to enable Application Insights for the Function App. This will allow you to monitor the status of the Function App for any errors. The Log Analytics Workspace specified in the "Log Analytics Resource Id" Parameter will be used to store the Application Insights data.')
 param DeployApplicationInsights bool = true
-@description('A globally unique name for the Key Vault to store Function App secrets.')
+@description('A globally unique name for the Key Vault to be created which will store Function App secrets.')
 param KeyVaultName string
 @description('Azure AD tenant ID in which DLP instance resides.')
 param TenantID string
@@ -11,17 +11,15 @@ param ClientID string
 @secure()
 @description('App Registration Client secret.')
 param ClientSecret string
-@description('Internal domain names.')
+@description('Internal domain names for your organization to better determine the source of email messages.')
 param InternalDomainNames string = 'youradditionaldomain.com,yourdomain.com,yourtenant.onmicrosoft.com'
-@description('Provide the Document library where you want to store the full email. IMPORTANT full path, with trailing /')
-param SharepointDocumentLibrary string = 'https://tenant.sharepoint.com/sites/DLPArchive/'
-@description('Name for Data Collection Endpoint used to ingest data into Log Analytics workspace.')
+@description('Name for Data Collection Endpoint to be created which is used to ingest data into Log Analytics workspace.')
 param DataCollectionEndpointName string
-@description('Name for Data Collection Rule used to ingest data into Log Analytics workspace.')
+@description('Name for Data Collection Rule to be created which is used to ingest data into Log Analytics workspace.')
 param DataCollectionRuleName string
-@description('Azure Resource ID of the Log Analytics Workspace where you would like the DLP and optional Function App Application Insights data to reside. The format is: "/subscriptions/xxxxxxxx-xxxxxxxx-xxxxxxxx-xxxxxxxx-xxxxxxxx/resourcegroups/xxxxxxxx/providers/microsoft.operationalinsights/workspaces/xxxxxxxx"')
+@description('Azure Resource ID of the existing Log Analytics Workspace where you would like the DLP and optional Function App Application Insights data to reside. The format is: "/subscriptions/xxxxxxxx-xxxxxxxx-xxxxxxxx-xxxxxxxx-xxxxxxxx/resourcegroups/xxxxxxxx/providers/microsoft.operationalinsights/workspaces/xxxxxxxx"')
 param LogAnalyticsWorkspaceResourceID string
-@description('Azure location/region of the Log Analytics Workspace referenced in the LogAnalyticsWorkspaceResourceId parameter.')
+@description('Azure location/region of the Log Analytics Workspace referenced in the LogAnalyticsWorkspaceResourceID parameter.')
 @allowed(
   [
     'asia'
@@ -270,7 +268,7 @@ resource functionApp 'Microsoft.Web/sites@2022-03-01' = {
         }
         {
           name: 'SPUS'
-          value: SharepointDocumentLibrary
+          value: 'https://tenant.sharepoint.com/sites/DLPArchive/'
         }
         {
           name: 'storageQueue'
