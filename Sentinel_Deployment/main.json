@@ -5,14 +5,14 @@
     "_generator": {
       "name": "bicep",
       "version": "0.17.1.54307",
-      "templateHash": "9060692621510501647"
+      "templateHash": "14545910975672427772"
     }
   },
   "parameters": {
     "FunctionAppName": {
       "type": "string",
       "metadata": {
-        "description": "The name of the function app that you wish to create."
+        "description": "A globally unique name for the Function App that will run the code to ingest DLP data into Sentinel."
       }
     },
     "DeployApplicationInsights": {
@@ -25,7 +25,7 @@
     "KeyVaultName": {
       "type": "string",
       "metadata": {
-        "description": "The name of the Key Vault to store Function App secrets."
+        "description": "A globally unique name for the Key Vault to store Function App secrets."
       }
     },
     "TenantID": {
@@ -62,14 +62,12 @@
     },
     "DataCollectionEndpointName": {
       "type": "string",
-      "defaultValue": "[format('dce-{0}', uniqueString(resourceGroup().id))]",
       "metadata": {
         "description": "Name for Data Collection Endpoint used to ingest data into Log Analytics workspace."
       }
     },
     "DataCollectionRuleName": {
       "type": "string",
-      "defaultValue": "[format('dcr-{0}', uniqueString(resourceGroup().id))]",
       "metadata": {
         "description": "Name for Data Collection Rule used to ingest data into Log Analytics workspace."
       }
@@ -152,7 +150,7 @@
     }
   },
   "variables": {
-    "storageAccountName": "[format('functionapp{0}', uniqueString(resourceGroup().id))]",
+    "storageAccountName": "[format('stfa{0}', uniqueString(resourceGroup().id))]",
     "location": "[resourceGroup().location]",
     "functionAppPackageUri": "https://raw.githubusercontent.com/anders-alex/O365-ActivityFeed-AzureFunction/Sentinel_Deployment/Sentinel_Deployment/functionPackage.zip",
     "deploymentScriptUri": "https://raw.githubusercontent.com/anders-alex/O365-ActivityFeed-AzureFunction/Sentinel_Deployment/Sentinel_Deployment/deploymentScript.ps1"
@@ -389,6 +387,7 @@
         "[resourceId('Microsoft.Storage/storageAccounts/fileServices/shares', split(format('{0}/default/{1}', variables('storageAccountName'), toLower(parameters('FunctionAppName'))), '/')[0], split(format('{0}/default/{1}', variables('storageAccountName'), toLower(parameters('FunctionAppName'))), '/')[1], split(format('{0}/default/{1}', variables('storageAccountName'), toLower(parameters('FunctionAppName'))), '/')[2])]",
         "[resourceId('Microsoft.Web/serverfarms', parameters('FunctionAppName'))]",
         "[resourceId('Microsoft.KeyVault/vaults/secrets', parameters('KeyVaultName'), 'StorageAccountConnectionString')]",
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[2], split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[4]), 'Microsoft.Resources/deployments', 'sentinelWatchlists')]",
         "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]",
         "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('uami-{0}', parameters('FunctionAppName')))]"
       ]
@@ -1239,7 +1238,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.17.1.54307",
-              "templateHash": "16106507744832567513"
+              "templateHash": "14479586274901213439"
             }
           },
           "parameters": {
@@ -1254,11 +1253,11 @@
               "name": "[format('{0}/Microsoft.SecurityInsights/1192ede7-9c2d-465a-8a7a-b0ea1da7323b', parameters('workspace'))]",
               "kind": "Scheduled",
               "properties": {
-                "displayName": "Template_EndPoint",
+                "displayName": "Purview DLP Template (Endpoint)",
                 "description": "",
                 "severity": "Medium",
                 "enabled": true,
-                "query": "let policywatchlist =(_GetWatchlist('Policy'));\r\nlet EndPointAction = datatable(ActionName: string, Action: int) [\r\n    \"None\", \"0\",\r\n    \"Audit\", \"1\",\r\n    \"Warn\", \"2\",\r\n    \"WarnAndBypass\", \"3\",\r\n    \"Block\", \"4\",\r\n    \"Allow\", \"5\"\r\n];\r\nPurviewDLP_CL\r\n| extend RuleName = tostring(PolicyDetails[0].Rules[0].RuleName)\r\n| extend Policy = tostring(PolicyDetails[0].PolicyName)\r\n| extend PolicyId = tostring(PolicyDetails[0].PolicyId)\r\n| where Policy != \"\" //Do Not Remove\r\n| where not(Policy has_any (policywatchlist)) //Do not remove\r\n| extend RuleId = tostring(PolicyDetails[0].Rules[0].RuleId)\r\n| extend SensitiveInfoTypeName1 = tostring(EndpointMetaData.SensitiveInfoTypeData[0].SensitiveInfoTypeName)      \r\n| extend Detected1 = tostring(EndpointMetaData.SensitiveInfoTypeData[0].SensitiveInformationDetectionsInfo.DetectedValues)\r\n| extend Detected = array_slice(todynamic(Detected1), 0, 5)\r\n| extend Deeplink = strcat(\"https://compliance.microsoft.com/datalossprevention/alerts/eventdeeplink?eventid=\", Identifier, \"&creationtime=\", CreationTime)\r\n| extend Action = toint(EndpointMetaData.EnforcementMode)\r\n| extend accountsplit = split(UserId, \"@\")\r\n| join kind= inner\r\n    (\r\n    EndPointAction\r\n    )\r\n    on Action\r\n| project\r\n    PolicyId,\r\n    SensitiveInfoTypeName1,\r\n    UserKey,\r\n    DocumentName,\r\n    ObjectId,\r\n    EndpointMetaData.ClientIP,\r\n    EndpointMetaData.RMSEncrypted,\r\n    EndpointMetaData.EnforcementMode,\r\n    EndpointMetaData.DeviceName,\r\n    EndpointMetaData.SourceLocationType,\r\n    Policy,\r\n    RuleName,\r\n    usageLocation,\r\n    EndpointMetaData.EndpointOperation,\r\n    EndpointMetaData.Sha256,\r\n    department,\r\n    manager,\r\n    ActionName,\r\n    Detected,\r\n    Workload,\r\n    jobTitle,\r\n    Deeplink,\r\n    UserId,\r\n    accountsplit[0],\r\n    accountsplit[1],\r\n    EvidenceFile.FullUrl",
+                "query": "let policywatchlist =(_GetWatchlist('Policy')\n    | project SearchKey);\n\nlet EndPointAction = datatable(ActionName: string, Action: int) [\n    \"None\", \"0\",\n    \"Audit\", \"1\",\n    \"Warn\", \"2\",\n    \"WarnAndBypass\", \"3\",\n    \"Block\", \"4\",\n    \"Allow\", \"5\"\n];\n\nPurviewDLP_CL\n| extend RuleName = tostring(PolicyDetails[0].Rules[0].RuleName)\n| extend Policy = tostring(PolicyDetails[0].PolicyName)\n| extend PolicyId = tostring(PolicyDetails[0].PolicyId)\n| where Policy != \"\" //Do Not Remove\n| where not(Policy has_any (policywatchlist)) //Do not remove\n| extend RuleId = tostring(PolicyDetails[0].Rules[0].RuleId)\n| extend SensitiveInfoTypeName1 = tostring(EndpointMetaData.SensitiveInfoTypeData[0].SensitiveInfoTypeName)      \n| extend Detected1 = tostring(EndpointMetaData.SensitiveInfoTypeData[0].SensitiveInformationDetectionsInfo.DetectedValues)\n| extend Detected = array_slice(todynamic(Detected1), 0, 5)\n| extend Deeplink = strcat(\"https://compliance.microsoft.com/datalossprevention/alerts/eventdeeplink?eventid=\", Identifier, \"&creationtime=\", CreationTime)\n| extend Action = toint(EndpointMetaData.EnforcementMode)\n| extend accountsplit = split(UserId, \"@\")\n| mv-expand EndpointMetaData.SensitiveInfoTypeData\n| summarize\n    MatchCount = sum(toint(EndpointMetaData_SensitiveInfoTypeData.Count)),\n    arg_max(TimeGenerated, *)\n    by Identifier\n| extend ProviderName = \"Microsoft Purview Sentinel Solution\"\n| extend ProductName = \"Microsoft Data Loss Prevention (Advanced)\"\n| join kind= inner\n    (\n    EndPointAction\n    )\n    on Action\n| project PolicyId, SensitiveInfoTypeName1, UserKey, DocumentName, ObjectId, EndpointMetaData.ClientIP, EndpointMetaData.RMSEncrypted, EndpointMetaData.EnforcementMode, EndpointMetaData.DeviceName, EndpointMetaData.SourceLocationType, Policy, RuleName, usageLocation, EndpointMetaData.EndpointOperation, EndpointMetaData.Sha256, department, manager, ActionName, Detected,    Workload, jobTitle, Deeplink, UserId, accountsplit[0], accountsplit[1], EvidenceFile.FullUrl, MatchCount, Identifier, ProviderName, ProductName\n",
                 "queryFrequency": "PT5M",
                 "queryPeriod": "PT5M",
                 "triggerOperator": "GreaterThan",
@@ -1293,21 +1292,36 @@
                 "alertDetailsOverride": {
                   "alertDisplayNameFormat": "{{RuleName}}",
                   "alertDescriptionFormat": "{{UserId}}, {{DocumentName}}",
-                  "alertDynamicProperties": []
+                  "alertDynamicProperties": [
+                    {
+                      "alertProperty": "AlertLink",
+                      "value": "Deeplink"
+                    },
+                    {
+                      "alertProperty": "ProviderName",
+                      "value": "ProviderName"
+                    },
+                    {
+                      "alertProperty": "ProductName",
+                      "value": "ProductName"
+                    }
+                  ]
                 },
                 "customDetails": {
                   "User": "UserId",
                   "JobTitle": "jobTitle",
                   "Department": "department",
-                  "Location": "usageLocation",
-                  "Detected": "SensitiveInfoTypeName1",
-                  "Action": "EndpointMetaData_EndpointOperation",
-                  "Evidence": "EvidenceFile_FullUrl",
-                  "BlockAction": "ActionName",
-                  "Encrypted": "EndpointMetaData_RMSEncrypted",
                   "Manager": "manager",
-                  "DataMatch": "Detected",
-                  "Deeplink": "Deeplink"
+                  "Location": "usageLocation",
+                  "Workload": "Workload",
+                  "MatchCount": "MatchCount",
+                  "SensitiveInfoType": "SensitiveInfoTypeName1",
+                  "DataDetected": "Detected",
+                  "Action": "EndpointMetaData_EndpointOperation",
+                  "BlockAction": "ActionName",
+                  "Evidence": "EvidenceFile_FullUrl",
+                  "Encrypted": "EndpointMetaData_RMSEncrypted",
+                  "EventID": "Identifier"
                 },
                 "entityMappings": [
                   {
@@ -1365,11 +1379,11 @@
               "name": "[format('{0}/Microsoft.SecurityInsights/03507f90-ed2d-420e-8530-e9e66b643bee', parameters('workspace'))]",
               "kind": "Scheduled",
               "properties": {
-                "displayName": "Template_email_teams",
+                "displayName": "Purview DLP Template (Exchange and Teams)",
                 "description": "",
                 "severity": "Medium",
                 "enabled": true,
-                "query": "let policywatchlist =(_GetWatchlist('Policy')\r\n| project SearchKey);\r\nPurviewDLP_CL\r\n| where Workload !in ('SharePoint', 'Endpoint', 'OneDrive')\r\n| extend Policy = tostring(PolicyDetails[0].PolicyName)\r\n| where Policy != \"\" //Do Not Remove\r\n| where not(Policy has_any (policywatchlist)) //Do not remove\r\n| extend Detected1 = tostring(PolicyDetails[0].Rules[0].ConditionsMatched.SensitiveInformation[0].SensitiveInformationDetections.DetectedValues)\r\n| extend Detected = array_slice(todynamic(Detected1), 0, 5)\r\n| extend SensitiveInformationTypeName = tostring(PolicyDetails[0].Rules[0].ConditionsMatched.SensitiveInformation[0].SensitiveInformationTypeName)\r\n| extend MessageId = ObjectId\r\n| extend linkoriginal = originalContent\r\n| extend Actions = tostring(PolicyDetails[0].Rules[0].Actions)       \r\n| extend linkoriginal = tostring(iff(isempty(SharePointMetaData.FilePathUrl), originalContent, SharePointMetaData.FilePathUrl))\r\n| extend Account = tostring(iff(isempty(SharePointMetaData.From), ExchangeMetaData.From, SharePointMetaData.From))\r\n| extend SubjectDoc = tostring(iff(isempty(SharePointMetaData.FileName), ExchangeMetaData.Subject, SharePointMetaData.FileName))\r\n| extend Recipients = tostring(strcat(\"To:\", ExchangeMetaData.To, \" CC:\", ExchangeMetaData.CC, \" BCC:\", ExchangeMetaData.BCC))\r\n| extend MatchCount = tostring(PolicyDetails[0].Rules[0].ConditionsMatched.SensitiveInformation[0].UniqueCount)\r\n| extend MatchConfidence = tostring(PolicyDetails[0].Rules[0].ConditionsMatched.SensitiveInformation[0].Confidence)\r\n| extend UserId = tostring(ExchangeMetaData.From)\r\n| extend accountsplit = split(UserId, \"@\")\r\n| extend SensitiveLabelIdnew = tostring(SharePointMetaData.SensitivityLabelIds[0])\r\n| extend RuleName = tostring(PolicyDetails[0].Rules[0].RuleName)\r\n| extend SITLocation = tostring(PolicyDetails[0].Rules[0].ConditionsMatched.SensitiveInformation[0].Location)\r\n| extend OtherMatch = tostring(PolicyDetails[0].Rules[0].ConditionsMatched.OtherConditions[0])\r\n| extend severity = tostring(PolicyDetails[0].Rules[0].Severity)\r\n| extend Deeplink = strcat(\"https://compliance.microsoft.com/datalossprevention/alerts/eventdeeplink?eventid=\", Identifier, \"&creationtime=\", CreationTime)\r\n| project\r\n    Account,\r\n    Workload,\r\n    SensitiveInformationTypeName,\r\n    Detected,\r\n    linkoriginal,\r\n    Recipients,\r\n    SubjectDoc,\r\n    TimeGenerated,\r\n    manager,\r\n    department,\r\n    Actions,\r\n    Policy,\r\n    MatchConfidence,\r\n    MatchCount,\r\n    MessageID=ExchangeMetaData.MessageID,\r\n    accountsplit[0],\r\n    accountsplit[1],\r\n    UserId,\r\n    Identifier,\r\n    ExceptionReason = ExchangeMetaData.ExceptionInfo.Reason,\r\n    RuleName,\r\n    SITLocation,\r\n    OtherMatch,\r\n    severity,\r\n    jobTitle,\r\n    tostring(ExceptionInfo.Justification),\r\n    Detected1,\r\n    Deeplink",
+                "query": "let policywatchlist =(_GetWatchlist('Policy')\n    | project SearchKey);\n\nPurviewDLP_CL\n| where Workload !in ('SharePoint', 'Endpoint', 'OneDrive')\n| extend Policy = tostring(PolicyDetails[0].PolicyName)\n| where Policy != \"\" //Do Not Remove\n| where not(Policy has_any (policywatchlist)) //Do not remove\n| extend Detected1 = tostring(PolicyDetails[0].Rules[0].ConditionsMatched.SensitiveInformation[0].SensitiveInformationDetections.DetectedValues)\n| extend Detected = array_slice(todynamic(Detected1), 0, 5)\n| extend SensitiveInformationTypeName = tostring(PolicyDetails[0].Rules[0].ConditionsMatched.SensitiveInformation[0].SensitiveInformationTypeName)\n| extend MessageId = ObjectId\n| extend linkoriginal = originalContent\n| extend Actions = tostring(PolicyDetails[0].Rules[0].Actions)       \n| extend linkoriginal = tostring(iff(isempty(SharePointMetaData.FilePathUrl), originalContent, SharePointMetaData.FilePathUrl))\n| extend Account = tostring(iff(isempty(SharePointMetaData.From), ExchangeMetaData.From, SharePointMetaData.From))\n| extend SubjectDoc = tostring(iff(isempty(SharePointMetaData.FileName), ExchangeMetaData.Subject, SharePointMetaData.FileName))\n| extend Recipients = tostring(strcat(\"To:\", ExchangeMetaData.To, \" CC:\", ExchangeMetaData.CC, \" BCC:\", ExchangeMetaData.BCC))\n| extend MatchConfidence = tostring(PolicyDetails[0].Rules[0].ConditionsMatched.SensitiveInformation[0].Confidence)\n| extend UserId = tostring(ExchangeMetaData.From)\n| extend accountsplit = split(UserId, \"@\")\n| extend SensitiveLabelIdnew = tostring(SharePointMetaData.SensitivityLabelIds[0])\n| extend RuleName = tostring(PolicyDetails[0].Rules[0].RuleName)\n| extend SITLocation = tostring(PolicyDetails[0].Rules[0].ConditionsMatched.SensitiveInformation[0].Location)\n| extend OtherMatch = tostring(PolicyDetails[0].Rules[0].ConditionsMatched.OtherConditions[0])\n| extend severity = tostring(PolicyDetails[0].Rules[0].Severity)\n| extend Deeplink = strcat(\"https://compliance.microsoft.com/datalossprevention/alerts/eventdeeplink?eventid=\", Identifier, \"&creationtime=\", CreationTime)\n| extend ProviderName = \"Microsoft Purview Sentinel Solution\"\n| extend ProductName = \"Microsoft Data Loss Prevention (Advanced)\"\n| mv-expand PolicyDetails\n| mv-expand PolicyDetails.Rules\n| mv-expand PolicyDetails_Rules.ConditionsMatched.SensitiveInformation\n| summarize\n    MatchCount = sum(toint(PolicyDetails_Rules_ConditionsMatched_SensitiveInformation.Count)),\n    arg_max(TimeGenerated, *)\n    by Identifier\n| project Account, Workload, SensitiveInformationTypeName, Detected, linkoriginal, Recipients, SubjectDoc, TimeGenerated, manager, department, Actions, Policy, MatchConfidence, MatchCount,    MessageID=ExchangeMetaData.MessageID, accountsplit[0], accountsplit[1], UserId, Identifier, ExceptionReason = ExchangeMetaData.ExceptionInfo.Reason, RuleName, usageLocation, SITLocation, OtherMatch, severity, jobTitle, tostring(ExceptionInfo.Justification), Detected1, Deeplink, ProviderName, ProductName\n",
                 "queryFrequency": "PT5M",
                 "queryPeriod": "PT5M",
                 "triggerOperator": "GreaterThan",
@@ -1407,23 +1421,37 @@
                   "alertDisplayNameFormat": "{{RuleName}}",
                   "alertDescriptionFormat": "{{Account}}, {{SubjectDoc}}",
                   "alertSeverityColumnName": "severity",
-                  "alertDynamicProperties": []
+                  "alertDynamicProperties": [
+                    {
+                      "alertProperty": "AlertLink",
+                      "value": "Deeplink"
+                    },
+                    {
+                      "alertProperty": "ProviderName",
+                      "value": "ProviderName"
+                    },
+                    {
+                      "alertProperty": "ProductName",
+                      "value": "ProductName"
+                    }
+                  ]
                 },
                 "customDetails": {
                   "User": "Account",
                   "JobTitle": "jobTitle",
+                  "Department": "department",
+                  "Manager": "manager",
+                  "Location": "usageLocation",
+                  "Workload": "Workload",
+                  "MatchCount": "MatchCount",
                   "Recipients": "Recipients",
-                  "SensitiveData": "SensitiveInformationTypeName",
+                  "SensitiveInfoType": "SensitiveInformationTypeName",
+                  "DataDetected": "Detected",
+                  "Actions": "Actions",
                   "DocumentorSubject": "SubjectDoc",
-                  "DataShared": "Detected",
                   "LocationofDetection": "SITLocation",
                   "RuleMatchOther": "OtherMatch",
-                  "Actions": "Actions",
-                  "NumberofMatches": "MatchCount",
-                  "WorkloadType": "Workload",
-                  "Manager": "manager",
-                  "Department": "department",
-                  "DeepLink": "Deeplink"
+                  "EventID": "Identifier"
                 },
                 "entityMappings": [
                   {
@@ -1489,11 +1517,11 @@
               "name": "[format('{0}/Microsoft.SecurityInsights/7e6ed702-770a-4945-98b4-a9506bbbd964', parameters('workspace'))]",
               "kind": "Scheduled",
               "properties": {
-                "displayName": "Template_SPOD",
+                "displayName": "Purview DLP Template (SharePoint and OneDrive)",
                 "description": "",
                 "severity": "Medium",
                 "enabled": true,
-                "query": "let policywatchlist =(_GetWatchlist('Policy')\r\n    | project SearchKey);\r\nlet domains=(_GetWatchlist('domains')\r\n    | project SearchKey);\r\nlet DLP = (PurviewDLP_CL\r\n    | extend SharePointMetaData_FilePathUrl_s = url_decode(tostring(SharePointMetaData.FilePathUrl))\r\n    | extend path = parse_path(tostring(SharePointMetaData.FilePathUrl))\r\n    | extend DirectoryPath = tostring(path.DirectoryPath)\r\n    | summarize by DirectoryPath);\r\nlet officedata = (\r\n    OfficeActivity\r\n    | where ingestion_time() > ago(24h)\r\n    | where Operation == \"AddedToSecureLink\" or Operation == \"SecureLinkUsed\"\r\n    | where OfficeObjectId has_any (DLP)\r\n    | extend SharePointMetaData_SiteCollectionUrl_s = Site_Url\r\n    | extend SharePointMetaData_FileName_s = SourceFileName\r\n    | extend Account = tolower(UserId)\r\n    | extend Targetsplit = split(UserId, \"#\")\r\n    | extend TargetUserOrGroupName = iff(isempty(TargetUserOrGroupName), Targetsplit[1], TargetUserOrGroupName)\r\n    //Exclude internal domains\r\n    //| where TargetUserOrGroupName !has \"mydom1.com\"\r\n    | extend TargetUserOrGroupName = tolower(TargetUserOrGroupName)\r\n    | summarize\r\n        by\r\n        SharePointMetaData_FileName_s,\r\n        SharePointMetaData_SiteCollectionUrl_s,\r\n        TargetUserOrGroupName,\r\n        OfficeObjectId,\r\n        Account);\r\nlet dlpmain = (\r\n    PurviewDLP_CL\r\n    | where ingestion_time() > ago(30m)\r\n    | where Workload in ('SharePoint', 'OneDrive')\r\n    | extend Policy = tostring(PolicyDetails[0].PolicyName)\r\n    | where Policy != \"\" //Do Not Remove\r\n    | where not(Policy has_any (policywatchlist)) //Do not remove\r\n    | extend Detected1 = tostring(parse_json(tostring(parse_json(tostring(parse_json(tostring(parse_json(tostring(parse_json(tostring(PolicyDetails[0].Rules))[0].ConditionsMatched)).SensitiveInformation))[0].SensitiveInformationDetections)).DetectedValues)))\r\n    | extend Detected = array_slice(todynamic(Detected1), 0, 5)\r\n    | extend SensitiveInformationTypeName = tostring(parse_json(tostring(parse_json(tostring(parse_json(tostring(PolicyDetails[0].Rules))[0].ConditionsMatched)).SensitiveInformation))[0].SensitiveInformationTypeName)\r\n    | extend MessageId = ObjectId\r\n    | extend linkoriginal = originalContent\r\n    | extend Actions = tostring(parse_json(tostring(parse_json(tostring(PolicyDetails[0].Rules))[0].Actions)))   \r\n    | extend SharePointMetaData_FilePathUrl_s = url_decode(tostring(SharePointMetaData.FilePathUrl))\r\n    | extend linkoriginal = iff(isempty(SharePointMetaData_FilePathUrl_s), originalContent, SharePointMetaData_FilePathUrl_s)\r\n    | extend Account = iff(isempty(SharePointMetaData.From), ExchangeMetaData.From, tolower(SharePointMetaData.From))    \r\n    | extend SubjectDoc = tostring(iff(isempty(SharePointMetaData.FileName), ExchangeMetaData.Subject, SharePointMetaData.FileName))\r\n    | extend Recipients = strcat(\"To:\", ExchangeMetaData.To, \" CC:\", ExchangeMetaData.CC, \" BCC:\", ExchangeMetaData.BCC) \r\n    | extend MatchCount = tostring(parse_json(tostring(parse_json(tostring(parse_json(tostring(PolicyDetails[0].Rules))[0].ConditionsMatched)).SensitiveInformation))[0].Count)\r\n    | extend MatchConfidence = tostring(parse_json(tostring(parse_json(tostring(parse_json(tostring(PolicyDetails[0].Rules))[0].ConditionsMatched)).SensitiveInformation))[0].Confidence)\r\n    | extend accountsplit = split(UserId, \"@\")\r\n    | extend SensitiveLabelIdnew = tostring(parse_json(SharePointMetaData.SensitivityLabelIds)[0])\r\n    | extend path = parse_path(SharePointMetaData_FilePathUrl_s)\r\n    | extend OfficeObjectId = tostring(path.DirectoryPath)\r\n    | join kind = leftouter\r\n        (\r\n        _GetWatchlist('SensitivityLabels')\r\n        | extend SensitiveLabelIdnew = tostring(id)\r\n        | extend Label = tostring(name)\r\n        )\r\n        on SensitiveLabelIdnew);\r\nlet folder = (dlpmain\r\n    | join kind = leftouter\r\n        (officedata\r\n        | summarize\r\n            by\r\n            SharePointMetaData_SiteCollectionUrl_s,\r\n            SharePointMetaData_FileName_s,\r\n            TargetUserOrGroupName,\r\n            OfficeObjectId\r\n        | summarize TargetUserOrGroupName = make_list(strcat(TargetUserOrGroupName))\r\n            by\r\n            OfficeObjectId,\r\n            SharePointMetaData_SiteCollectionUrl_s,\r\n            SharePointMetaData_FileName_s\r\n        | summarize take_any(TargetUserOrGroupName)\r\n            by\r\n            OfficeObjectId,\r\n            SharePointMetaData_SiteCollectionUrl_s,\r\n            SharePointMetaData_FileName_s\r\n        | join kind = leftouter\r\n            (\r\n            officedata\r\n            | summarize\r\n                by\r\n                SharePointMetaData_SiteCollectionUrl_s,\r\n                SharePointMetaData_FileName_s,\r\n                TargetUserOrGroupName,\r\n                OfficeObjectId\r\n            | extend Domsplit = split(TargetUserOrGroupName, \"@\")\r\n            | extend domain = Domsplit[1]\r\n            | summarize TargetDomain = make_list(strcat(domain)) by SharePointMetaData_FileName_s, OfficeObjectId\r\n            | summarize take_any(TargetDomain) by SharePointMetaData_FileName_s, OfficeObjectId\r\n            )\r\n            on OfficeObjectId\r\n        )\r\n        on OfficeObjectId\r\n    );\r\nlet files = (folder\r\n    //| where TargetUserOrGroupName == \"\"\r\n    | join kind = leftouter\r\n        (officedata\r\n        | summarize TargetUserOrGroupName = make_list(strcat(TargetUserOrGroupName)) by SharePointMetaData_FileName_s, SharePointMetaData_SiteCollectionUrl_s\r\n        | summarize take_any(TargetUserOrGroupName) by SharePointMetaData_FileName_s, SharePointMetaData_SiteCollectionUrl_s   \r\n        | join kind = leftouter\r\n            (\r\n            officedata\r\n            | summarize\r\n                by\r\n                SharePointMetaData_SiteCollectionUrl_s,\r\n                SharePointMetaData_FileName_s,\r\n                TargetUserOrGroupName\r\n            | extend Domsplit = split(TargetUserOrGroupName, \"@\")\r\n            | extend domain = Domsplit[1]\r\n            | summarize TargetDomain = make_list(strcat(domain)) by SharePointMetaData_FileName_s\r\n            | summarize take_any(TargetDomain) by SharePointMetaData_FileName_s\r\n            )\r\n            on SharePointMetaData_FileName_s\r\n        )\r\n        on SharePointMetaData_FileName_s, SharePointMetaData_SiteCollectionUrl_s\r\n    | extend TargetUserOrGroupName = TargetUserOrGroupName1\r\n    | extend TargetDomain = TargetDomain1\r\n    | where TargetUserOrGroupName != \"\"\r\n    );\r\nunion folder, files\r\n| summarize arg_max(TimeGenerated, *) by SubjectDoc, UserId, Identifier\r\n| join kind = leftouter\r\n    (\r\n    officedata\r\n    | extend Domsplit = split(TargetUserOrGroupName, \"@\")\r\n    | extend domain = Domsplit[1]\r\n    | where tolower(domain) in (domains)\r\n    | summarize TargetDomain = make_list(strcat(domain)) by tostring(SharePointMetaData_SiteCollectionUrl_s)\r\n    )\r\n    on SharePointMetaData_SiteCollectionUrl_s\r\n| extend HighRiskDomain = iff(isempty(TargetDomain), \"\", \"HighRiskDomain\")\r\n| extend Policy = strcat(tostring(PolicyDetails[0].PolicyName), \" \", HighRiskDomain)\r\n| extend RuleName = strcat(tostring(parse_json(tostring(PolicyDetails[0].Rules))[0].RuleName), \" \", HighRiskDomain)\r\n| extend SITLocation = tostring(parse_json(tostring(parse_json(tostring(parse_json(tostring(PolicyDetails[0].Rules))[0].ConditionsMatched)).SensitiveInformation))[0].Location)\r\n| extend OtherMatch = tostring(parse_json(tostring(parse_json(tostring(parse_json(tostring(PolicyDetails[0].Rules))[0].ConditionsMatched)).OtherConditions))[0])\r\n| extend severity = tostring(PolicyDetails[0].Rules[0].Severity)\r\n| extend Deeplink = strcat(\"https://compliance.microsoft.com/datalossprevention/alerts/eventdeeplink?eventid=\", Identifier, \"&creationtime=\", CreationTime)\r\n| summarize\r\n    by\r\n    Account,\r\n    Workload,\r\n    SensitiveInformationTypeName,\r\n    tostring(Detected),\r\n    linkoriginal,\r\n    Recipients,\r\n    SubjectDoc,\r\n    TimeGenerated,\r\n    manager,\r\n    department,\r\n    Actions,\r\n    Policy,\r\n    MatchConfidence,\r\n    MatchCount,\r\n    tostring(ExchangeMetaData.MessageID),\r\n    tostring(accountsplit[0]),\r\n    tostring(accountsplit[1]),\r\n    UserId,\r\n    Identifier,\r\n    Label,\r\n    tostring(SharePointMetaData.ExceptionInfo.Reason),\r\n    RuleName,\r\n    SITLocation,\r\n    OtherMatch,\r\n    tostring(severity),\r\n    jobTitle,\r\n    tostring(ExceptionInfo.Justification),\r\n    Deeplink,\r\n    tostring(TargetUserOrGroupName),\r\n    HighRiskDomain",
+                "query": "let policywatchlist =(_GetWatchlist('Policy')\n    | project SearchKey);\n\nlet domains=(_GetWatchlist('domains')\n    | project SearchKey);\n\nlet DLP = (PurviewDLP_CL\n    | extend path = parse_path(tostring(SharePointMetaData.FilePathUrl))\n    | extend DirectoryPath = tostring(path.DirectoryPath)\n    | summarize by DirectoryPath);\nlet officedata = (\n    OfficeActivity\n    | where ingestion_time() > ago(24h)\n    | where Operation == \"AddedToSecureLink\" or Operation == \"SecureLinkUsed\"\n    | where OfficeObjectId has_any (DLP)\n    | extend SiteCollectionUrl = Site_Url\n    | extend FileName = SourceFileName\n    | extend Account = tolower(UserId)\n    | extend Targetsplit = split(UserId, \"#\")\n    | extend TargetUserOrGroupName = iff(isempty(TargetUserOrGroupName), Targetsplit[1], TargetUserOrGroupName)\n    //Exclude internal domains\n    //| where TargetUserOrGroupName !has \"mydom1.com\"\n    | extend TargetUserOrGroupName = tolower(TargetUserOrGroupName)\n    | summarize\n        by FileName, SiteCollectionUrl, TargetUserOrGroupName, OfficeObjectId, Account);\n\nlet dlpmain = (\n    PurviewDLP_CL\n    | where Workload in ('SharePoint', 'OneDrive')\n    | extend Policy = tostring(PolicyDetails[0].PolicyName)\n    | where Policy != \"\" //Do Not Remove\n    | where not(Policy has_any (policywatchlist)) //Do not remove\n    | extend Detected1 = tostring(PolicyDetails[0].Rules[0].ConditionsMatched.SensitiveInformation[0].SensitiveInformationDetections.DetectedValues)\n    | extend Detected = array_slice(todynamic(Detected1), 0, 5)\n    | extend SensitiveInformationTypeName = tostring(PolicyDetails[0].Rules[0].ConditionsMatched.SensitiveInformation[0].SensitiveInformationTypeName)\n    | extend MessageId = ObjectId\n    | extend linkoriginal = originalContent\n    | extend Actions = tostring(PolicyDetails[0].Rules[0].Actions)   \n    | extend FilePathUrl = url_decode(tostring(SharePointMetaData.FilePathUrl))\n    | extend linkoriginal = iff(isempty(FilePathUrl), originalContent, FilePathUrl)\n    | extend Account = iff(isempty(SharePointMetaData.From), ExchangeMetaData.From, tolower(SharePointMetaData.From))    \n    | extend SubjectDoc = tostring(iff(isempty(SharePointMetaData.FileName), ExchangeMetaData.Subject, SharePointMetaData.FileName))\n    | extend Recipients = strcat(\"To:\", ExchangeMetaData.To, \" CC:\", ExchangeMetaData.CC, \" BCC:\", ExchangeMetaData.BCC) \n    | extend MatchConfidence = tostring(parse_json(tostring(parse_json(tostring(parse_json(tostring(PolicyDetails[0].Rules))[0].ConditionsMatched)).SensitiveInformation))[0].Confidence)\n    | extend accountsplit = split(UserId, \"@\")\n    | extend SensitiveLabelIdnew = tostring(SharePointMetaData.SensitivityLabelIds[0])\n    | extend path = parse_path(FilePathUrl)\n    | extend OfficeObjectId = tostring(path.DirectoryPath)\n    | join kind = leftouter\n        (\n        _GetWatchlist('SensitivityLabels')\n        | extend SensitiveLabelIdnew = tostring(id)\n        | extend Label = tostring(name)\n        )\n        on SensitiveLabelIdnew);\n\nlet folder = (dlpmain\n    | join kind = leftouter\n        (officedata\n        | summarize\n            by\n            SiteCollectionUrl,\n            FileName,\n            TargetUserOrGroupName,\n            OfficeObjectId\n        | summarize TargetUserOrGroupName = make_list(strcat(TargetUserOrGroupName))\n            by\n            OfficeObjectId,\n            SiteCollectionUrl,\n            FileName\n        | summarize take_any(TargetUserOrGroupName)\n            by\n            OfficeObjectId,\n            SiteCollectionUrl,\n            FileName\n        | join kind = leftouter\n            (\n            officedata\n            | summarize\n                by\n                SiteCollectionUrl,\n                FileName,\n                TargetUserOrGroupName,\n                OfficeObjectId\n            | extend Domsplit = split(TargetUserOrGroupName, \"@\")\n            | extend domain = Domsplit[1]\n            | summarize TargetDomain = make_list(strcat(domain)) by FileName, OfficeObjectId\n            | summarize take_any(TargetDomain) by FileName, OfficeObjectId\n            )\n            on OfficeObjectId\n        )\n        on OfficeObjectId\n    );\n\nlet files = (folder\n    //| where TargetUserOrGroupName == \"\"\n    | join kind = leftouter\n        (officedata\n        | summarize TargetUserOrGroupName = make_list(strcat(TargetUserOrGroupName)) by FileName, SiteCollectionUrl\n        | summarize take_any(TargetUserOrGroupName) by FileName, SiteCollectionUrl   \n        | join kind = leftouter\n            (\n            officedata\n            | summarize\n                by\n                SiteCollectionUrl,\n                FileName,\n                TargetUserOrGroupName\n            | extend Domsplit = split(TargetUserOrGroupName, \"@\")\n            | extend domain = Domsplit[1]\n            | summarize TargetDomain = make_list(strcat(domain)) by FileName\n            | summarize take_any(TargetDomain) by FileName\n            )\n            on FileName\n        )\n        on FileName, SiteCollectionUrl\n    | extend TargetUserOrGroupName = TargetUserOrGroupName1\n    | extend TargetDomain = TargetDomain1\n    | where TargetUserOrGroupName != \"\"\n    );\n    \nunion folder, files\n| summarize arg_max(TimeGenerated, *) by SubjectDoc, UserId, Identifier\n| join kind = leftouter\n    (\n    officedata\n    | extend Domsplit = split(TargetUserOrGroupName, \"@\")\n    | extend domain = Domsplit[1]\n    | where tolower(domain) in (domains)\n    | summarize TargetDomain = make_list(strcat(domain)) by tostring(SiteCollectionUrl)\n    )\n    on SiteCollectionUrl\n| extend HighRiskDomain = iff(isempty(TargetDomain), \"\", \"HighRiskDomain\")\n| extend Policy = strcat(tostring(PolicyDetails[0].PolicyName), \" \", HighRiskDomain)\n| extend RuleName = strcat(tostring(parse_json(tostring(PolicyDetails[0].Rules))[0].RuleName), \" \", HighRiskDomain)\n| extend SITLocation = tostring(parse_json(tostring(parse_json(tostring(parse_json(tostring(PolicyDetails[0].Rules))[0].ConditionsMatched)).SensitiveInformation))[0].Location)\n| extend OtherMatch = tostring(parse_json(tostring(parse_json(tostring(parse_json(tostring(PolicyDetails[0].Rules))[0].ConditionsMatched)).OtherConditions))[0])\n| extend severity = tostring(PolicyDetails[0].Rules[0].Severity)\n| extend Deeplink = strcat(\"https://compliance.microsoft.com/datalossprevention/alerts/eventdeeplink?eventid=\", Identifier, \"&creationtime=\", CreationTime)\n| mv-expand PolicyDetails\n| mv-expand PolicyDetails.Rules\n| mv-expand PolicyDetails_Rules.ConditionsMatched.SensitiveInformation\n| extend ProviderName = \"Microsoft Purview Sentinel Solution\"\n| extend ProductName = \"Microsoft Data Loss Prevention (Advanced)\"\n| summarize MatchCount = sum(toint(PolicyDetails_Rules_ConditionsMatched_SensitiveInformation.Count))\n    by Account, Workload, SensitiveInformationTypeName, tostring(Detected), linkoriginal, Recipients, SubjectDoc, TimeGenerated, manager, department, Actions, Policy, MatchConfidence, tostring(ExchangeMetaData.MessageID), tostring(accountsplit[0]), tostring(accountsplit[1]), UserId, Identifier, Label, tostring(SharePointMetaData.ExceptionInfo.Reason), RuleName, SITLocation, OtherMatch,\n    tostring(severity), jobTitle, tostring(ExceptionInfo.Justification), Deeplink, tostring(TargetUserOrGroupName), HighRiskDomain, usageLocation, ProviderName, ProductName\n",
                 "queryFrequency": "PT5M",
                 "queryPeriod": "PT5M",
                 "triggerOperator": "GreaterThan",
@@ -1531,23 +1559,38 @@
                   "alertDisplayNameFormat": "{{RuleName}}",
                   "alertDescriptionFormat": "{{Account}}, {{SubjectDoc}}",
                   "alertSeverityColumnName": "severity",
-                  "alertDynamicProperties": []
+                  "alertDynamicProperties": [
+                    {
+                      "alertProperty": "AlertLink",
+                      "value": "Deeplink"
+                    },
+                    {
+                      "alertProperty": "ProviderName",
+                      "value": "ProviderName"
+                    },
+                    {
+                      "alertProperty": "ProductName",
+                      "value": "ProductName"
+                    }
+                  ]
                 },
                 "customDetails": {
                   "User": "Account",
                   "JobTitle": "jobTitle",
+                  "Department": "department",
+                  "Manager": "manager",
+                  "Location": "usageLocation",
+                  "Workload": "Workload",
+                  "MatchCount": "MatchCount",
+                  "SensitiveInfoType": "SensitiveInformationTypeName",
+                  "DataDetected": "Detected",
+                  "Actions": "Actions",
                   "SharedWith": "TargetUserOrGroupName",
-                  "SensitiveData": "SensitiveInformationTypeName",
                   "Document": "SubjectDoc",
-                  "DataShared": "Detected",
                   "LocationofDetection": "SITLocation",
                   "RuleMatchOther": "OtherMatch",
-                  "Actions": "Actions",
-                  "NumberofMatches": "MatchCount",
-                  "Manager": "manager",
-                  "Department": "department",
                   "SharePointLabel": "Label",
-                  "DeepLink": "Deeplink"
+                  "EventID": "Identifier"
                 },
                 "entityMappings": [
                   {

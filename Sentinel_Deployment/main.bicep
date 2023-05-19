@@ -1,8 +1,8 @@
-@description('The name of the function app that you wish to create.')
+@description('A globally unique name for the Function App that will run the code to ingest DLP data into Sentinel.')
 param FunctionAppName string
 @description('Select to enable Application Insights for the Function App. This will allow you to monitor the status of the Function App for any errors. The Log Analytics Workspace specified in the "Log Analytics Resource Id" Parameter will be used to store the Application Insights data.')
 param DeployApplicationInsights bool = true
-@description('The name of the Key Vault to store Function App secrets.')
+@description('A globally unique name for the Key Vault to store Function App secrets.')
 param KeyVaultName string
 @description('Azure AD tenant ID in which DLP instance resides.')
 param TenantID string
@@ -16,9 +16,9 @@ param InternalDomainNames string = 'youradditionaldomain.com,yourdomain.com,your
 @description('Provide the Document library where you want to store the full email. IMPORTANT full path, with trailing /')
 param SharepointDocumentLibrary string = 'https://tenant.sharepoint.com/sites/DLPArchive/'
 @description('Name for Data Collection Endpoint used to ingest data into Log Analytics workspace.')
-param DataCollectionEndpointName string = 'dce-${uniqueString(resourceGroup().id)}'
+param DataCollectionEndpointName string
 @description('Name for Data Collection Rule used to ingest data into Log Analytics workspace.')
-param DataCollectionRuleName string = 'dcr-${uniqueString(resourceGroup().id)}'
+param DataCollectionRuleName string
 @description('Azure Resource ID of the Log Analytics Workspace where you would like the DLP and optional Function App Application Insights data to reside. The format is: "/subscriptions/xxxxxxxx-xxxxxxxx-xxxxxxxx-xxxxxxxx-xxxxxxxx/resourcegroups/xxxxxxxx/providers/microsoft.operationalinsights/workspaces/xxxxxxxx"')
 param LogAnalyticsWorkspaceResourceID string
 @description('Azure location/region of the Log Analytics Workspace referenced in the LogAnalyticsWorkspaceResourceId parameter.')
@@ -90,7 +90,7 @@ param LogAnalyticsWorkspaceResourceID string
 )
 param LogAnalyticsWorkspaceLocation string
 
-var storageAccountName = 'functionapp${uniqueString(resourceGroup().id)}'
+var storageAccountName = 'stfa${uniqueString(resourceGroup().id)}'
 var location = resourceGroup().location
 var functionAppPackageUri = 'https://raw.githubusercontent.com/anders-alex/O365-ActivityFeed-AzureFunction/Sentinel_Deployment/Sentinel_Deployment/functionPackage.zip'
 var deploymentScriptUri = 'https://raw.githubusercontent.com/anders-alex/O365-ActivityFeed-AzureFunction/Sentinel_Deployment/Sentinel_Deployment/deploymentScript.ps1'
@@ -312,6 +312,7 @@ resource functionApp 'Microsoft.Web/sites@2022-03-01' = {
     }
   }
   dependsOn: [
+    sentinelWatchlists
     keyVaultSecretStorageAccountConnectionString
     storageAccount
     fileShare
