@@ -87,8 +87,10 @@ param LogAnalyticsWorkspaceResourceID string
   ]
 )
 param LogAnalyticsWorkspaceLocation string
-@description('Create a Sentinel scheduled query rule for each DLP policy and workload (i.e., Teams, SharePoint, Endpoint, etc.) If "false", a single scheudled query rule will be created to cover all policies and workloads.')
+@description('Create a Sentinel scheduled query rule for each DLP policy and workload (i.e., Teams, SharePoint, Endpoint, etc.). If "false", a single scheduled query rule will be created to cover all policies and workloads.')
 param DLPPolicySync bool = false
+@description('Deploy Azure workbooks to help visualize the DLP data and manage DLP incidents.')
+param DeployWorkbooks bool = true
 
 var storageAccountName = 'stfa${uniqueString(resourceGroup().id)}'
 var location = resourceGroup().location
@@ -249,15 +251,15 @@ resource functionApp 'Microsoft.Web/sites@2022-03-01' = {
           value: '0'
         }
         {
-          name: 'AzureWebJobs.SynchEndpointDLPAnalyticRules.Disabled'
+          name: 'AzureWebJobs.SyncEndpointDLPAnalyticRules.Disabled'
           value: DLPPolicySync == false ? '1' : '0'
         }
         {
-          name: 'AzureWebJobs.SynchEXOTeamsDLPAnalyticRules.Disabled'
+          name: 'AzureWebJobs.SyncEXOTeamsDLPAnalyticRules.Disabled'
           value: DLPPolicySync == false ? '1' : '0'
         }
         {
-          name: 'AzureWebJobs.SynchSPODDLPAnalyticRules.Disabled'
+          name: 'AzureWebJobs.SyncSPODDLPAnalyticRules.Disabled'
           value: DLPPolicySync == false ? '1' : '0'
         }
         {
@@ -369,7 +371,7 @@ module sentinelWatchlists 'modules/sentinelWatchlists.bicep' = {
   name: 'sentinelWatchlists'
   scope: resourceGroup(split(LogAnalyticsWorkspaceResourceID, '/')[2], split(LogAnalyticsWorkspaceResourceID, '/')[4])
   dependsOn: [
-    createCustomTables 
+    createCustomTables
   ]
   params: {
     lawName: split(LogAnalyticsWorkspaceResourceID, '/')[8]
@@ -387,6 +389,17 @@ module sentinelRules 'modules/sentinelRules.bicep' = {
   params: {
     workspace: split(LogAnalyticsWorkspaceResourceID, '/')[8]
   }
+}
+
+module sentinelWorkbooks 'modules/sentinelRules.bicep' = if(DeployWorkbooks == true) {
+  name: 'sentinelWorkbooks'
+  dependsOn: [
+    createCustomTables
+    deploymentScript
+  ]
+  params: {
+    workspace: LogAnalyticsWorkspaceResourceID
+  } 
 }
 
 resource deploymentScript 'Microsoft.Resources/deploymentScripts@2020-10-01' = {
