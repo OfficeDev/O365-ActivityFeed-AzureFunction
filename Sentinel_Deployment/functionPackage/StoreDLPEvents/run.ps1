@@ -31,9 +31,6 @@ $dcrImmutableId = $env:DcrImmutableId
 $dceUri = $env:DceUri
 $uamiClientId = $env:UamiClientId
 
-#SharePoint Site US
-$SPUS = $env:SPUS
-
 #Retry logic primarily for AF429 where there is more than 60k requests per minute, much code reused from https://stackoverflow.com/questions/45470999/powershell-try-catch-and-retry
 function Test-Command {
     [CmdletBinding()]
@@ -206,19 +203,7 @@ Foreach ($user in $records) {
             $querymanager = "https://graph.microsoft.com/v1.0/users/" + $info.userPrincipalName + "/manager"
             $manager = Invoke-RestMethod -Headers $headerParamsG -Uri $querymanager -SkipHttpErrorCheck
             if ($manager) { $user | Add-Member -MemberType NoteProperty -Name "manager" -Value $manager.mail }
-        
-            if ($user.workload -eq "Exchange") {
-
-                #Add link to the location of the original content !!!! Remember to add per Geo depending on Geo
-                $original = $user.ExchangeMetaData.MessageID -replace ("\<", "_") -replace ("\>", "_")
-                $spousLocation = [uri]::EscapeUriString($SPUS + $user.PolicyDetails.rules.RuleName + "/" + $original + ".eml")
-                $spoSELocation = $SPUS + $user.PolicyDetails.rules.RuleName + "/" + $original + ".eml"
-                
-                #Determine SPO Geo to point to this is pointing to the US sample, only Exchange provide full content
-                if (($user.usageLocation -eq "US") -and ($user.workload -eq "Exchange")) { $user | Add-Member -MemberType NoteProperty -Name "originalContent" -Value $spousLocation }
-                if (($user.usageLocation -ne "US") -and ($user.workload -eq "Exchange")) { $user | Add-Member -MemberType NoteProperty -Name "originalContent" -Value $spousLocation }
-   
-            }   
+          
             Clear-Variable -name info                                                                                                         
         }
 
@@ -336,7 +321,7 @@ if ($workspace) {
         $activeWS = $workspace.name
         if ($uploadWS.$activeWS) {
             #Add required TimeGenerated field and create alias for Id field since that name is not allowed by Azure Monitor.
-            $uploadWS.$activeWS | Add-Member -NotePropertyName 'TimeGenerated' -NotePropertyValue (Get-Date -Format 'yyyy-MM-ddTHH:mm:ssZ' -AsUTC)
+            $allWS | Add-Member -MemberType AliasProperty -Name 'TimeGenerated' -Value CreationTime
             $uploadWS.$activeWS | Add-Member -MemberType AliasProperty -Name Identifier -Value Id
 
             #Send received data to Azure Monitor.
@@ -353,7 +338,7 @@ $allWS += $endpointupload
 $allWS += $powerbiupload
 if ($allWS) {
     #Add required TimeGenerated field and create alias for Id field since that name is not allowed by Azure Monitor.
-    $allWS | Add-Member -NotePropertyName 'TimeGenerated' -NotePropertyValue (Get-Date -Format 'yyyy-MM-ddTHH:mm:ssZ' -AsUTC)
+    $allWS | Add-Member -MemberType AliasProperty -Name 'TimeGenerated' -Value CreationTime
     $allWS | Add-Member -MemberType AliasProperty -Name Identifier -Value Id
 
     #Send received data to Azure Monitor.

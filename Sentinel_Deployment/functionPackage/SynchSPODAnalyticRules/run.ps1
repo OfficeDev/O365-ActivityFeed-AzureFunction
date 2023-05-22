@@ -60,7 +60,7 @@ foreach ($workspace in $main.GetEnumerator()) {
   $rules = Invoke-RestMethod -Method "Get" -Uri $urllist -Headers $authHeader
 
   #Fetch Template
-  $template0 = $rules.value | where-object { $_.properties.displayname -eq "Purview DLP Template (SharePoint and OneDrive)" } | select-object
+  $template0 = $rules.value | where-object { $_.properties.displayname -eq "Microsoft DLP Template (SharePoint and OneDrive)" } | select-object
   $date = Get-Date
 
   if (-not ($rules)) { throw 'Failed to connect to Sentinel Workspace' }
@@ -71,7 +71,7 @@ foreach ($workspace in $main.GetEnumerator()) {
     $alreadyprocessed = $path + "," + $policy.Name 
     if ($SPOprocessedrules -notcontains $alreadyprocessed) {
    
-      $policyName2 = "Purview DLP - " + $policy.Name + " (SPOD)"
+      $policyName2 = "Microsoft DLP - " + $policy.Name + " (SPOD)"
       $matchexisting = $rules.value | where-object { $_.properties.displayname -eq $policyName2 } | select-object
       $template = $template0 | ConvertTo-Json -Depth 20 | ConvertFrom-Json
     

@@ -9,11 +9,11 @@ $tenantGUID = "$env:TenantGuid"
 $resource = "https://graph.microsoft.com"
 
 # Get an Oauth 2 access token based on client id, secret and tenant domain
-$body = @{grant_type="client_credentials";resource=$resource;client_id=$ClientID;client_secret=$ClientSecret}
+$body = @{grant_type = "client_credentials"; resource = $resource; client_id = $ClientID; client_secret = $ClientSecret }
 $oauth = Invoke-RestMethod -Method Post -Uri $loginURL/$tenantGUID/oauth2/token?api-version=1.0 -Body $body
 
 #Let's put the oauth token in the header, where it belongs
-$headerParams  = @{'Authorization'="$($oauth.token_type) $($oauth.access_token)"}
+$headerParams = @{'Authorization' = "$($oauth.token_type) $($oauth.access_token)" }
 
 #Code to sign-in to Sentinel
 $context = Get-AzContext
@@ -21,9 +21,9 @@ $profileR = [Microsoft.Azure.Commands.Common.Authentication.Abstractions.AzureRm
 $profileClient = New-Object -TypeName Microsoft.Azure.Commands.ResourceManager.Common.RMProfileClient -ArgumentList ($profileR)
 $token = $profileClient.AcquireAccessToken($context.Subscription.TenantId)
 $authHeader = @{
-  'Content-Type' = 'application/json'
-  'Authorization' = 'Bearer ' + $token.AccessToken 
-               }
+    'Content-Type'  = 'application/json'
+    'Authorization' = 'Bearer ' + $token.AccessToken 
+}
 
 Set-AzContext $context.Subscription.name
 $instance = Get-AzResource -Name $env:SentinelWorkspace -ResourceType Microsoft.OperationalInsights/workspaces
@@ -35,22 +35,22 @@ $watchlist = Invoke-AzOperationalInsightsQuery -WorkspaceId $WorkspaceID -Query 
 
 #Fetch the labels and prepare for export
 $labels = Invoke-RestMethod -Headers $headerParams -Uri "https://graph.microsoft.com/beta/security/informationProtection/sensitivityLabels" -Method Get -ContentType "application/json"
-$sLabels = $labels.value | select id,name,@{N='parent';E={$_.parent.name}}  
+$sLabels = $labels.value | select id, name, @{N = 'parent'; E = { $_.parent.name } }  
 
 # Watchlist update 
 $path = $instance.ResourceId                           
 $csv = $sLabels
 
 foreach ($item in $csv) {
-if ($item.id -notin $watchlist.results.SearchKey) {
- $etag = New-Guid
-               $a= @{
-                'etag'= $etag.guid
-                'properties'= @{itemsKeyValue = @()}
-                    }           
-                $a.properties.itemsKeyValue = $item  
-                $update = $a | convertto-json    
-            $urlupdate = "https://management.azure.com$path/providers/Microsoft.SecurityInsights/watchlists/SensitivityLabels/watchlistitems/$($etag)?api-version=2023-04-01-preview"
-            Invoke-RestMethod -Method "Put" -Uri $urlupdate -Headers $authHeader -body $update
-                                            }
-                        }
+    if ($item.id -notin $watchlist.results.SearchKey) {
+        $etag = New-Guid
+        $a = @{
+            'etag'       = $etag.guid
+            'properties' = @{itemsKeyValue = @() }
+        }           
+        $a.properties.itemsKeyValue = $item  
+        $update = $a | convertto-json    
+        $urlupdate = "https://management.azure.com$path/providers/Microsoft.SecurityInsights/watchlists/SensitivityLabels/watchlistitems/$($etag)?api-version=2023-04-01-preview"
+        Invoke-RestMethod -Method "Put" -Uri $urlupdate -Headers $authHeader -body $update
+    }
+}

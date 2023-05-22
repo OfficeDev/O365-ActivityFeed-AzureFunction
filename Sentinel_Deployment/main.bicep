@@ -87,6 +87,8 @@ param LogAnalyticsWorkspaceResourceID string
   ]
 )
 param LogAnalyticsWorkspaceLocation string
+@description('Create a Sentinel scheduled query rule for each DLP policy and workload (i.e., Teams, SharePoint, Endpoint, etc.) If "false", a single scheudled query rule will be created to cover all policies and workloads.')
+param DLPPolicySync bool = false
 
 var storageAccountName = 'stfa${uniqueString(resourceGroup().id)}'
 var location = resourceGroup().location
@@ -247,6 +249,18 @@ resource functionApp 'Microsoft.Web/sites@2022-03-01' = {
           value: '0'
         }
         {
+          name: 'AzureWebJobs.SynchEndpointDLPAnalyticRules.Disabled'
+          value: DLPPolicySync == false ? '1' : '0'
+        }
+        {
+          name: 'AzureWebJobs.SynchEXOTeamsDLPAnalyticRules.Disabled'
+          value: DLPPolicySync == false ? '1' : '0'
+        }
+        {
+          name: 'AzureWebJobs.SynchSPODDLPAnalyticRules.Disabled'
+          value: DLPPolicySync == false ? '1' : '0'
+        }
+        {
           name: 'ClientID'
           value: ClientID
         }
@@ -265,10 +279,6 @@ resource functionApp 'Microsoft.Web/sites@2022-03-01' = {
         {
           name: 'domains'
           value: InternalDomainNames
-        }
-        {
-          name: 'SPUS'
-          value: 'https://tenant.sharepoint.com/sites/DLPArchive/'
         }
         {
           name: 'storageQueue'
@@ -363,6 +373,7 @@ module sentinelWatchlists 'modules/sentinelWatchlists.bicep' = {
   ]
   params: {
     lawName: split(LogAnalyticsWorkspaceResourceID, '/')[8]
+    policySync: DLPPolicySync 
   }
 }
 

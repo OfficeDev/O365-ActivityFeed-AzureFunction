@@ -1,11 +1,11 @@
 param lawName string
-
+param policySync bool = false
 
 resource workspace 'Microsoft.OperationalInsights/workspaces@2022-10-01' existing = {
   name: lawName
 }
 
-resource watchlistPolicy 'Microsoft.SecurityInsights/watchlists@2023-02-01' = {
+resource watchlistPolicy 'Microsoft.SecurityInsights/watchlists@2023-02-01' = if(policySync == true) {
   name: 'Policy'
   scope: workspace
   properties: {

@@ -49,7 +49,7 @@ foreach ($workspace in $main.GetEnumerator()) {
   $q2 = '(_GetWatchlist("Policy") | project SearchKey)'
   $watchlist = Invoke-AzOperationalInsightsQuery -WorkspaceId $WorkspaceID -Query $q2
 
-  $policies = $response.results | where { ($_.Workload -contains "EndPoint") }
+  $policies = $response.results | where { ($_.Workload -contains "Endpoint") }
   $policies = $policies | Select-Object -Unique Name  
 
   $processedPolicies = @()
@@ -61,7 +61,7 @@ foreach ($workspace in $main.GetEnumerator()) {
   $rules = Invoke-RestMethod -Method "Get" -Uri $urllist -Headers $authHeader
 
   #Fetch Template
-  $template0 = $rules.value | where-object { $_.properties.displayname -eq "Purview DLP Template (Endpoint)" }
+  $template0 = $rules.value | where-object { $_.properties.displayname -eq "Microsoft DLP Template (Endpoint)" }
 
   if (-not ($rules)) { throw 'Failed to connect to Sentinel Workspace' }
   if (-not ($template0)) { throw 'Failed to retreive template' }
@@ -71,10 +71,11 @@ foreach ($workspace in $main.GetEnumerator()) {
 
 
     $alreadyprocessed = $path + "," + $policy.Name 
-    if ($EPprocessedrules -notcontains $alreadyprocessed) { #-and ((get-date $policy.whenChanged).ToString("yyyy-MM-ddTHH:mm:ss.fffZ") -gt (get-date $lastpolicychange).ToString("yyyy-MM-ddTHH:mm:ss.fffZ")))
+    if ($EPprocessedrules -notcontains $alreadyprocessed) {
+      #-and ((get-date $policy.whenChanged).ToString("yyyy-MM-ddTHH:mm:ss.fffZ") -gt (get-date $lastpolicychange).ToString("yyyy-MM-ddTHH:mm:ss.fffZ")))
 
       #Updating with the severity and name of the Dlp Policy
-      $policyName = "Purview DLP - " + $policy.name + " (Endpoint)"
+      $policyName = "Microsoft DLP - " + $policy.name + " (Endpoint)"
       $matchexisting = $rules.value | where-object { $_.properties.displayname -eq $policyName } | select-object *
  
       # Deep copy of template
