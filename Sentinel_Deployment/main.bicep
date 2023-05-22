@@ -1,24 +1,26 @@
 @description('A globally unique name for the Function App to be created which will run the code to ingest DLP data into Sentinel.')
-param FunctionAppName string
+param FunctionAppName string = 'fa-sentineldlp'
 @description('Select to enable Application Insights for the Function App. This will allow you to monitor the status of the Function App for any errors. The Log Analytics Workspace specified in the "Log Analytics Resource Id" Parameter will be used to store the Application Insights data.')
 param DeployApplicationInsights bool = true
 @description('A globally unique name for the Key Vault to be created which will store Function App secrets.')
-param KeyVaultName string
+param KeyVaultName string = 'kv-sentineldlp-[Replace with globally unique identifier]'
+@description('A globally unique name for the Function App Storage Account. Must be between 3 and 24 characters in length and use numbers and lower-case letters only.')
+param StorageAccountName string = 'stsentineldlp[Replace with globally unique identifier]'
 @description('Azure AD tenant ID in which DLP instance resides.')
-param TenantID string
+param TenantID string = 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
 @description('App Registration Client ID.')
-param ClientID string
+param ClientID string = 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
 @secure()
 @description('App Registration Client secret.')
 param ClientSecret string
 @description('Internal domain names for your organization to better determine the source of email messages.')
 param InternalDomainNames string = 'youradditionaldomain.com,yourdomain.com,yourtenant.onmicrosoft.com'
 @description('Name for Data Collection Endpoint to be created which is used to ingest data into Log Analytics workspace.')
-param DataCollectionEndpointName string
+param DataCollectionEndpointName string = 'dce-sentineldlp'
 @description('Name for Data Collection Rule to be created which is used to ingest data into Log Analytics workspace.')
-param DataCollectionRuleName string
+param DataCollectionRuleName string = 'dcr-sentineldlp'
 @description('Azure Resource ID of the existing Log Analytics Workspace where you would like the DLP and optional Function App Application Insights data to reside. The format is: "/subscriptions/xxxxxxxx-xxxxxxxx-xxxxxxxx-xxxxxxxx-xxxxxxxx/resourcegroups/xxxxxxxx/providers/microsoft.operationalinsights/workspaces/xxxxxxxx"')
-param LogAnalyticsWorkspaceResourceID string
+param LogAnalyticsWorkspaceResourceID string = '/subscriptions/xxxxxxxx-xxxxxxxx-xxxxxxxx-xxxxxxxx-xxxxxxxx/resourcegroups/xxxxxxxx/providers/microsoft.operationalinsights/workspaces/xxxxxxxx'
 @description('Azure location/region of the Log Analytics Workspace referenced in the LogAnalyticsWorkspaceResourceID parameter.')
 @allowed(
   [
@@ -92,7 +94,6 @@ param DLPPolicySync bool = false
 @description('Deploy Azure workbooks to help visualize the DLP data and manage DLP incidents.')
 param DeployWorkbooks bool = true
 
-var storageAccountName = 'stfa${uniqueString(resourceGroup().id)}'
 var location = resourceGroup().location
 var functionAppPackageUri = 'https://raw.githubusercontent.com/anders-alex/O365-ActivityFeed-AzureFunction/Sentinel_Deployment/Sentinel_Deployment/functionPackage.zip'
 var deploymentScriptUri = 'https://raw.githubusercontent.com/anders-alex/O365-ActivityFeed-AzureFunction/Sentinel_Deployment/Sentinel_Deployment/deploymentScript.ps1'
@@ -103,7 +104,7 @@ resource userAssignedMi 'Microsoft.ManagedIdentity/userAssignedIdentities@2022-0
 }
 
 resource storageAccount 'Microsoft.Storage/storageAccounts@2021-08-01' = {
-  name: storageAccountName
+  name: StorageAccountName
   location: location
   kind: 'StorageV2'
   sku: {
@@ -167,7 +168,7 @@ resource keyVaultSecretStorageAccountConnectionString 'Microsoft.KeyVault/vaults
   parent: keyVault
   name: 'StorageAccountConnectionString'
   properties: {
-    value: 'DefaultEndpointsProtocol=https;AccountName=${storageAccountName};EndpointSuffix=${environment().suffixes.storage};AccountKey=${storageAccount.listKeys().keys[0].value}'
+    value: 'DefaultEndpointsProtocol=https;AccountName=${StorageAccountName};EndpointSuffix=${environment().suffixes.storage};AccountKey=${storageAccount.listKeys().keys[0].value}'
   }
 }
 

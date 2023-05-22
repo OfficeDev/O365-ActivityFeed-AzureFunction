@@ -5,12 +5,13 @@
     "_generator": {
       "name": "bicep",
       "version": "0.17.1.54307",
-      "templateHash": "15436610881703283998"
+      "templateHash": "8147571085008300223"
     }
   },
   "parameters": {
     "FunctionAppName": {
       "type": "string",
+      "defaultValue": "fa-sentineldlp",
       "metadata": {
         "description": "A globally unique name for the Function App to be created which will run the code to ingest DLP data into Sentinel."
       }
@@ -24,18 +25,28 @@
     },
     "KeyVaultName": {
       "type": "string",
+      "defaultValue": "kv-sentineldlp-[Replace with globally unique identifier]",
       "metadata": {
         "description": "A globally unique name for the Key Vault to be created which will store Function App secrets."
       }
     },
+    "StorageAccountName": {
+      "type": "string",
+      "defaultValue": "stsentineldlp[Replace with globally unique identifier]",
+      "metadata": {
+        "description": "A globally unique name for the Function App Storage Account. Must be between 3 and 24 characters in length and use numbers and lower-case letters only."
+      }
+    },
     "TenantID": {
       "type": "string",
+      "defaultValue": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
       "metadata": {
         "description": "Azure AD tenant ID in which DLP instance resides."
       }
     },
     "ClientID": {
       "type": "string",
+      "defaultValue": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
       "metadata": {
         "description": "App Registration Client ID."
       }
@@ -55,18 +66,21 @@
     },
     "DataCollectionEndpointName": {
       "type": "string",
+      "defaultValue": "dce-sentineldlp",
       "metadata": {
         "description": "Name for Data Collection Endpoint to be created which is used to ingest data into Log Analytics workspace."
       }
     },
     "DataCollectionRuleName": {
       "type": "string",
+      "defaultValue": "dcr-sentineldlp",
       "metadata": {
         "description": "Name for Data Collection Rule to be created which is used to ingest data into Log Analytics workspace."
       }
     },
     "LogAnalyticsWorkspaceResourceID": {
       "type": "string",
+      "defaultValue": "/subscriptions/xxxxxxxx-xxxxxxxx-xxxxxxxx-xxxxxxxx-xxxxxxxx/resourcegroups/xxxxxxxx/providers/microsoft.operationalinsights/workspaces/xxxxxxxx",
       "metadata": {
         "description": "Azure Resource ID of the existing Log Analytics Workspace where you would like the DLP and optional Function App Application Insights data to reside. The format is: \"/subscriptions/xxxxxxxx-xxxxxxxx-xxxxxxxx-xxxxxxxx-xxxxxxxx/resourcegroups/xxxxxxxx/providers/microsoft.operationalinsights/workspaces/xxxxxxxx\""
       }
@@ -157,7 +171,6 @@
     }
   },
   "variables": {
-    "storageAccountName": "[format('stfa{0}', uniqueString(resourceGroup().id))]",
     "location": "[resourceGroup().location]",
     "functionAppPackageUri": "https://raw.githubusercontent.com/anders-alex/O365-ActivityFeed-AzureFunction/Sentinel_Deployment/Sentinel_Deployment/functionPackage.zip",
     "deploymentScriptUri": "https://raw.githubusercontent.com/anders-alex/O365-ActivityFeed-AzureFunction/Sentinel_Deployment/Sentinel_Deployment/deploymentScript.ps1"
@@ -172,7 +185,7 @@
     {
       "type": "Microsoft.Storage/storageAccounts",
       "apiVersion": "2021-08-01",
-      "name": "[variables('storageAccountName')]",
+      "name": "[parameters('StorageAccountName')]",
       "location": "[variables('location')]",
       "kind": "StorageV2",
       "sku": {
@@ -185,17 +198,17 @@
     {
       "type": "Microsoft.Storage/storageAccounts/fileServices/shares",
       "apiVersion": "2022-09-01",
-      "name": "[format('{0}/default/{1}', variables('storageAccountName'), toLower(parameters('FunctionAppName')))]",
+      "name": "[format('{0}/default/{1}', parameters('StorageAccountName'), toLower(parameters('FunctionAppName')))]",
       "dependsOn": [
-        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
+        "[resourceId('Microsoft.Storage/storageAccounts', parameters('StorageAccountName'))]"
       ]
     },
     {
       "type": "Microsoft.Storage/storageAccounts/queueServices/queues",
       "apiVersion": "2022-09-01",
-      "name": "[format('{0}/default/dlpqueue', variables('storageAccountName'))]",
+      "name": "[format('{0}/default/dlpqueue', parameters('StorageAccountName'))]",
       "dependsOn": [
-        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
+        "[resourceId('Microsoft.Storage/storageAccounts', parameters('StorageAccountName'))]"
       ]
     },
     {
@@ -233,11 +246,11 @@
       "apiVersion": "2022-07-01",
       "name": "[format('{0}/{1}', parameters('KeyVaultName'), 'StorageAccountConnectionString')]",
       "properties": {
-        "value": "[format('DefaultEndpointsProtocol=https;AccountName={0};EndpointSuffix={1};AccountKey={2}', variables('storageAccountName'), environment().suffixes.storage, listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), '2021-08-01').keys[0].value)]"
+        "value": "[format('DefaultEndpointsProtocol=https;AccountName={0};EndpointSuffix={1};AccountKey={2}', parameters('StorageAccountName'), environment().suffixes.storage, listKeys(resourceId('Microsoft.Storage/storageAccounts', parameters('StorageAccountName')), '2021-08-01').keys[0].value)]"
       },
       "dependsOn": [
         "[resourceId('Microsoft.KeyVault/vaults', parameters('KeyVaultName'))]",
-        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
+        "[resourceId('Microsoft.Storage/storageAccounts', parameters('StorageAccountName'))]"
       ]
     },
     {
@@ -395,11 +408,11 @@
       "dependsOn": [
         "[resourceId('Microsoft.Insights/components', format('appInsights-{0}', parameters('FunctionAppName')))]",
         "[resourceId('Microsoft.Resources/deployments', 'createCustomTables')]",
-        "[resourceId('Microsoft.Storage/storageAccounts/fileServices/shares', split(format('{0}/default/{1}', variables('storageAccountName'), toLower(parameters('FunctionAppName'))), '/')[0], split(format('{0}/default/{1}', variables('storageAccountName'), toLower(parameters('FunctionAppName'))), '/')[1], split(format('{0}/default/{1}', variables('storageAccountName'), toLower(parameters('FunctionAppName'))), '/')[2])]",
+        "[resourceId('Microsoft.Storage/storageAccounts/fileServices/shares', split(format('{0}/default/{1}', parameters('StorageAccountName'), toLower(parameters('FunctionAppName'))), '/')[0], split(format('{0}/default/{1}', parameters('StorageAccountName'), toLower(parameters('FunctionAppName'))), '/')[1], split(format('{0}/default/{1}', parameters('StorageAccountName'), toLower(parameters('FunctionAppName'))), '/')[2])]",
         "[resourceId('Microsoft.Web/serverfarms', parameters('FunctionAppName'))]",
         "[resourceId('Microsoft.KeyVault/vaults/secrets', parameters('KeyVaultName'), 'StorageAccountConnectionString')]",
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[2], split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[4]), 'Microsoft.Resources/deployments', 'sentinelWatchlists')]",
-        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]",
+        "[resourceId('Microsoft.Storage/storageAccounts', parameters('StorageAccountName'))]",
         "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('uami-{0}', parameters('FunctionAppName')))]"
       ]
     },
