@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.17.1.54307",
-      "templateHash": "8147571085008300223"
+      "templateHash": "13006904382695313549"
     }
   },
   "parameters": {
@@ -1856,7 +1856,7 @@
         },
         "mode": "Incremental",
         "parameters": {
-          "workspace": {
+          "workbookSourceId": {
             "value": "[parameters('LogAnalyticsWorkspaceResourceID')]"
           }
         },
@@ -1867,574 +1867,60 @@
             "_generator": {
               "name": "bicep",
               "version": "0.17.1.54307",
-              "templateHash": "11621033638309293668"
+              "templateHash": "8975266872808717039"
             }
           },
           "parameters": {
-            "workspace": {
-              "type": "string"
+            "workbookDisplayName": {
+              "type": "string",
+              "defaultValue": "Microsoft Purview DLP Incident Management",
+              "metadata": {
+                "description": "The friendly name for the workbook that is used in the Gallery or Saved List.  This name must be unique within a resource group."
+              }
             },
-            "policySync": {
-              "type": "bool",
-              "defaultValue": false
+            "workbookType": {
+              "type": "string",
+              "defaultValue": "sentinel",
+              "metadata": {
+                "description": "The gallery that the workbook will been shown under. Supported values include workbook, tsg, etc. Usually, this is 'workbook'"
+              }
+            },
+            "workbookSourceId": {
+              "type": "string",
+              "metadata": {
+                "description": "The id of resource instance to which the workbook will be associated"
+              }
+            },
+            "workbookId": {
+              "type": "string",
+              "defaultValue": "[newGuid()]",
+              "metadata": {
+                "description": "The unique guid for this workbook instance"
+              }
             }
           },
           "resources": [
             {
-              "condition": "[equals(parameters('policySync'), false())]",
-              "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
-              "apiVersion": "2022-11-01-preview",
-              "name": "[format('{0}/Microsoft.SecurityInsights/64621844-3809-45b1-a072-50b93283e095', parameters('workspace'))]",
-              "kind": "Scheduled",
+              "type": "Microsoft.Insights/workbooks",
+              "apiVersion": "2022-04-01",
+              "name": "[parameters('workbookId')]",
+              "location": "[resourceGroup().location]",
+              "kind": "shared",
               "properties": {
-                "displayName": "Microsoft DLP Incident Creation",
-                "description": "",
-                "severity": "Medium",
-                "enabled": true,
-                "query": "let alertProductName = 'Microsoft Data Loss Prevention (Custom)';\r\nlet endpointSeverityMatchCountTrigger = 2;\r\n\r\nlet DLPCommon = PurviewDLP_CL\r\n| join kind=leftanti (SecurityAlert\r\n    | where TimeGenerated > ago(12h)\r\n    | where ProductName == alertProductName\r\n    | extend Identifier = substring(AlertLink, indexof(AlertLink, 'eventid=') + 8, indexof(AlertLink, '&creationtime') - indexof(AlertLink, 'eventid=') - 8)\r\n    ) on Identifier\r\n| mv-expand PolicyDetails\r\n| where PolicyDetails.PolicyName != ''\r\n| mv-expand Rules = PolicyDetails.Rules\r\n| mv-expand ActionsTaken = Rules.Actions\r\n| mv-expand SensitiveInfo = Rules.ConditionsMatched.SensitiveInformation\r\n| extend RulesString = tostring(Rules), SensitiveInfoString = tostring(SensitiveInfo)\r\n| summarize ActionsTaken = make_set(ActionsTaken), arg_max(TimeGenerated, *) by TimeGenerated, CreationTime, Identifier, RulesString, SensitiveInfoString\r\n| extend SensitiveInfoType = bag_pack('Name', SensitiveInfo.SensitiveInformationTypeName, 'Count', toint(SensitiveInfo.Count), 'Confidence', toint(SensitiveInfo.Confidence))\r\n| extend\r\n    ActionsTaken = strcat_array(ActionsTaken, ', '),\r\n    SensitiveInfoTypeString = strcat(SensitiveInfoType.Name, ' (', SensitiveInfoType.Count, ', ', SensitiveInfoType.Confidence, '%)'),\r\n    Product = alertProductName,\r\n    PolicyName = tostring(PolicyDetails.PolicyName),\r\n    RuleName = tostring(Rules.RuleName),\r\n    RuleSeverity = tostring(Rules.Severity),\r\n    UserPrincipalName = tolower(UserId),\r\n    UserObjectId = UserKey,\r\n    Deeplink = strcat('https://compliance.microsoft.com/datalossprevention/alerts/eventdeeplink?eventid=', Identifier, '&creationtime=', CreationTime)\r\n| order by TimeGenerated asc\r\n| take 150;\r\n\r\nlet DLPSPOD = DLPCommon\r\n| where Workload in ('SharePoint', 'OneDrive')\r\n| mv-expand SensitivityLablelId = SharePointMetaData.SensitivityLablelIds\r\n| extend SensitivityLabelId = tostring(SharePointMetaData.SensitivityLablelId)\r\n| join kind = leftouter (_GetWatchlist('SensitivityLabels')\r\n    | extend SensitivityLabelId = tostring(column_ifexists('id', '')),\r\n        SensitivityLabelName = tostring(column_ifexists('name', ''))) on SensitivityLabelId\r\n| extend OfficeObjectId = url_decode(tostring(SharePointMetaData.FilePathUrl))\r\n| extend CreationTimeBin = bin(CreationTime, 1m)\r\n| join kind = leftouter (OfficeActivity\r\n    | where ingestion_time() > ago(24h)\r\n    | where Operation == \"AddedToSecureLink\" or Operation == \"SecureLinkUsed\"\r\n    | extend CreationTimeBin = bin(TimeGenerated, 1m),\r\n        TargetUserOrGroupName = tolower(iff(isempty(TargetUserOrGroupName), split(UserId, \"#\")[1], TargetUserOrGroupName))\r\n    ) on OfficeObjectId, CreationTimeBin\r\n| extend Filename = tostring(SharePointMetaData.FileName),\r\n    FilePath = tostring(SharePointMetaData.FilePathUrl),\r\n    SiteUrl = tostring(SharePointMetaData.SiteCollectionUrl),\r\n    ExceptionReason = tostring(SharePointMetaData.ExceptionInfo.Reason)\r\n| summarize SensitiveInfoTypesArray = make_list(SensitiveInfoType), SensitiveInfoTypes = make_set(SensitiveInfoTypeString), TotalMatchCount = sum(toint(SensitiveInfoType.Count)), SensitivityLabels = make_list(SensitivityLabelName) by TimeGenerated, CreationTime, Identifier, Product, Workload, Deeplink, usageLocation, UserPrincipalName, UserObjectId, department, manager, jobTitle, PolicyName, RuleName, RuleSeverity, ActionsTaken, FilePath, Filename, SiteUrl, TargetUserOrGroupName, ExceptionReason, Operation;\r\n\r\nlet DLPEXOT = DLPCommon\r\n| where Workload in ('Exchange', 'MicrosoftTeams')\r\n| extend Recipients = iff(Workload == 'Exchange', tostring(strcat(array_strcat(ExchangeMetaData.To, ', '), iff(array_length(ExchangeMetaData.CC) == 0, '', \", \"), array_strcat(ExchangeMetaData.CC, ', '), iff(array_length(ExchangeMetaData.BCC) == 0, '', \", \"))), tostring(strcat_array(ExchangeMetaData.To, ', '))),\r\n    InternetMessageId = replace_string(replace_string(tostring(ExchangeMetaData.MessageID), '<', ''), '>',''),\r\n    EmailSubject = tostring(ExchangeMetaData.Subject),\r\n    Sender = UserPrincipalName,\r\n    ExceptionReason = tostring(ExchangeMetaData.ExceptionInfo.Reason)\r\n| summarize SensitiveInfoTypesArray = make_list(SensitiveInfoType), SensitiveInfoTypes = make_set(SensitiveInfoTypeString), TotalMatchCount = sum(toint(SensitiveInfoType.Count)), DetectedLocations = make_set(SensitiveInfo.Location) by TimeGenerated, CreationTime, Identifier, Product, Workload, Deeplink, usageLocation, UserPrincipalName, UserObjectId, department, manager, jobTitle, PolicyName, RuleName, RuleSeverity, ActionsTaken, Recipients, InternetMessageId, EmailSubject, Sender, ExceptionReason, Operation;\r\n\r\nlet EndpointAction = datatable(ActionName: string, ActionId: int) [\r\n    \"None\", \"0\",\r\n    \"Audit\", \"1\",\r\n    \"Warn\", \"2\",\r\n    \"WarnAndBypass\", \"3\",\r\n    \"Block\", \"4\",\r\n    \"Allow\", \"5\"\r\n];\r\n\r\nlet DLPEndpoint = DLPCommon\r\n| where Workload in ('Endpoint')\r\n| mv-expand SensitiveInfo = EndpointMetaData.SensitiveInfoTypeData\r\n| extend SensitiveInfoType = bag_pack('Name', SensitiveInfo.SensitiveInfoTypeName, 'Count', toint(SensitiveInfo.Count), 'Confidence', toint(SensitiveInfo.Confidence)),\r\n    DeviceFullName = tostring(EndpointMetaData.DeviceName)\r\n| extend SensitiveInfoTypeString = strcat(SensitiveInfoType.Name, ' (', SensitiveInfoType.Count, ', ', SensitiveInfoType.Confidence, '%)'),\r\n    ActionId = toint(EndpointMetaData.EnforcementMode),\r\n    ClientIP = tostring(EndpointMetaData.ClientIP),\r\n    DeviceHostName = tostring(split(DeviceFullName, '.')[0]), \r\n    DeviceDNSName = tostring(substring(DeviceFullName, indexof(DeviceFullName, '.')+1)),\r\n    Filename = DocumentName,\r\n    FilePath = ObjectId,\r\n    FileHash = tostring(EndpointMetaData.Sha256),\r\n    FileHashAlgorithm = 'SHA256',\r\n    RMSEncrypted = tostring(EndpointMetaData.RMSEncrypted),\r\n    EvidenceFileUrl = tostring(EvidenceFile.FullUrl),\r\n    SourceLocationType = tostring(EndpointMetaData.SourceLocationType), \r\n    EndpointOperation = tostring(EndpointMetaData.EndpointOperation),\r\n    EndpointApplication = tostring(EndpointMetaData.Application)   \r\n| join kind = inner(EndpointAction) on ActionId\r\n| extend ActionsTaken = ActionName\r\n| summarize SensitiveInfoTypesArray = make_list(SensitiveInfoType), SensitiveInfoTypes = make_list(SensitiveInfoTypeString), TotalMatchCount = sum(toint(SensitiveInfo.Count)) by TimeGenerated, CreationTime, Identifier, Product, Workload, Deeplink, usageLocation, UserPrincipalName, UserObjectId, department, manager, jobTitle, PolicyName, RuleName, ActionsTaken, DeviceFullName, DeviceHostName, DeviceDNSName, Filename, FilePath, FileHash, FileHashAlgorithm, RMSEncrypted, EvidenceFileUrl, SourceLocationType, EndpointOperation, EndpointApplication, Operation;\r\n\r\nunion DLPSPOD, DLPEXOT, DLPEndpoint\r\n| extend FileDirectory = parse_path(FilePath).DirectoryPath\r\n| project TimeGenerated, CreationTime, Identifier, Product, Workload, Deeplink, usageLocation, UserPrincipalName, UserObjectId, department, manager, jobTitle, PolicyName, RuleName, ActionsTaken, SensitiveInfoTypesArray, TotalMatchCount, DeviceFullName, DeviceHostName, DeviceDNSName, Filename, FilePath, FileDirectory, FileHash, FileHashAlgorithm, RMSEncrypted, EvidenceFileUrl, SourceLocationType, EndpointOperation, EndpointApplication, Recipients, InternetMessageId, EmailSubject, Sender, ExceptionReason, SiteUrl, TargetUserOrGroupName, Operation,\r\n    Username = split(UserPrincipalName, '@')[0], UPNSuffix =split(UserPrincipalName, '@')[1], \r\n    RuleSeverity = iff(TotalMatchCount >= endpointSeverityMatchCountTrigger and Workload == 'Endpoint', 'High', RuleSeverity), \r\n    SensitiveInfoTypes = iff(array_length(SensitiveInfoTypes) > 1, strcat(SensitiveInfoTypes[0], ' +', array_length(SensitiveInfoTypes) - 1, ' more'), strcat_array(SensitiveInfoTypes, ', ')), \r\n    DetectedLocations = strcat_array(DetectedLocations, ', '), SensitivityLabels = strcat_array(SensitivityLabels, ', ')\r\n| order by TimeGenerated",
-                "queryFrequency": "PT6M",
-                "queryPeriod": "PT8H",
-                "triggerOperator": "GreaterThan",
-                "triggerThreshold": 0,
-                "suppressionDuration": "PT5H",
-                "suppressionEnabled": false,
-                "startTimeUtc": null,
-                "tactics": [
-                  "Exfiltration"
-                ],
-                "techniques": [],
-                "alertRuleTemplateName": null,
-                "incidentConfiguration": {
-                  "createIncident": true,
-                  "groupingConfiguration": {
-                    "enabled": true,
-                    "reopenClosedIncident": true,
-                    "lookbackDuration": "PT45M",
-                    "matchingMethod": "Selected",
-                    "groupByEntities": [
-                      "Account"
-                    ],
-                    "groupByAlertDetails": [],
-                    "groupByCustomDetails": []
-                  }
-                },
-                "eventGroupingSettings": {
-                  "aggregationKind": "AlertPerResult"
-                },
-                "alertDetailsOverride": {
-                  "alertDisplayNameFormat": "{{RuleName}} ({{Workload}})",
-                  "alertDescriptionFormat": "Microsoft Purview DLP ({{Workload}}) alert for {{UserPrincipalName}}. Use the alert link to view more details about the events within the alert.",
-                  "alertSeverityColumnName": "RuleSeverity",
-                  "alertDynamicProperties": [
-                    {
-                      "alertProperty": "AlertLink",
-                      "value": "Deeplink"
-                    },
-                    {
-                      "alertProperty": "ProductName",
-                      "value": "Product"
-                    }
-                  ]
-                },
-                "customDetails": {
-                  "User": "UserPrincipalName",
-                  "JobTitle": "jobTitle",
-                  "Department": "department",
-                  "Manager": "manager",
-                  "Location": "usageLocation",
-                  "Workload": "Workload",
-                  "MatchCount": "TotalMatchCount",
-                  "SensitiveInfo": "SensitiveInfoTypes",
-                  "ActionsTaken": "ActionsTaken",
-                  "SharedWith": "TargetUserOrGroupName",
-                  "DetectedLocations": "DetectedLocations",
-                  "SensitivityLabels": "SensitivityLabels",
-                  "Subject": "EmailSubject",
-                  "Operation": "EndpointOperation",
-                  "Application": "EndpointApplication"
-                },
-                "entityMappings": [
-                  {
-                    "entityType": "Account",
-                    "fieldMappings": [
-                      {
-                        "identifier": "AadUserId",
-                        "columnName": "UserObjectId"
-                      },
-                      {
-                        "identifier": "Name",
-                        "columnName": "Username"
-                      },
-                      {
-                        "identifier": "UPNSuffix",
-                        "columnName": "UPNSuffix"
-                      }
-                    ]
-                  },
-                  {
-                    "entityType": "File",
-                    "fieldMappings": [
-                      {
-                        "identifier": "Name",
-                        "columnName": "Filename"
-                      },
-                      {
-                        "identifier": "Directory",
-                        "columnName": "FileDirectory"
-                      }
-                    ]
-                  },
-                  {
-                    "entityType": "MailMessage",
-                    "fieldMappings": [
-                      {
-                        "identifier": "InternetMessageId",
-                        "columnName": "InternetMessageId"
-                      },
-                      {
-                        "identifier": "Recipient",
-                        "columnName": "Recipients"
-                      },
-                      {
-                        "identifier": "Sender",
-                        "columnName": "Sender"
-                      }
-                    ]
-                  },
-                  {
-                    "entityType": "FileHash",
-                    "fieldMappings": [
-                      {
-                        "identifier": "Algorithm",
-                        "columnName": "FileHashAlgorithm"
-                      },
-                      {
-                        "identifier": "Value",
-                        "columnName": "FileHash"
-                      }
-                    ]
-                  },
-                  {
-                    "entityType": "Host",
-                    "fieldMappings": [
-                      {
-                        "identifier": "DnsDomain",
-                        "columnName": "DeviceDNSName"
-                      },
-                      {
-                        "identifier": "HostName",
-                        "columnName": "DeviceHostName"
-                      },
-                      {
-                        "identifier": "FullName",
-                        "columnName": "DeviceFullName"
-                      }
-                    ]
-                  }
-                ],
-                "sentinelEntitiesMappings": null,
-                "templateVersion": null
-              }
-            },
-            {
-              "condition": "[equals(parameters('policySync'), true())]",
-              "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
-              "apiVersion": "2022-11-01-preview",
-              "name": "[format('{0}/Microsoft.SecurityInsights/1192ede7-9c2d-465a-8a7a-b0ea1da7323b', parameters('workspace'))]",
-              "kind": "Scheduled",
-              "properties": {
-                "displayName": "Microsoft DLP Template (Endpoint)",
-                "description": "",
-                "severity": "Medium",
-                "enabled": true,
-                "query": "let policywatchlist =(_GetWatchlist('Policy')\n    | project SearchKey);\n\nlet EndPointAction = datatable(ActionName: string, Action: int) [\n    \"None\", \"0\",\n    \"Audit\", \"1\",\n    \"Warn\", \"2\",\n    \"WarnAndBypass\", \"3\",\n    \"Block\", \"4\",\n    \"Allow\", \"5\"\n];\n\nPurviewDLP_CL\n| extend RuleName = tostring(PolicyDetails[0].Rules[0].RuleName)\n| extend Policy = tostring(PolicyDetails[0].PolicyName)\n| extend PolicyId = tostring(PolicyDetails[0].PolicyId)\n| where Policy != \"\" //Do Not Remove\n| where not(Policy has_any (policywatchlist)) //Do not remove\n| extend RuleId = tostring(PolicyDetails[0].Rules[0].RuleId)\n| extend SensitiveInfoTypeName1 = tostring(EndpointMetaData.SensitiveInfoTypeData[0].SensitiveInfoTypeName)      \n| extend Detected1 = tostring(EndpointMetaData.SensitiveInfoTypeData[0].SensitiveInformationDetectionsInfo.DetectedValues)\n| extend Detected = array_slice(todynamic(Detected1), 0, 5)\n| extend Deeplink = strcat(\"https://compliance.microsoft.com/datalossprevention/alerts/eventdeeplink?eventid=\", Identifier, \"&creationtime=\", CreationTime)\n| extend Action = toint(EndpointMetaData.EnforcementMode)\n| extend accountsplit = split(UserId, \"@\")\n| mv-expand EndpointMetaData.SensitiveInfoTypeData\n| summarize\n    MatchCount = sum(toint(EndpointMetaData_SensitiveInfoTypeData.Count)),\n    arg_max(TimeGenerated, *)\n    by Identifier\n| extend Provider = \"Microsoft Purview Sentinel Solution\"\n| extend Product = \"Microsoft Data Loss Prevention (Advanced)\"\n| join kind= inner\n    (\n    EndPointAction\n    )\n    on Action\n| project PolicyId, SensitiveInfoTypeName1, UserKey, DocumentName, ObjectId, EndpointMetaData.ClientIP, EndpointMetaData.RMSEncrypted, EndpointMetaData.EnforcementMode, EndpointMetaData.DeviceName, EndpointMetaData.SourceLocationType, Policy, RuleName, usageLocation, EndpointMetaData.EndpointOperation, EndpointMetaData.Sha256, department, manager, ActionName, Detected,    Workload, jobTitle, Deeplink, UserId, accountsplit[0], accountsplit[1], EvidenceFile.FullUrl, MatchCount, Identifier, Provider, Product\n",
-                "queryFrequency": "PT5M",
-                "queryPeriod": "PT5M",
-                "triggerOperator": "GreaterThan",
-                "triggerThreshold": 0,
-                "suppressionDuration": "PT2H",
-                "suppressionEnabled": false,
-                "startTimeUtc": null,
-                "tactics": [
-                  "Exfiltration"
-                ],
-                "techniques": [],
-                "alertRuleTemplateName": null,
-                "incidentConfiguration": {
-                  "createIncident": true,
-                  "groupingConfiguration": {
-                    "enabled": true,
-                    "reopenClosedIncident": false,
-                    "lookbackDuration": "PT45M",
-                    "matchingMethod": "Selected",
-                    "groupByEntities": [
-                      "Account"
-                    ],
-                    "groupByAlertDetails": [
-                      "DisplayName"
-                    ],
-                    "groupByCustomDetails": []
-                  }
-                },
-                "eventGroupingSettings": {
-                  "aggregationKind": "AlertPerResult"
-                },
-                "alertDetailsOverride": {
-                  "alertDisplayNameFormat": "{{RuleName}}",
-                  "alertDescriptionFormat": "{{UserId}}, {{DocumentName}}",
-                  "alertDynamicProperties": [
-                    {
-                      "alertProperty": "AlertLink",
-                      "value": "Deeplink"
-                    },
-                    {
-                      "alertProperty": "ProviderName",
-                      "value": "Provider"
-                    },
-                    {
-                      "alertProperty": "ProductName",
-                      "value": "Product"
-                    }
-                  ]
-                },
-                "customDetails": {
-                  "User": "UserId",
-                  "JobTitle": "jobTitle",
-                  "Department": "department",
-                  "Manager": "manager",
-                  "Location": "usageLocation",
-                  "Workload": "Workload",
-                  "MatchCount": "MatchCount",
-                  "SensitiveInfoType": "SensitiveInfoTypeName1",
-                  "DataDetected": "Detected",
-                  "Action": "EndpointMetaData_EndpointOperation",
-                  "BlockAction": "ActionName",
-                  "Evidence": "EvidenceFile_FullUrl",
-                  "Encrypted": "EndpointMetaData_RMSEncrypted",
-                  "EventID": "Identifier"
-                },
-                "entityMappings": [
-                  {
-                    "entityType": "Account",
-                    "fieldMappings": [
-                      {
-                        "identifier": "Name",
-                        "columnName": "accountsplit_0"
-                      },
-                      {
-                        "identifier": "UPNSuffix",
-                        "columnName": "accountsplit_1"
-                      }
-                    ]
-                  },
-                  {
-                    "entityType": "File",
-                    "fieldMappings": [
-                      {
-                        "identifier": "Name",
-                        "columnName": "DocumentName"
-                      },
-                      {
-                        "identifier": "Directory",
-                        "columnName": "ObjectId"
-                      }
-                    ]
-                  },
-                  {
-                    "entityType": "Host",
-                    "fieldMappings": [
-                      {
-                        "identifier": "HostName",
-                        "columnName": "EndpointMetaData_DeviceName"
-                      }
-                    ]
-                  },
-                  {
-                    "entityType": "IP",
-                    "fieldMappings": [
-                      {
-                        "identifier": "Address",
-                        "columnName": "EndpointMetaData_ClientIP"
-                      }
-                    ]
-                  }
-                ],
-                "sentinelEntitiesMappings": null,
-                "templateVersion": null
-              }
-            },
-            {
-              "condition": "[equals(parameters('policySync'), true())]",
-              "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
-              "apiVersion": "2022-11-01-preview",
-              "name": "[format('{0}/Microsoft.SecurityInsights/03507f90-ed2d-420e-8530-e9e66b643bee', parameters('workspace'))]",
-              "kind": "Scheduled",
-              "properties": {
-                "displayName": "Microsoft DLP Template (Exchange and Teams)",
-                "description": "",
-                "severity": "Medium",
-                "enabled": true,
-                "query": "let policywatchlist =(_GetWatchlist('Policy')\n    | project SearchKey);\n\nPurviewDLP_CL\n| where Workload !in ('SharePoint', 'Endpoint', 'OneDrive')\n| extend Policy = tostring(PolicyDetails[0].PolicyName)\n| where Policy != \"\" //Do Not Remove\n| where not(Policy has_any (policywatchlist)) //Do not remove\n| extend Detected1 = tostring(PolicyDetails[0].Rules[0].ConditionsMatched.SensitiveInformation[0].SensitiveInformationDetections.DetectedValues)\n| extend Detected = array_slice(todynamic(Detected1), 0, 5)\n| extend SensitiveInformationTypeName = tostring(PolicyDetails[0].Rules[0].ConditionsMatched.SensitiveInformation[0].SensitiveInformationTypeName)\n| extend MessageId = ObjectId\n| extend linkoriginal = originalContent\n| extend Actions = tostring(PolicyDetails[0].Rules[0].Actions)       \n| extend linkoriginal = tostring(iff(isempty(SharePointMetaData.FilePathUrl), originalContent, SharePointMetaData.FilePathUrl))\n| extend Account = tostring(iff(isempty(SharePointMetaData.From), ExchangeMetaData.From, SharePointMetaData.From))\n| extend SubjectDoc = tostring(iff(isempty(SharePointMetaData.FileName), ExchangeMetaData.Subject, SharePointMetaData.FileName))\n| extend Recipients = tostring(strcat(\"To:\", ExchangeMetaData.To, \" CC:\", ExchangeMetaData.CC, \" BCC:\", ExchangeMetaData.BCC))\n| extend MatchConfidence = tostring(PolicyDetails[0].Rules[0].ConditionsMatched.SensitiveInformation[0].Confidence)\n| extend UserId = tostring(ExchangeMetaData.From)\n| extend accountsplit = split(UserId, \"@\")\n| extend SensitiveLabelIdnew = tostring(SharePointMetaData.SensitivityLabelIds[0])\n| extend RuleName = tostring(PolicyDetails[0].Rules[0].RuleName)\n| extend SITLocation = tostring(PolicyDetails[0].Rules[0].ConditionsMatched.SensitiveInformation[0].Location)\n| extend OtherMatch = tostring(PolicyDetails[0].Rules[0].ConditionsMatched.OtherConditions[0])\n| extend severity = tostring(PolicyDetails[0].Rules[0].Severity)\n| extend Deeplink = strcat(\"https://compliance.microsoft.com/datalossprevention/alerts/eventdeeplink?eventid=\", Identifier, \"&creationtime=\", CreationTime)\n| extend Provider = \"Microsoft Purview Sentinel Solution\"\n| extend Product = \"Microsoft Data Loss Prevention (Advanced)\"\n| mv-expand PolicyDetails\n| mv-expand PolicyDetails.Rules\n| mv-expand PolicyDetails_Rules.ConditionsMatched.SensitiveInformation\n| summarize\n    MatchCount = sum(toint(PolicyDetails_Rules_ConditionsMatched_SensitiveInformation.Count)),\n    arg_max(TimeGenerated, *)\n    by Identifier\n| project Account, Workload, SensitiveInformationTypeName, Detected, linkoriginal, Recipients, SubjectDoc, TimeGenerated, manager, department, Actions, Policy, MatchConfidence, MatchCount,    MessageID=ExchangeMetaData.MessageID, accountsplit[0], accountsplit[1], UserId, Identifier, ExceptionReason = ExchangeMetaData.ExceptionInfo.Reason, RuleName, usageLocation, SITLocation, OtherMatch, severity, jobTitle, tostring(ExceptionInfo.Justification), Detected1, Deeplink, Provider, Product\n",
-                "queryFrequency": "PT5M",
-                "queryPeriod": "PT5M",
-                "triggerOperator": "GreaterThan",
-                "triggerThreshold": 0,
-                "suppressionDuration": "PT2H",
-                "suppressionEnabled": false,
-                "startTimeUtc": null,
-                "tactics": [
-                  "Exfiltration"
-                ],
-                "techniques": [],
-                "alertRuleTemplateName": null,
-                "incidentConfiguration": {
-                  "createIncident": true,
-                  "groupingConfiguration": {
-                    "enabled": true,
-                    "reopenClosedIncident": true,
-                    "lookbackDuration": "PT45M",
-                    "matchingMethod": "Selected",
-                    "groupByEntities": [
-                      "Account"
-                    ],
-                    "groupByAlertDetails": [],
-                    "groupByCustomDetails": [
-                      "User",
-                      "DocumentorSubject",
-                      "Recipients"
-                    ]
-                  }
-                },
-                "eventGroupingSettings": {
-                  "aggregationKind": "AlertPerResult"
-                },
-                "alertDetailsOverride": {
-                  "alertDisplayNameFormat": "{{RuleName}}",
-                  "alertDescriptionFormat": "{{Account}}, {{SubjectDoc}}",
-                  "alertSeverityColumnName": "severity",
-                  "alertDynamicProperties": [
-                    {
-                      "alertProperty": "AlertLink",
-                      "value": "Deeplink"
-                    },
-                    {
-                      "alertProperty": "ProviderName",
-                      "value": "Provider"
-                    },
-                    {
-                      "alertProperty": "ProductName",
-                      "value": "Product"
-                    }
-                  ]
-                },
-                "customDetails": {
-                  "User": "Account",
-                  "JobTitle": "jobTitle",
-                  "Department": "department",
-                  "Manager": "manager",
-                  "Location": "usageLocation",
-                  "Workload": "Workload",
-                  "MatchCount": "MatchCount",
-                  "Recipients": "Recipients",
-                  "SensitiveInfoType": "SensitiveInformationTypeName",
-                  "DataDetected": "Detected",
-                  "Actions": "Actions",
-                  "DocumentorSubject": "SubjectDoc",
-                  "LocationofDetection": "SITLocation",
-                  "RuleMatchOther": "OtherMatch",
-                  "EventID": "Identifier"
-                },
-                "entityMappings": [
-                  {
-                    "entityType": "Account",
-                    "fieldMappings": [
-                      {
-                        "identifier": "Name",
-                        "columnName": "accountsplit_0"
-                      },
-                      {
-                        "identifier": "UPNSuffix",
-                        "columnName": "accountsplit_1"
-                      }
-                    ]
-                  },
-                  {
-                    "entityType": "MailMessage",
-                    "fieldMappings": [
-                      {
-                        "identifier": "InternetMessageId",
-                        "columnName": "MessageID"
-                      },
-                      {
-                        "identifier": "Recipient",
-                        "columnName": "Recipients"
-                      },
-                      {
-                        "identifier": "Sender",
-                        "columnName": "UserId"
-                      }
-                    ]
-                  },
-                  {
-                    "entityType": "File",
-                    "fieldMappings": [
-                      {
-                        "identifier": "Name",
-                        "columnName": "SubjectDoc"
-                      },
-                      {
-                        "identifier": "Directory",
-                        "columnName": "linkoriginal"
-                      }
-                    ]
-                  },
-                  {
-                    "entityType": "RegistryKey",
-                    "fieldMappings": [
-                      {
-                        "identifier": "Key",
-                        "columnName": "Actions"
-                      }
-                    ]
-                  }
-                ],
-                "sentinelEntitiesMappings": null,
-                "templateVersion": null
-              }
-            },
-            {
-              "condition": "[equals(parameters('policySync'), true())]",
-              "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
-              "apiVersion": "2022-11-01-preview",
-              "name": "[format('{0}/Microsoft.SecurityInsights/7e6ed702-770a-4945-98b4-a9506bbbd964', parameters('workspace'))]",
-              "kind": "Scheduled",
-              "properties": {
-                "displayName": "Microsoft DLP Template (SharePoint and OneDrive)",
-                "description": "",
-                "severity": "Medium",
-                "enabled": true,
-                "query": "let policywatchlist =(_GetWatchlist('Policy')\n    | project SearchKey);\n\nlet domains=(_GetWatchlist('domains')\n    | project SearchKey);\n\nlet DLP = (PurviewDLP_CL\n    | extend path = parse_path(tostring(SharePointMetaData.FilePathUrl))\n    | extend DirectoryPath = tostring(path.DirectoryPath)\n    | summarize by DirectoryPath);\nlet officedata = (\n    OfficeActivity\n    | where ingestion_time() > ago(24h)\n    | where Operation == \"AddedToSecureLink\" or Operation == \"SecureLinkUsed\"\n    | where OfficeObjectId has_any (DLP)\n    | extend SiteCollectionUrl = Site_Url\n    | extend FileName = SourceFileName\n    | extend Account = tolower(UserId)\n    | extend Targetsplit = split(UserId, \"#\")\n    | extend TargetUserOrGroupName = iff(isempty(TargetUserOrGroupName), Targetsplit[1], TargetUserOrGroupName)\n    //Exclude internal domains\n    //| where TargetUserOrGroupName !has \"mydom1.com\"\n    | extend TargetUserOrGroupName = tolower(TargetUserOrGroupName)\n    | summarize\n        by FileName, SiteCollectionUrl, TargetUserOrGroupName, OfficeObjectId, Account);\n\nlet dlpmain = (\n    PurviewDLP_CL\n    | where Workload in ('SharePoint', 'OneDrive')\n    | extend Policy = tostring(PolicyDetails[0].PolicyName)\n    | where Policy != \"\" //Do Not Remove\n    | where not(Policy has_any (policywatchlist)) //Do not remove\n    | extend Detected1 = tostring(PolicyDetails[0].Rules[0].ConditionsMatched.SensitiveInformation[0].SensitiveInformationDetections.DetectedValues)\n    | extend Detected = array_slice(todynamic(Detected1), 0, 5)\n    | extend SensitiveInformationTypeName = tostring(PolicyDetails[0].Rules[0].ConditionsMatched.SensitiveInformation[0].SensitiveInformationTypeName)\n    | extend MessageId = ObjectId\n    | extend linkoriginal = originalContent\n    | extend Actions = tostring(PolicyDetails[0].Rules[0].Actions)   \n    | extend FilePathUrl = url_decode(tostring(SharePointMetaData.FilePathUrl))\n    | extend linkoriginal = iff(isempty(FilePathUrl), originalContent, FilePathUrl)\n    | extend Account = iff(isempty(SharePointMetaData.From), ExchangeMetaData.From, tolower(SharePointMetaData.From))    \n    | extend SubjectDoc = tostring(iff(isempty(SharePointMetaData.FileName), ExchangeMetaData.Subject, SharePointMetaData.FileName))\n    | extend Recipients = strcat(\"To:\", ExchangeMetaData.To, \" CC:\", ExchangeMetaData.CC, \" BCC:\", ExchangeMetaData.BCC) \n    | extend MatchConfidence = tostring(parse_json(tostring(parse_json(tostring(parse_json(tostring(PolicyDetails[0].Rules))[0].ConditionsMatched)).SensitiveInformation))[0].Confidence)\n    | extend accountsplit = split(UserId, \"@\")\n    | extend SensitiveLabelIdnew = tostring(SharePointMetaData.SensitivityLabelIds[0])\n    | extend path = parse_path(FilePathUrl)\n    | extend OfficeObjectId = tostring(path.DirectoryPath)\n    | join kind = leftouter\n        (\n        _GetWatchlist('SensitivityLabels')\n        | extend SensitiveLabelIdnew = tostring(column_ifexists('id', ''))\n        | extend Label = tostring(column_ifexists('name', ''))\n        )\n        on SensitiveLabelIdnew);\n\nlet folder = (dlpmain\n    | join kind = leftouter\n        (officedata\n        | summarize\n            by\n            SiteCollectionUrl,\n            FileName,\n            TargetUserOrGroupName,\n            OfficeObjectId\n        | summarize TargetUserOrGroupName = make_list(strcat(TargetUserOrGroupName))\n            by\n            OfficeObjectId,\n            SiteCollectionUrl,\n            FileName\n        | summarize take_any(TargetUserOrGroupName)\n            by\n            OfficeObjectId,\n            SiteCollectionUrl,\n            FileName\n        | join kind = leftouter\n            (\n            officedata\n            | summarize\n                by\n                SiteCollectionUrl,\n                FileName,\n                TargetUserOrGroupName,\n                OfficeObjectId\n            | extend Domsplit = split(TargetUserOrGroupName, \"@\")\n            | extend domain = Domsplit[1]\n            | summarize TargetDomain = make_list(strcat(domain)) by FileName, OfficeObjectId\n            | summarize take_any(TargetDomain) by FileName, OfficeObjectId\n            )\n            on OfficeObjectId\n        )\n        on OfficeObjectId\n    );\n\nlet files = (folder\n    //| where TargetUserOrGroupName == \"\"\n    | join kind = leftouter\n        (officedata\n        | summarize TargetUserOrGroupName = make_list(strcat(TargetUserOrGroupName)) by FileName, SiteCollectionUrl\n        | summarize take_any(TargetUserOrGroupName) by FileName, SiteCollectionUrl   \n        | join kind = leftouter\n            (\n            officedata\n            | summarize\n                by\n                SiteCollectionUrl,\n                FileName,\n                TargetUserOrGroupName\n            | extend Domsplit = split(TargetUserOrGroupName, \"@\")\n            | extend domain = Domsplit[1]\n            | summarize TargetDomain = make_list(strcat(domain)) by FileName\n            | summarize take_any(TargetDomain) by FileName\n            )\n            on FileName\n        )\n        on FileName, SiteCollectionUrl\n    | extend TargetUserOrGroupName = TargetUserOrGroupName1\n    | extend TargetDomain = TargetDomain1\n    | where TargetUserOrGroupName != \"\"\n    );\n    \nunion folder, files\n| summarize arg_max(TimeGenerated, *) by SubjectDoc, UserId, Identifier\n| join kind = leftouter\n    (\n    officedata\n    | extend Domsplit = split(TargetUserOrGroupName, \"@\")\n    | extend domain = Domsplit[1]\n    | where tolower(domain) in (domains)\n    | summarize TargetDomain = make_list(strcat(domain)) by tostring(SiteCollectionUrl)\n    )\n    on SiteCollectionUrl\n| extend HighRiskDomain = iff(isempty(TargetDomain), \"\", \"HighRiskDomain\")\n| extend Policy = strcat(tostring(PolicyDetails[0].PolicyName), \" \", HighRiskDomain)\n| extend RuleName = strcat(tostring(parse_json(tostring(PolicyDetails[0].Rules))[0].RuleName), \" \", HighRiskDomain)\n| extend SITLocation = tostring(parse_json(tostring(parse_json(tostring(parse_json(tostring(PolicyDetails[0].Rules))[0].ConditionsMatched)).SensitiveInformation))[0].Location)\n| extend OtherMatch = tostring(parse_json(tostring(parse_json(tostring(parse_json(tostring(PolicyDetails[0].Rules))[0].ConditionsMatched)).OtherConditions))[0])\n| extend severity = tostring(PolicyDetails[0].Rules[0].Severity)\n| extend Deeplink = strcat(\"https://compliance.microsoft.com/datalossprevention/alerts/eventdeeplink?eventid=\", Identifier, \"&creationtime=\", CreationTime)\n| mv-expand PolicyDetails\n| mv-expand PolicyDetails.Rules\n| mv-expand PolicyDetails_Rules.ConditionsMatched.SensitiveInformation\n| extend Provider = \"Microsoft Purview Sentinel Solution\"\n| extend Product = \"Microsoft Data Loss Prevention (Advanced)\"\n| summarize MatchCount = sum(toint(PolicyDetails_Rules_ConditionsMatched_SensitiveInformation.Count))\n    by Account, Workload, SensitiveInformationTypeName, tostring(Detected), linkoriginal, Recipients, SubjectDoc, TimeGenerated, manager, department, Actions, Policy, MatchConfidence, tostring(ExchangeMetaData.MessageID), tostring(accountsplit[0]), tostring(accountsplit[1]), UserId, Identifier, Label, tostring(SharePointMetaData.ExceptionInfo.Reason), RuleName, SITLocation, OtherMatch,\n    tostring(severity), jobTitle, tostring(ExceptionInfo.Justification), Deeplink, tostring(TargetUserOrGroupName), HighRiskDomain, usageLocation, Provider, Product\n",
-                "queryFrequency": "PT5M",
-                "queryPeriod": "PT5M",
-                "triggerOperator": "GreaterThan",
-                "triggerThreshold": 0,
-                "suppressionDuration": "PT2H",
-                "suppressionEnabled": false,
-                "startTimeUtc": null,
-                "tactics": [
-                  "Exfiltration"
-                ],
-                "techniques": [],
-                "alertRuleTemplateName": null,
-                "incidentConfiguration": {
-                  "createIncident": true,
-                  "groupingConfiguration": {
-                    "enabled": true,
-                    "reopenClosedIncident": true,
-                    "lookbackDuration": "PT45M",
-                    "matchingMethod": "Selected",
-                    "groupByEntities": [
-                      "Account"
-                    ],
-                    "groupByAlertDetails": [],
-                    "groupByCustomDetails": [
-                      "User",
-                      "Document",
-                      "SharedWith"
-                    ]
-                  }
-                },
-                "eventGroupingSettings": {
-                  "aggregationKind": "AlertPerResult"
-                },
-                "alertDetailsOverride": {
-                  "alertDisplayNameFormat": "{{RuleName}}",
-                  "alertDescriptionFormat": "{{Account}}, {{SubjectDoc}}",
-                  "alertSeverityColumnName": "severity",
-                  "alertDynamicProperties": [
-                    {
-                      "alertProperty": "AlertLink",
-                      "value": "Deeplink"
-                    },
-                    {
-                      "alertProperty": "ProviderName",
-                      "value": "Provider"
-                    },
-                    {
-                      "alertProperty": "ProductName",
-                      "value": "Product"
-                    }
-                  ]
-                },
-                "customDetails": {
-                  "User": "Account",
-                  "JobTitle": "jobTitle",
-                  "Department": "department",
-                  "Manager": "manager",
-                  "Location": "usageLocation",
-                  "Workload": "Workload",
-                  "MatchCount": "MatchCount",
-                  "SensitiveInfoType": "SensitiveInformationTypeName",
-                  "DataDetected": "Detected",
-                  "Actions": "Actions",
-                  "SharedWith": "TargetUserOrGroupName",
-                  "Document": "SubjectDoc",
-                  "LocationofDetection": "SITLocation",
-                  "RuleMatchOther": "OtherMatch",
-                  "SharePointLabel": "Label",
-                  "EventID": "Identifier"
-                },
-                "entityMappings": [
-                  {
-                    "entityType": "Account",
-                    "fieldMappings": [
-                      {
-                        "identifier": "Name",
-                        "columnName": "accountsplit_0"
-                      },
-                      {
-                        "identifier": "UPNSuffix",
-                        "columnName": "accountsplit_1"
-                      }
-                    ]
-                  },
-                  {
-                    "entityType": "File",
-                    "fieldMappings": [
-                      {
-                        "identifier": "Name",
-                        "columnName": "SubjectDoc"
-                      },
-                      {
-                        "identifier": "Directory",
-                        "columnName": "linkoriginal"
-                      }
-                    ]
-                  },
-                  {
-                    "entityType": "RegistryKey",
-                    "fieldMappings": [
-                      {
-                        "identifier": "Key",
-                        "columnName": "Actions"
-                      }
-                    ]
-                  },
-                  {
-                    "entityType": "CloudApplication",
-                    "fieldMappings": [
-                      {
-                        "identifier": "Name",
-                        "columnName": "Workload"
-                      }
-                    ]
-                  }
-                ],
-                "sentinelEntitiesMappings": null,
-                "templateVersion": null
+                "displayName": "[parameters('workbookDisplayName')]",
+                "serializedData": "{\"version\":\"Notebook/1.0\",\"items\":[{\"type\":1,\"content\":{\"json\":\"## Microsoft Purview DLP Incident Management\"},\"name\":\"text - 2\"},{\"type\":9,\"content\":{\"version\":\"KqlParameterItem/1.0\",\"crossComponentResources\":[\"{paramWorkspace}\"],\"parameters\":[{\"id\":\"264afe85-711d-483d-a208-af021b3fcfc2\",\"version\":\"KqlParameterItem/1.0\",\"name\":\"paramWorkspace\",\"label\":\"Sentinel Workspace\",\"type\":5,\"isRequired\":true,\"query\":\"resources\\r\\n| where type contains \\\"microsoft.operationalinsights/workspaces\\\"\\r\\n| extend id = tolower(id)\\r\\n| summarize by id=tolower(id)\\r\\n| project id\",\"crossComponentResources\":[\"value::all\"],\"typeSettings\":{\"additionalResourceOptions\":[],\"showDefault\":false},\"queryType\":1,\"resourceType\":\"microsoft.resourcegraph/resources\",\"value\":\"/subscriptions/46db4fa1-a60c-4cbd-be28-807c0c4ea04f/resourcegroups/rg-5152301/providers/microsoft.operationalinsights/workspaces/sentineltest2\"},{\"id\":\"b8b136a2-f4bf-42c8-babc-902b8ff6cc6d\",\"version\":\"KqlParameterItem/1.0\",\"name\":\"paramTimeRange\",\"label\":\"Time Range\",\"type\":4,\"isRequired\":true,\"typeSettings\":{\"selectableValues\":[{\"durationMs\":300000},{\"durationMs\":900000},{\"durationMs\":1800000},{\"durationMs\":3600000},{\"durationMs\":14400000},{\"durationMs\":43200000},{\"durationMs\":86400000},{\"durationMs\":172800000},{\"durationMs\":259200000},{\"durationMs\":604800000},{\"durationMs\":1209600000},{\"durationMs\":2419200000},{\"durationMs\":2592000000},{\"durationMs\":5184000000},{\"durationMs\":7776000000}],\"allowCustom\":true},\"value\":{\"durationMs\":7776000000}},{\"id\":\"c10ac340-1c5d-4273-8d4f-04aeb6f7736d\",\"version\":\"KqlParameterItem/1.0\",\"name\":\"paramProduct\",\"label\":\"Product\",\"type\":2,\"multiSelect\":true,\"quote\":\"'\",\"delimiter\":\",\",\"query\":\"SecurityIncident\\r\\n| where TimeGenerated {paramTimeRange} and Status != 'Deleted'\\r\\n| extend Product = tostring(parse_json(tostring(AdditionalData.alertProductNames))[0])\\r\\n| summarize Count=count(IncidentNumber) by Product = case (Product ==\\\"\\\", \\\"Undefined\\\", Product)\\r\\n| project Value = Product, Label = Product, Selected = iff(Product == 'Microsoft Data Loss Prevention (Custom)', true, false) \",\"crossComponentResources\":[\"{paramWorkspace}\"],\"typeSettings\":{\"additionalResourceOptions\":[\"value::all\"],\"showDefault\":false},\"queryType\":0,\"resourceType\":\"microsoft.operationalinsights/workspaces\",\"value\":[\"Microsoft Data Loss Prevention (Advanced)\"]},{\"id\":\"79d64d60-f4ed-4ed4-ab93-de72d0ee74a5\",\"version\":\"KqlParameterItem/1.0\",\"name\":\"paramStatus\",\"label\":\"Incident Status\",\"type\":2,\"multiSelect\":true,\"quote\":\"'\",\"delimiter\":\",\",\"query\":\"let product = dynamic([{paramProduct}]);\\r\\n\\r\\nSecurityIncident\\r\\n| where TimeGenerated {paramTimeRange} and Status != 'Deleted'\\r\\n| extend Product = todynamic((parse_json(tostring(AdditionalData.alertProductNames))[0]))\\r\\n| where Product in (product) or \\\"*\\\" in (product)\\r\\n| where Status != 'Deleted'\\r\\n| order by Status\\r\\n| summarize by Status\",\"crossComponentResources\":[\"{paramWorkspace}\"],\"typeSettings\":{\"additionalResourceOptions\":[\"value::all\"],\"selectAllValue\":\"all\",\"showDefault\":false},\"timeContext\":{\"durationMs\":0},\"timeContextFromParameter\":\"paramTimeRange\",\"defaultValue\":\"value::all\",\"queryType\":0,\"resourceType\":\"microsoft.operationalinsights/workspaces\"},{\"id\":\"75803958-4d09-442e-a143-4005d267d0d7\",\"version\":\"KqlParameterItem/1.0\",\"name\":\"paramClassification\",\"label\":\"Incident Classification\",\"type\":2,\"multiSelect\":true,\"quote\":\"'\",\"delimiter\":\",\",\"query\":\"let product = dynamic([{paramProduct}]);\\r\\n\\r\\nSecurityIncident\\r\\n| where TimeGenerated {paramTimeRange} and Status != 'Deleted'\\r\\n| extend Product = todynamic((parse_json(tostring(AdditionalData.alertProductNames))[0]))\\r\\n| where Product in (product) or \\\"*\\\" in (product)\\r\\n| summarize by Classification\\r\\n| where Classification != ''\",\"crossComponentResources\":[\"{paramWorkspace}\"],\"typeSettings\":{\"additionalResourceOptions\":[\"value::all\"],\"selectAllValue\":\"all\",\"showDefault\":false},\"timeContext\":{\"durationMs\":0},\"timeContextFromParameter\":\"paramTimeRange\",\"defaultValue\":\"value::all\",\"queryType\":0,\"resourceType\":\"microsoft.operationalinsights/workspaces\"},{\"id\":\"17aca97f-01e3-4012-ac2c-8167f6a4353b\",\"version\":\"KqlParameterItem/1.0\",\"name\":\"paramWorkload\",\"label\":\"Workload\",\"type\":2,\"multiSelect\":true,\"quote\":\"'\",\"delimiter\":\",\",\"query\":\"let product = dynamic([{paramProduct}]);\\r\\n\\r\\nSecurityIncident\\r\\n| where TimeGenerated {paramTimeRange} and Status != 'Deleted'\\r\\n| extend Product = todynamic((parse_json(tostring(AdditionalData.alertProductNames))[0]))\\r\\n| where Product in (product) or \\\"*\\\" in (product)\\r\\n| summarize arg_max(TimeGenerated, *) by IncidentNumber\\r\\n| mv-expand AlertIds\\r\\n| extend AlertId = tostring(AlertIds)\\r\\n| join kind=leftouter (SecurityAlert | where TimeGenerated {paramTimeRange} | summarize arg_max(TimeGenerated, *) by SystemAlertId) on $left.AlertId == $right.SystemAlertId\\r\\n| extend Workload = parse_json(tostring(parse_json(ExtendedProperties).[\\\"Custom Details\\\"])).Workload[0]\\r\\n| summarize by tostring(Workload), Label = iff(Workload == 'MicrosoftTeams', 'Microsoft Teams', Workload)\\r\\n| where Workload != ''\",\"crossComponentResources\":[\"{paramWorkspace}\"],\"typeSettings\":{\"additionalResourceOptions\":[\"value::all\"],\"selectAllValue\":\"all\",\"showDefault\":false},\"defaultValue\":\"value::all\",\"queryType\":0,\"resourceType\":\"microsoft.operationalinsights/workspaces\"},{\"id\":\"c9768571-fcde-4d64-9a1b-f8339e6f21a7\",\"version\":\"KqlParameterItem/1.0\",\"name\":\"paramMatchCount\",\"label\":\"Match Count GTE\",\"type\":1,\"query\":\"print('0')\",\"typeSettings\":{\"paramValidationRules\":[{\"regExp\":\"/^\\\\d+$/\",\"match\":false,\"message\":\"Please provide a number value.\"}]},\"queryType\":0,\"resourceType\":\"microsoft.operationalinsights/workspaces\"}],\"style\":\"pills\",\"queryType\":0,\"resourceType\":\"microsoft.operationalinsights/workspaces\"},\"name\":\"parameters - 2\"},{\"type\":3,\"content\":{\"version\":\"KqlItem/1.0\",\"query\":\"let status = dynamic([{paramStatus}]);\\r\\nlet classification = dynamic([{paramClassification}]);\\r\\nlet workload = dynamic([{paramWorkload}]);\\r\\nlet product = dynamic([{paramProduct}]);\\r\\nlet matchCountTrigger = {paramMatchCount};\\r\\n\\r\\nlet data = SecurityIncident\\r\\n| where TimeGenerated {paramTimeRange}\\r\\n| extend Product = todynamic((parse_json(tostring(AdditionalData.alertProductNames))[0]))\\r\\n| where Product in (product) or \\\"*\\\" in (product)\\r\\n| summarize arg_max(TimeGenerated, *) by IncidentNumber\\r\\n| where Status in (status) or 'all' in (status) \\r\\n| where Classification in (classification) or 'all' in (classification)\\r\\n| summarize arg_max(TimeGenerated, *) by IncidentNumber\\r\\n| mv-expand AlertIds\\r\\n| extend AlertId = tostring(AlertIds)\\r\\n| join kind=leftouter (SecurityAlert | where TimeGenerated {paramTimeRange} | summarize arg_max(TimeGenerated, *) by SystemAlertId\\r\\n    | extend EventId = substring(AlertLink, indexof(AlertLink, 'eventid=') + 8, indexof(AlertLink, '&creationtime') - indexof(AlertLink, 'eventid=') - 8)\\r\\n    | extend Workload = tostring(parse_json(tostring(parse_json(ExtendedProperties).[\\\"Custom Details\\\"])).Workload[0])\\r\\n    | extend User = tostring(parse_json(tostring(parse_json(ExtendedProperties).[\\\"Custom Details\\\"])).User[0])\\r\\n    | extend Actions = tostring(parse_json(tostring(parse_json(ExtendedProperties).[\\\"Custom Details\\\"])).ActionsTaken[0])\\r\\n    | extend MatchCount = tostring(parse_json(tostring(parse_json(ExtendedProperties).[\\\"Custom Details\\\"])).MatchCount[0])\\r\\n    | extend PolicyName = AlertName\\r\\n    | extend AlertStatus = Status) on $left.AlertId == $right.SystemAlertId\\r\\n| extend IncidentNumber = tostring(IncidentNumber)\\r\\n| extend IncidentArmId = strcat('{paramWorkspace}/providers/Microsoft.SecurityInsights/Incidents/', IncidentName)\\r\\n| where Workload in (workload) or 'all' in (workload)\\r\\n| where toint(MatchCount) >= matchCountTrigger\\r\\n| order by TimeGenerated;\\r\\n\\r\\ndata\\r\\n| summarize arg_max(TimeGenerated, *), Count = count() by SystemAlertId\\r\\n| project CreatedTime = StartTime, Type = 'Alert', ID = int(null), IdField = strcat(IncidentNumber, '/', SystemAlertId), Parent = IncidentNumber, Title = AlertName, Status = AlertStatus, Owner = '', Severity = AlertSeverity, Link = AlertLink, Workload, MatchCount, User, Actions, IncidentArmId\\r\\n| union (data\\r\\n    | summarize Count = count(), MatchCount = tostring(max(toint(MatchCount))), User = tostring(count_distinct(User)), Workload = tostring(count_distinct(Workload)), arg_max(TimeGenerated, *) by IncidentNumber\\r\\n    | project CreatedTime, Type = 'Incident', ID = toint(IncidentNumber), IdField = IncidentNumber, Title, Status, Owner = iff(Owner.assignedTo == '', 'Unassigned', tostring(Owner.assignedTo)), Parent = '', Severity = strcat('(', Count, ') ', Severity), Workload = strcat('(', Workload, ')'), Link = IncidentUrl, User = strcat('(', User, ')'), MatchCount, IncidentArmId)\\r\\n| order by CreatedTime\\r\\n\\r\\n\\r\\n\",\"size\":3,\"title\":\"DLP Incidents\",\"timeContextFromParameter\":\"paramTimeRange\",\"queryType\":0,\"resourceType\":\"microsoft.operationalinsights/workspaces\",\"crossComponentResources\":[\"{paramWorkspace}\"],\"gridSettings\":{\"formatters\":[{\"columnMatch\":\"ID\",\"formatter\":7,\"formatOptions\":{\"linkTarget\":\"OpenBlade\",\"bladeOpenContext\":{\"bladeName\":\"IncidentPage.ReactView\",\"extensionName\":\"Microsoft_Azure_Security_Insights\",\"bladeParameters\":[{\"name\":\"incidentArmId\",\"source\":\"column\",\"value\":\"IncidentArmId\"}]}}},{\"columnMatch\":\"IdField\",\"formatter\":5},{\"columnMatch\":\"Parent\",\"formatter\":5},{\"columnMatch\":\"Title\",\"formatter\":7,\"formatOptions\":{\"linkTarget\":\"OpenBlade\",\"linkIsContextBlade\":true,\"bladeOpenContext\":{\"bladeName\":\"IncidentPage.ReactView\",\"extensionName\":\"Microsoft_Azure_Security_Insights\",\"bladeParameters\":[{\"name\":\"incidentArmId\",\"source\":\"column\",\"value\":\"IncidentArmId\"}]}}},{\"columnMatch\":\"Severity\",\"formatter\":18,\"formatOptions\":{\"thresholdsOptions\":\"icons\",\"thresholdsGrid\":[{\"operator\":\"contains\",\"thresholdValue\":\"High\",\"representation\":\"Sev0\",\"text\":\"{0}{1}\"},{\"operator\":\"contains\",\"thresholdValue\":\"Medium\",\"representation\":\"Sev1\",\"text\":\"{0}{1}\"},{\"operator\":\"contains\",\"thresholdValue\":\"Low\",\"representation\":\"Sev2\",\"text\":\"{0}{1}\"},{\"operator\":\"contains\",\"thresholdValue\":\"Informational\",\"representation\":\"Sev3\",\"text\":\"{0}{1}\"},{\"operator\":\"Default\",\"thresholdValue\":null,\"representation\":\"Sev0\",\"text\":\"{0}{1}\"}]}},{\"columnMatch\":\"Link\",\"formatter\":5,\"formatOptions\":{\"linkTarget\":\"Url\",\"linkLabel\":\"Open\"}},{\"columnMatch\":\"IncidentArmId\",\"formatter\":5}],\"rowLimit\":10000,\"hierarchySettings\":{\"idColumn\":\"IdField\",\"parentColumn\":\"Parent\",\"treeType\":0,\"expanderColumn\":\"Severity\"},\"sortBy\":[{\"itemKey\":\"CreatedTime\",\"sortOrder\":2}],\"labelSettings\":[{\"columnId\":\"CreatedTime\",\"label\":\"Created Time\"},{\"columnId\":\"Workload\",\"label\":\"Workloads\"},{\"columnId\":\"MatchCount\",\"label\":\"Match Count\"},{\"columnId\":\"User\",\"label\":\"Users\"}]},\"sortBy\":[{\"itemKey\":\"CreatedTime\",\"sortOrder\":2}]},\"name\":\"queryDlpAlerts\"}],\"isLocked\":false,\"fallbackResourceIds\":[\"/subscriptions/8a27ecf5-1c40-4eee-a29d-0a7f9a7de45f/resourcegroups/rg-monitor-prd-scu/providers/microsoft.operationalinsights/workspaces/log-sentinel-prd-scu-1\"],\"fromTemplateId\":\"sentinel-UserWorkbook\"}",
+                "version": "1.0",
+                "sourceId": "[parameters('workbookSourceId')]",
+                "category": "[parameters('workbookType')]"
               }
             }
-          ]
+          ],
+          "outputs": {
+            "workbookId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Insights/workbooks', parameters('workbookId'))]"
+            }
+          }
         }
       },
       "dependsOn": [

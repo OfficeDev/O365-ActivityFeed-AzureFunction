@@ -392,14 +392,14 @@ module sentinelRules 'modules/sentinelRules.bicep' = {
   }
 }
 
-module sentinelWorkbooks 'modules/sentinelRules.bicep' = if(DeployWorkbooks == true) {
+module sentinelWorkbooks 'modules/sentinelWorkbooks.bicep' = if(DeployWorkbooks == true) {
   name: 'sentinelWorkbooks'
   dependsOn: [
     createCustomTables
     deploymentScript
   ]
   params: {
-    workspace: LogAnalyticsWorkspaceResourceID
+    workbookSourceId: LogAnalyticsWorkspaceResourceID
   } 
 }
 
