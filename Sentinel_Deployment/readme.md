@@ -5,6 +5,7 @@
     - **Microsoft Graph**
         - Group.Read.All
         - User.Read.All
+        - InformationProtectionPolicy.Read.All
     - **Office 365 Management APIs**
         - ActivityFeed.ReadDlp
 3. Click the button below to deploy the Function App which will start ingesting DLP data into Sentinel.
