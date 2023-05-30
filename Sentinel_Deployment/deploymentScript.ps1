@@ -2,9 +2,6 @@ param([string] $PackageUri, [string] $SubscriptionId, [string] $ResourceGroupNam
 
 Set-AzContext -Subscription $SubscriptionId
 
-#Give Function App and Watchlists some time to fully finish provisioning.
-Start-Sleep -Seconds 120
-
 $tenantId = $env:TenantId
 $clientId = $env:ClientId
 $clientSecret = $env:ClientSecret
@@ -27,8 +24,6 @@ if (($subs | Where-Object contentType -eq DLP.All).status -ne 'enabled') {
 #Download Function App package and publish.
 Invoke-WebRequest -Uri $PackageUri -OutFile functionPackage.zip
 Publish-AzWebapp -ResourceGroupName $ResourceGroupName -Name $FunctionAppName -ArchivePath functionPackage.zip -Force
-
-Start-Sleep -Seconds 10
 
 <#Run Enablement function.
 $functionApp = Get-AzFunctionApp -Name $FunctionAppName -ResourceGroupName $ResourceGroupName

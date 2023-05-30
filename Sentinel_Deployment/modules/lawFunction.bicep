@@ -4,6 +4,7 @@ param category string
 param displayName string
 param query string
 param functionParams string = ''
+param functionAlias string
 
 resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2022-10-01' existing = {
   name: lawName
@@ -16,6 +17,7 @@ resource function 'Microsoft.OperationalInsights/workspaces/savedSearches@2020-0
     category: category 
     displayName: displayName 
     query: query
-    functionParameters: functionParams  
+    functionParameters: functionParams
+    functionAlias: functionAlias
   }
 }
