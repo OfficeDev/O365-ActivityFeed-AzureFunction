@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.17.1.54307",
-      "templateHash": "8184656129793636200"
+      "templateHash": "12129872384716055557"
     }
   },
   "parameters": {
@@ -1389,7 +1389,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.17.1.54307",
-              "templateHash": "14686551274627674606"
+              "templateHash": "6414325694025679223"
             }
           },
           "parameters": {
@@ -1562,7 +1562,7 @@
               "condition": "[equals(parameters('policySync'), true())]",
               "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
               "apiVersion": "2022-11-01-preview",
-              "name": "[format('{0}/Microsoft.SecurityInsights/da0f142a-bb82-43bc-a168-5e7e3d7107d3', parameters('workspace'))]",
+              "name": "[format('{0}/Microsoft.SecurityInsights/da07a488-6336-4854-bc4d-cbfc5d7f52d5', parameters('workspace'))]",
               "kind": "Scheduled",
               "properties": {
                 "displayName": "Microsoft DLP Incident Creation Template (Endpoint)",
@@ -1718,7 +1718,7 @@
               "condition": "[equals(parameters('policySync'), true())]",
               "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
               "apiVersion": "2022-11-01-preview",
-              "name": "[format('{0}/Microsoft.SecurityInsights/da0f142a-bb82-43bc-a168-5e7e3d7107d3', parameters('workspace'))]",
+              "name": "[format('{0}/Microsoft.SecurityInsights/fb51d8a8-575c-4aea-8d90-42bf9a4aca1c', parameters('workspace'))]",
               "kind": "Scheduled",
               "properties": {
                 "displayName": "Microsoft DLP Incident Creation Template (EXOT)",
@@ -1874,7 +1874,7 @@
               "condition": "[equals(parameters('policySync'), true())]",
               "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
               "apiVersion": "2022-11-01-preview",
-              "name": "[format('{0}/Microsoft.SecurityInsights/da0f142a-bb82-43bc-a168-5e7e3d7107d3', parameters('workspace'))]",
+              "name": "[format('{0}/Microsoft.SecurityInsights/00036c1a-b3b5-4a54-bb53-bdb5df05cb6b', parameters('workspace'))]",
               "kind": "Scheduled",
               "properties": {
                 "displayName": "Microsoft DLP Incident Creation Template (SPOT)",

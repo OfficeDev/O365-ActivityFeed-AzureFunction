@@ -156,7 +156,7 @@ resource sentinelRuleAll 'Microsoft.OperationalInsights/workspaces/providers/ale
 }
 
 resource sentinelRuleEndpoint 'Microsoft.OperationalInsights/workspaces/providers/alertRules@2022-11-01-preview' = if(policySync == true) {
-  name: '${workspace}/Microsoft.SecurityInsights/da0f142a-bb82-43bc-a168-5e7e3d7107d3'
+  name: '${workspace}/Microsoft.SecurityInsights/da07a488-6336-4854-bc4d-cbfc5d7f52d5'
   kind: 'Scheduled'
   properties: {
     displayName: 'Microsoft DLP Incident Creation Template (Endpoint)'
@@ -310,7 +310,7 @@ resource sentinelRuleEndpoint 'Microsoft.OperationalInsights/workspaces/provider
 }
 
 resource sentinelRuleEXOT 'Microsoft.OperationalInsights/workspaces/providers/alertRules@2022-11-01-preview' = if(policySync == true) {
-  name: '${workspace}/Microsoft.SecurityInsights/da0f142a-bb82-43bc-a168-5e7e3d7107d3'
+  name: '${workspace}/Microsoft.SecurityInsights/fb51d8a8-575c-4aea-8d90-42bf9a4aca1c'
   kind: 'Scheduled'
   properties: {
     displayName: 'Microsoft DLP Incident Creation Template (EXOT)'
@@ -464,7 +464,7 @@ resource sentinelRuleEXOT 'Microsoft.OperationalInsights/workspaces/providers/al
 }
 
 resource sentinelRuleSPOD 'Microsoft.OperationalInsights/workspaces/providers/alertRules@2022-11-01-preview' = if(policySync == true) {
-  name: '${workspace}/Microsoft.SecurityInsights/da0f142a-bb82-43bc-a168-5e7e3d7107d3'
+  name: '${workspace}/Microsoft.SecurityInsights/00036c1a-b3b5-4a54-bb53-bdb5df05cb6b'
   kind: 'Scheduled'
   properties: {
     displayName: 'Microsoft DLP Incident Creation Template (SPOT)'
