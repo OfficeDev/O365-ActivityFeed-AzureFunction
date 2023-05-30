@@ -162,7 +162,7 @@ resource sentinelRuleEndpoint 'Microsoft.OperationalInsights/workspaces/provider
     displayName: 'Microsoft DLP Incident Creation Template (Endpoint)'
     description: ''
     severity: 'Medium'
-    enabled: false
+    enabled: true
     query: 'let AlertProductName = \'Microsoft Data Loss Prevention (Custom)\';\r\nlet Workloads = dynamic([\'Endpoint\']);\r\n\r\nlet CurrentPolicies = (PurviewDLP_CL\r\n    | where TimeGenerated > ago(90d) and Workload in (Workloads)\r\n    | mv-expand PolicyDetails\r\n    | extend Name = tostring(PolicyDetails.PolicyName)\r\n    | where Name != ""\r\n    | summarize by Name);\r\n\r\nlet policywatchlist =(_GetWatchlist(\'Policy\')\r\n    | where Workload in (Workloads) and Name in (CurrentPolicies)\r\n    | project SearchKey);\r\n\r\nPurviewDLP(Workloads,true)\r\n| where PolicyName != "" //Do Not Remove\r\n| where not(PolicyName has_any (policywatchlist)) //Do not remove\r\n| extend Product = AlertProductName\r\n| order by TimeGenerated'
     queryFrequency: 'PT5M'
     queryPeriod: 'PT5M'
@@ -316,7 +316,7 @@ resource sentinelRuleEXOT 'Microsoft.OperationalInsights/workspaces/providers/al
     displayName: 'Microsoft DLP Incident Creation Template (EXOT)'
     description: ''
     severity: 'Medium'
-    enabled: false
+    enabled: true
     query: 'let AlertProductName = \'Microsoft Data Loss Prevention (Custom)\';\r\nlet Workloads = dynamic([\'Exchange\', \'MicrosoftTeams\']);\r\n\r\nlet CurrentPolicies = (PurviewDLP_CL\r\n    | where TimeGenerated > ago(90d) and Workload in (Workloads)\r\n    | mv-expand PolicyDetails\r\n    | extend Name = tostring(PolicyDetails.PolicyName)\r\n    | where Name != ""\r\n    | summarize by Name);\r\n\r\nlet policywatchlist =(_GetWatchlist(\'Policy\')\r\n    | where Workload in (Workloads) and Name in (CurrentPolicies)\r\n    | project SearchKey);\r\n\r\nPurviewDLP(Workloads,true)\r\n| where PolicyName != "" //Do Not Remove\r\n| where not(PolicyName has_any (policywatchlist)) //Do not remove\r\n| extend Product = AlertProductName\r\n| order by TimeGenerated'
     queryFrequency: 'PT5M'
     queryPeriod: 'PT5M'
@@ -470,7 +470,7 @@ resource sentinelRuleSPOD 'Microsoft.OperationalInsights/workspaces/providers/al
     displayName: 'Microsoft DLP Incident Creation Template (SPOT)'
     description: ''
     severity: 'Medium'
-    enabled: false
+    enabled: true
     query: 'let AlertProductName = \'Microsoft Data Loss Prevention (Custom)\';\r\nlet Workloads = dynamic([\'SharePoint\', \'OneDrive\']);\r\n\r\nlet CurrentPolicies = (PurviewDLP_CL\r\n    | where TimeGenerated > ago(90d) and Workload in (Workloads)\r\n    | mv-expand PolicyDetails\r\n    | extend Name = tostring(PolicyDetails.PolicyName)\r\n    | where Name != ""\r\n    | summarize by Name);\r\n\r\nlet policywatchlist =(_GetWatchlist(\'Policy\')\r\n    | where Workload in (Workloads) and Name in (CurrentPolicies)\r\n    | project SearchKey);\r\n\r\nPurviewDLP(Workloads,true)\r\n| where PolicyName != "" //Do Not Remove\r\n| where not(PolicyName has_any (policywatchlist)) //Do not remove\r\n| extend Product = AlertProductName\r\n| order by TimeGenerated'
     queryFrequency: 'PT5M'
     queryPeriod: 'PT5M'
