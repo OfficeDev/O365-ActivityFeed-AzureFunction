@@ -30,6 +30,7 @@ $LogType = $env:customLogName
 $dcrImmutableId = $env:DcrImmutableId
 $dceUri = $env:DceUri
 $uamiClientId = $env:UamiClientId
+$sensitiveDataHandling = $env:SensitiveDataHandling
 
 #Retry logic primarily for AF429 where there is more than 60k requests per minute, much code reused from https://stackoverflow.com/questions/45470999/powershell-try-catch-and-retry
 function Test-Command {
@@ -78,6 +79,36 @@ function Send-DataToAzureMonitor {
     )
 }
 
+#Function to hash or remove the sensitive data detected.
+function Set-DetectedValues {
+    param($Data, $Method)
+    foreach ($policy in $Data.PolicyDetails) {
+        foreach ($rule in $policy.Rules) {
+            foreach ($sit in $rule.ConditionsMatched.SensitiveInformation) {
+                foreach ($detection in $sit.SensitiveInformationDetections) {
+                    foreach ($value in $detection.DetectedValues) {
+                        if ($Method -eq 'Hash') {
+                            $hasher = [System.Security.Cryptography.HashAlgorithm]::Create('sha256')
+                            $nameHash = $hasher.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($value.Name))
+                            $nameHashString = [System.BitConverter]::ToString($nameHash)
+                            $nameHash = $nameHashString.Replace('-', '')
+                            $valueHash = $hasher.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($value.Name))
+                            $valueHashString = [System.BitConverter]::ToString($valueHash)
+                            $valueHash = $valueHashString.Replace('-', '')
+                            $value.Name = $nameHash.toLower()
+                            $value.Value = $valueHash.toLower()
+                        } else {
+                            $value.Name = 'Removed'
+                            $value.Value = 'Removed'
+                        }
+                    }
+                }
+                
+            }
+        }
+    }
+}
+
 $clientID = "$env:clientID"
 $clientSecret = "$env:clientSecret"
 $loginURL = "https://login.microsoftonline.com"
@@ -120,10 +151,7 @@ $headerParamsG = @{'Authorization' = "$($oauthG.token_type) $($oauthG.access_tok
 
 Foreach ($user in $records) {
     #Capture detection entries that are too long for LA to store
-    if (($user.PolicyDetails.rules.ConditionsMatched.SensitiveInformation.SensitiveInformationDetections.ResultsTruncated -eq "true") -or ($user.PolicyDetails.rules.ConditionsMatched.SensitiveInformation.SensitiveInformationDetections.DetectedValues.Count -gt 60)) {
-    
-   
-    
+    if (($user.PolicyDetails.rules.ConditionsMatched.SensitiveInformation.SensitiveInformationDetections.ResultsTruncated -eq "true") -or ($user.PolicyDetails.rules.ConditionsMatched.SensitiveInformation.SensitiveInformationDetections.DetectedValues.Count -gt 60)) { 
         while (($user.PolicyDetails.rules.ConditionsMatched.SensitiveInformation.SensitiveInformationDetections | convertto-json -depth 20 | measure-object -Character).characters -gt "24000") {
             $sit = $user.PolicyDetails.rules.ConditionsMatched.SensitiveInformation.SensitiveInformationDetections.count 
             for ($i = 0; $i -lt $SIT) {
@@ -155,7 +183,6 @@ Foreach ($user in $records) {
             for ($i = 0; $i -lt $SIT) {
                 $detectedrows = $user.EndpointMetaData.SensitiveInfoTypeData.SensitiveInformationDetectionsInfo[$i].DetectedValues.count
                 do {
-
                     $dec = 1
                     if ($detectedrows -gt 4) { $dec = 2 }
                     $increment = [math]::truncate($detectedrows / $dec)
@@ -173,7 +200,10 @@ Foreach ($user in $records) {
     #Exchange and Teams upload data process
     $user.workload
     if (($user.workload -eq "Exchange" -and $user.operation -ne "MipLabel") -or ($user.Workload -eq "MicrosoftTeams")) {
-
+        #Remove/hash sensitive info if specified.
+        if ($sensitiveDataHandling -eq 'Keep') {}
+        else {Set-DetectedValues -Data $user -Method $sensitiveDataHandling}
+        
         #Determine if the email is from external or internal if from external associate with first recipient on the to line
         if (($env:domains).split(",") -Contains ($user.ExchangeMetaData.from.Split('@'))[1]) { $exuser = $user.ExchangeMetaData.from }
 
@@ -212,6 +242,9 @@ Foreach ($user in $records) {
 
     #SharePoint and OneDrive upload data process
     if (($user.Workload -eq "OneDrive") -or ($user.Workload -eq "SharePoint")) {
+        #Remove/hash sensitive info if specified.
+        if ($sensitiveDataHandling -eq 'Keep') {}
+        else {Set-DetectedValues -Data $user -Method $sensitiveDataHandling}
 
         #Add the additional attributes needed to enrich the event stored in Log Analytics for SharePoint
         $queryString = $user.SharePointMetaData.From + "?$" + "select=usageLocation,Manager,department,state,jobTitle"
@@ -257,6 +290,9 @@ Foreach ($user in $records) {
     
     #PowerBI upload
     if ($user.Workload -eq "PowerBI") {
+        #Remove/hash sensitive info if specified.
+        if ($sensitiveDataHandling -eq 'Keep') {}
+        else {Set-DetectedValues -Data $user -Method $sensitiveDataHandling}
 
         #Add the additional attributes needed to enrich the event stored
         $queryString = $user.UserId + "?$" + "select=usageLocation,Manager,department,state,jobTitle"
@@ -312,7 +348,7 @@ if ($workspace) {
         $uploadWS[$workspace.name] += $endpointupload | where-object { $workspace.Value.Countries.split(",") -Contains $_.usageLocation }
         
         #PowerBi
-        $uploadWS[$workspace.name] += $powerbiupload | where-object  {$workspace.Value.Countries.split(",") -Contains $_.usageLocation} 
+        $uploadWS[$workspace.name] += $powerbiupload | where-object { $workspace.Value.Countries.split(",") -Contains $_.usageLocation } 
     }                  
 
     #Upload to Workspaces

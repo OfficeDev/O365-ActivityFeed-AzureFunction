@@ -60,7 +60,7 @@ foreach ($workspace in $main.GetEnumerator()) {
   $rules = Invoke-RestMethod -Method "Get" -Uri $urllist -Headers $authHeader
 
   #Fetch Template
-  $template0 = $rules.value | where-object { $_.properties.displayname -eq "Microsoft DLP Template (SharePoint and OneDrive)" } | select-object
+  $template0 = $rules.value | where-object { $_.properties.displayname -eq "Microsoft DLP Incident Creation Template (SPOD)" } | select-object
   $date = Get-Date
 
   if (-not ($rules)) { throw 'Failed to connect to Sentinel Workspace' }
@@ -77,8 +77,8 @@ foreach ($workspace in $main.GetEnumerator()) {
     
       if ($matchexisting) {
         $policy.name
-        $template.properties.query = $template.properties.query -replace 'Policy != "" //Do Not Remove', "Policy == '$($policy.name)'"
-        $pattern = '\| where not\(Policy has_any \(policywatchlist\)\) //Do not remove'
+        $template.properties.query = $template.properties.query -replace 'PolicyName != "" //Do Not Remove', "PolicyName == '$($policy.name)'"
+        $pattern = '\| where not\(PolicyName has_any \(policywatchlist\)\) //Do not remove'
         $template.properties.query = $template.properties.query -replace $pattern, "//This rule was updated by code $date"
         $template.properties.displayname = $matchexisting.properties.displayname
         $template.properties.enabled = $true
@@ -97,8 +97,8 @@ foreach ($workspace in $main.GetEnumerator()) {
 
       if (-not $matchexisting) {
         $etag = New-Guid
-        $template.properties.query = $template.properties.query -replace 'Policy != "" //Do Not Remove', "Policy == '$($policy.Name)'"
-        $pattern = '\| where not\(Policy has_any \(policywatchlist\)\) //Do not remove'
+        $template.properties.query = $template.properties.query -replace 'PolicyName != "" //Do Not Remove', "PolicyName == '$($policy.Name)'"
+        $pattern = '\| where not\(PolicyName has_any \(policywatchlist\)\) //Do not remove'
         $template.properties.query = $template.properties.query -replace $pattern, "//This rule was created by code $date"
         $template.properties.displayname = $policyName2
         $template.properties.enabled = $true
