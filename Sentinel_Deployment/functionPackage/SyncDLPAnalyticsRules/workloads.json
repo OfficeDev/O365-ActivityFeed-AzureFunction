@@ -1,0 +1,14 @@
+[
+    {
+        "Alias": "SPOD",
+        "Names": ["SharePoint", "OneDrive"]
+    },
+    {
+        "Alias": "EXOT",
+        "Names": ["Exchange", "MicrosoftTeams"]
+    },
+    {
+        "Alias": "Endpoint",
+        "Names": ["Endpoint"]
+    }
+]
