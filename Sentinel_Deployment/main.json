@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.17.1.54307",
-      "templateHash": "13113424287503595617"
+      "templateHash": "7697758976230267439"
     }
   },
   "parameters": {
@@ -361,15 +361,7 @@
               "value": "0"
             },
             {
-              "name": "AzureWebJobs.SyncEndpointDLPAnalyticRules.Disabled",
-              "value": "[if(equals(parameters('DLPPolicySync'), false()), '1', '0')]"
-            },
-            {
-              "name": "AzureWebJobs.SyncEXOTeamsDLPAnalyticRules.Disabled",
-              "value": "[if(equals(parameters('DLPPolicySync'), false()), '1', '0')]"
-            },
-            {
-              "name": "AzureWebJobs.SyncSPODDLPAnalyticRules.Disabled",
+              "name": "AzureWebJobs.SyncDLPAnalyticsRules.Disabled",
               "value": "[if(equals(parameters('DLPPolicySync'), false()), '1', '0')]"
             },
             {
@@ -506,123 +498,6 @@
       },
       "dependsOn": [
         "[resourceId('Microsoft.Web/sites', parameters('FunctionAppName'))]",
-        "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('uami-{0}', parameters('FunctionAppName')))]"
-      ]
-    },
-    {
-      "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2022-09-01",
-      "name": "keyVaultUpdateNetworkAcl",
-      "properties": {
-        "expressionEvaluationOptions": {
-          "scope": "inner"
-        },
-        "mode": "Incremental",
-        "parameters": {
-          "kvName": {
-            "value": "[parameters('KeyVaultName')]"
-          },
-          "location": {
-            "value": "[reference(resourceId('Microsoft.KeyVault/vaults', parameters('KeyVaultName')), '2022-07-01', 'full').location]"
-          },
-          "skuFamily": {
-            "value": "[reference(resourceId('Microsoft.KeyVault/vaults', parameters('KeyVaultName')), '2022-07-01').sku.family]"
-          },
-          "skuName": {
-            "value": "[reference(resourceId('Microsoft.KeyVault/vaults', parameters('KeyVaultName')), '2022-07-01').sku.name]"
-          },
-          "principalId": {
-            "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('uami-{0}', parameters('FunctionAppName'))), '2022-01-31-preview').principalId]"
-          },
-          "aclBypass": {
-            "value": "None"
-          },
-          "aclDefaultAction": {
-            "value": "Deny"
-          },
-          "aclIpRules": {
-            "value": "[reference(resourceId('Microsoft.Web/sites', parameters('FunctionAppName')), '2022-03-01').possibleOutboundIpAddresses]"
-          },
-          "secretPermissions": {
-            "value": "[reference(resourceId('Microsoft.KeyVault/vaults', parameters('KeyVaultName')), '2022-07-01').accessPolicies[0].permissions.secrets]"
-          }
-        },
-        "template": {
-          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
-          "contentVersion": "1.0.0.0",
-          "metadata": {
-            "_generator": {
-              "name": "bicep",
-              "version": "0.17.1.54307",
-              "templateHash": "380844100257844807"
-            }
-          },
-          "parameters": {
-            "kvName": {
-              "type": "string"
-            },
-            "location": {
-              "type": "string"
-            },
-            "skuFamily": {
-              "type": "string"
-            },
-            "skuName": {
-              "type": "string"
-            },
-            "principalId": {
-              "type": "string"
-            },
-            "secretPermissions": {
-              "type": "array"
-            },
-            "aclIpRules": {
-              "type": "string",
-              "defaultValue": ""
-            },
-            "aclBypass": {
-              "type": "string",
-              "defaultValue": "None"
-            },
-            "aclDefaultAction": {
-              "type": "string",
-              "defaultValue": "AzureServices"
-            }
-          },
-          "resources": [
-            {
-              "type": "Microsoft.KeyVault/vaults",
-              "apiVersion": "2022-07-01",
-              "name": "[parameters('kvName')]",
-              "location": "[parameters('location')]",
-              "properties": {
-                "sku": {
-                  "family": "[parameters('skuFamily')]",
-                  "name": "[parameters('skuName')]"
-                },
-                "tenantId": "[subscription().tenantId]",
-                "accessPolicies": [
-                  {
-                    "objectId": "[parameters('principalId')]",
-                    "permissions": {
-                      "secrets": "[parameters('secretPermissions')]"
-                    },
-                    "tenantId": "[subscription().tenantId]"
-                  }
-                ],
-                "networkAcls": {
-                  "bypass": "[parameters('aclBypass')]",
-                  "defaultAction": "[parameters('aclDefaultAction')]",
-                  "ipRules": "[if(equals(parameters('aclIpRules'), ''), createArray(), json(format('{0}{1}{2}', '[{\"value\": \"', replace(parameters('aclIpRules'), ',', '\"},{\"value\": \"'), '\"}]')))]"
-                }
-              }
-            }
-          ]
-        }
-      },
-      "dependsOn": [
-        "[resourceId('Microsoft.Web/sites', parameters('FunctionAppName'))]",
-        "[resourceId('Microsoft.KeyVault/vaults', parameters('KeyVaultName'))]",
         "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('uami-{0}', parameters('FunctionAppName')))]"
       ]
     },
@@ -1217,8 +1092,124 @@
         }
       },
       "dependsOn": [
-        "[resourceId('Microsoft.Resources/deployments', 'createCustomTables')]",
-        "[resourceId('Microsoft.Web/sites', parameters('FunctionAppName'))]"
+        "[resourceId('Microsoft.Resources/deployments', 'createCustomTables')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "keyVaultUpdateNetworkAcl",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "kvName": {
+            "value": "[parameters('KeyVaultName')]"
+          },
+          "location": {
+            "value": "[reference(resourceId('Microsoft.KeyVault/vaults', parameters('KeyVaultName')), '2022-07-01', 'full').location]"
+          },
+          "skuFamily": {
+            "value": "[reference(resourceId('Microsoft.KeyVault/vaults', parameters('KeyVaultName')), '2022-07-01').sku.family]"
+          },
+          "skuName": {
+            "value": "[reference(resourceId('Microsoft.KeyVault/vaults', parameters('KeyVaultName')), '2022-07-01').sku.name]"
+          },
+          "principalId": {
+            "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('uami-{0}', parameters('FunctionAppName'))), '2022-01-31-preview').principalId]"
+          },
+          "aclBypass": {
+            "value": "None"
+          },
+          "aclDefaultAction": {
+            "value": "Deny"
+          },
+          "aclIpRules": {
+            "value": "[reference(resourceId('Microsoft.Web/sites', parameters('FunctionAppName')), '2022-03-01').possibleOutboundIpAddresses]"
+          },
+          "secretPermissions": {
+            "value": "[reference(resourceId('Microsoft.KeyVault/vaults', parameters('KeyVaultName')), '2022-07-01').accessPolicies[0].permissions.secrets]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.17.1.54307",
+              "templateHash": "380844100257844807"
+            }
+          },
+          "parameters": {
+            "kvName": {
+              "type": "string"
+            },
+            "location": {
+              "type": "string"
+            },
+            "skuFamily": {
+              "type": "string"
+            },
+            "skuName": {
+              "type": "string"
+            },
+            "principalId": {
+              "type": "string"
+            },
+            "secretPermissions": {
+              "type": "array"
+            },
+            "aclIpRules": {
+              "type": "string",
+              "defaultValue": ""
+            },
+            "aclBypass": {
+              "type": "string",
+              "defaultValue": "None"
+            },
+            "aclDefaultAction": {
+              "type": "string",
+              "defaultValue": "AzureServices"
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.KeyVault/vaults",
+              "apiVersion": "2022-07-01",
+              "name": "[parameters('kvName')]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "sku": {
+                  "family": "[parameters('skuFamily')]",
+                  "name": "[parameters('skuName')]"
+                },
+                "tenantId": "[subscription().tenantId]",
+                "accessPolicies": [
+                  {
+                    "objectId": "[parameters('principalId')]",
+                    "permissions": {
+                      "secrets": "[parameters('secretPermissions')]"
+                    },
+                    "tenantId": "[subscription().tenantId]"
+                  }
+                ],
+                "networkAcls": {
+                  "bypass": "[parameters('aclBypass')]",
+                  "defaultAction": "[parameters('aclDefaultAction')]",
+                  "ipRules": "[if(equals(parameters('aclIpRules'), ''), createArray(), json(format('{0}{1}{2}', '[{\"value\": \"', replace(parameters('aclIpRules'), ',', '\"},{\"value\": \"'), '\"}]')))]"
+                }
+              }
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/sites', parameters('FunctionAppName'))]",
+        "[resourceId('Microsoft.KeyVault/vaults', parameters('KeyVaultName'))]",
+        "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('uami-{0}', parameters('FunctionAppName')))]"
       ]
     },
     {
@@ -1357,11 +1348,7 @@
             }
           ]
         }
-      },
-      "dependsOn": [
-        "[resourceId('Microsoft.Resources/deployments', 'createCustomTables')]",
-        "[resourceId('Microsoft.Web/sites', parameters('FunctionAppName'))]"
-      ]
+      }
     },
     {
       "type": "Microsoft.Resources/deployments",
@@ -1389,7 +1376,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.17.1.54307",
-              "templateHash": "6468611229234708554"
+              "templateHash": "17438801836654139114"
             }
           },
           "parameters": {
@@ -1438,7 +1425,7 @@
             "workloads": "[variables('$fxv#0')]",
             "baseQueryVar1": "let Workloads = dynamic(WORKLOADSREPLACE);\r\n",
             "baseQueryVar2": "let WorkloadAlias = \"WORKLOADALIASREPLACE\";\r\n",
-            "baseQuery": "let AlertProductName = \"Microsoft Data Loss Prevention (Custom)\";\r\n\r\nlet CurrentPolicies = (PurviewDLP_CL\r\n    | where TimeGenerated > ago(14d) and Workload in (Workloads)\r\n    | mv-expand PolicyDetails\r\n| extend Name = tostring(PolicyDetails.PolicyName)\r\n    | where Name != \"\"\r\n    | summarize by Name);\r\n\r\nlet policywatchlist =(_GetWatchlist(\"Policy\")\r\n    | where Workload == WorkloadAlias and Name in (CurrentPolicies)\r\n    | project SearchKey);\r\n\r\nPurviewDLP(Workloads, true)\r\n| where IngestionTime > ago(5m)\r\n| where PolicyName != \"\" //Do Not Remove\r\n| where not(PolicyName has_any (policywatchlist)) //Do not remove\r\n| extend Product = AlertProductName\r\n| order by TimeGenerated"
+            "baseQuery": "let AlertProductName = \"Microsoft Data Loss Prevention (Custom)\";\r\n\r\nlet CurrentPolicies = (PurviewDLP_CL\r\n    | where TimeGenerated > ago(14d) and Workload in (Workloads)\r\n    | mv-expand PolicyDetails\r\n| extend Name = tostring(PolicyDetails.PolicyName)\r\n    | where Name != \"\"\r\n    | summarize by Name);\r\n\r\nlet policywatchlist =(_GetWatchlist(\"Policy\")\r\n    | extend Workload = column_ifexists(\"Workload\", \"\")\r\n    | extend Name = column_ifexists(\"Name\", \"\")\r\n    | where Workload == WorkloadAlias and Name in (CurrentPolicies)\r\n    | project SearchKey);\r\n\r\nPurviewDLP(Workloads, true)\r\n| where IngestionTime > ago(5m)\r\n| where PolicyName != \"\" //Do Not Remove\r\n| where not(PolicyName has_any (policywatchlist)) //Do not remove\r\n| extend Product = AlertProductName\r\n| order by TimeGenerated"
           },
           "resources": [
             {
@@ -1684,7 +1671,8 @@
       },
       "dependsOn": [
         "[resourceId('Microsoft.Resources/deployments', 'createCustomTables')]",
-        "[resourceId('Microsoft.Web/sites', parameters('FunctionAppName'))]"
+        "[resourceId('Microsoft.Web/sites', parameters('FunctionAppName'))]",
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[2], split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[4]), 'Microsoft.Resources/deployments', 'purviewDLPFunction')]"
       ]
     },
     {

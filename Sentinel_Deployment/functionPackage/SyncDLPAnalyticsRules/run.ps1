@@ -5,7 +5,7 @@ param($Timer)
 $filepath = "d:\home\"
 
 #Define workloads array to be processed
-$workloads = Get-Content .\SyncDLPAnalyticRules\workloads.json  | ConvertFrom-Json
+$workloads = Get-Content ($filepath + 'SyncDLPAnalyticRules\workloads.json')  | ConvertFrom-Json
 
 #Sentinel variables for workspaces update for each workspace to include
 #$workspaceId0 = $env:SentinelWorkspaceUS
