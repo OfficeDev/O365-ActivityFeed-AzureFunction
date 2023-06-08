@@ -44,7 +44,8 @@ foreach ($workload in $workloads) {
     $q = "PurviewDLP_CL
         | where TimeGenerated > ago(14d)
         | where Workload in ($workloadNames)
-        | extend Name = tostring(PolicyDetails[0].PolicyName)
+        | mv-expand PolicyDetails
+        | extend Name = tostring(PolicyDetails.PolicyName)
         | where Name != ''
         | summarize by Name
         | project Name, Workload = '$workloadAlias'"
@@ -82,8 +83,8 @@ foreach ($workload in $workloads) {
           
         if ($matchexisting) {
           $policy.name
-          $template.properties.query = $template.properties.query -replace 'PolicyName != "" //Do Not Remove', "PolicyName == '$($policy.name)'"
-          $pattern = '\| where not\(PolicyName has_any \(policywatchlist\)\) //Do not remove'
+          $template.properties.query = $template.properties.query -replace 'PolicyName != "" //Do Not Remove', "PolicyName == '$($policy.name)' and PolicyName has_any (PolicyWatchlist)"
+          $pattern = '\| where not\(PolicyName has_any \(PolicyWatchlist\)\) //Do not remove'
           $template.properties.query = $template.properties.query -replace $pattern, "//This rule was updated by code $date"
           $template.properties.displayname = $matchexisting.properties.displayname
           $template.properties.enabled = $true
@@ -102,8 +103,8 @@ foreach ($workload in $workloads) {
       
         if (-not $matchexisting) {
           $etag = New-Guid
-          $template.properties.query = $template.properties.query -replace 'PolicyName != "" //Do Not Remove', "PolicyName == '$($policy.Name)'"
-          $pattern = '\| where not\(PolicyName has_any \(policywatchlist\)\) //Do not remove'
+          $template.properties.query = $template.properties.query -replace 'PolicyName != "" //Do Not Remove', "PolicyName == '$($policy.Name)' and PolicyName has_any (PolicyWatchlist)"
+          $pattern = '\| where not\(PolicyName has_any \(PolicyWatchlist\)\) //Do not remove'
           $template.properties.query = $template.properties.query -replace $pattern, "//This rule was created by code $date"
           $template.properties.displayname = $policyName
           $template.properties.enabled = $true

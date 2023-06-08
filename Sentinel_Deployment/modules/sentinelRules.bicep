@@ -10,9 +10,10 @@ param guids array = [
 ]
 
 var workloads = loadJsonContent('../functionPackage/SyncDLPAnalyticsRules/workloads.json')
-var baseQueryVar1 = 'let Workloads = dynamic(WORKLOADSREPLACE);\r\n'
-var baseQueryVar2 = 'let WorkloadAlias = "WORKLOADALIASREPLACE";\r\n'
-var baseQuery = 'let AlertProductName = "Microsoft Data Loss Prevention (Custom)";\r\n\r\nlet CurrentPolicies = (PurviewDLP_CL\r\n    | where TimeGenerated > ago(14d) and Workload in (Workloads)\r\n    | mv-expand PolicyDetails\r\n| extend Name = tostring(PolicyDetails.PolicyName)\r\n    | where Name != ""\r\n    | summarize by Name);\r\n\r\nlet policywatchlist =(_GetWatchlist("Policy")\r\n    | extend Workload = column_ifexists("Workload", "")\r\n    | extend Name = column_ifexists("Name", "")\r\n    | where Workload == WorkloadAlias and Name in (CurrentPolicies)\r\n    | project SearchKey);\r\n\r\nPurviewDLP(Workloads, true)\r\n| where IngestionTime > ago(5m)\r\n| where PolicyName != "" //Do Not Remove\r\n| where not(PolicyName has_any (policywatchlist)) //Do not remove\r\n| extend Product = AlertProductName\r\n| order by TimeGenerated'
+var querySyncVar1 = 'let Workloads = dynamic(WORKLOADSREPLACE);\r\n'
+var querySyncVar2 = 'let WorkloadAlias = "WORKLOADALIASREPLACE";\r\n'
+var querySync = 'let PolicyWatchlist = _GetWatchlist("Policy")\r\n| extend Workload = column_ifexists("Workload", ""), Name = column_ifexists("Name", "")\r\n| where Workload == WorkloadAlias\r\n| project SearchKey;\r\n\r\nPurviewDLP(Workloads, true)\r\n| where IngestionTime > ago(5m)\r\n| where PolicyName != "" //Do Not Remove\r\n| where not(PolicyName has_any (PolicyWatchlist)) //Do not remove\r\n| extend Product = AlertProductName\r\n| order by TimeGenerated'
+var queryAll = 'let AlertProductName = "Microsoft Data Loss Prevention (Custom)";\r\nlet Workloads = dynamic(["Endpoint", "SharePoint", "OneDrive", "Exchange", "MicrosoftTeams"]);\r\nlet Lookback = 8h;\r\n\r\nPurviewDLP(Workloads,true)\r\n| where TimeGenerated > ago(Lookback)\r\n| extend Product = AlertProductName\r\n| join kind=leftanti (SecurityAlert\r\n    | where TimeGenerated > ago(Lookback + 1h)\r\n    | where ProductName == AlertProductName\r\n    | extend Identifier = substring(AlertLink, indexof(AlertLink, "eventid=") + 8, indexof(AlertLink, "&creationtime") - indexof(AlertLink, "eventid=") - 8)\r\n    ) on Identifier\r\n| order by TimeGenerated asc\r\n| take 150\r\n| order by TimeGenerated'
 
 resource sentinelRuleAll 'Microsoft.OperationalInsights/workspaces/providers/alertRules@2022-11-01-preview' = if (policySync == false) {
   name: '${workspace}/Microsoft.SecurityInsights/64621844-3809-45b1-a072-50b93283e095'
@@ -22,9 +23,9 @@ resource sentinelRuleAll 'Microsoft.OperationalInsights/workspaces/providers/ale
     description: ''
     severity: 'Medium'
     enabled: true
-    query: 'let AlertProductName = "Microsoft Data Loss Prevention (Custom)";\r\nlet Workloads = dynamic(["Endpoint", "SharePoint", "OneDrive", "Exchange", "MicrosoftTeams"]);\r\n\r\nPurviewDLP(Workloads,true)\r\n| extend Product = AlertProductName\r\n| join kind=leftanti (SecurityAlert\r\n    | where TimeGenerated > ago(12h)\r\n    | where ProductName == AlertProductName\r\n    | extend Identifier = substring(AlertLink, indexof(AlertLink, "eventid=") + 8, indexof(AlertLink, "&creationtime") - indexof(AlertLink, "eventid=") - 8)\r\n    ) on Identifier\r\n| order by TimeGenerated asc\r\n| take 150'
+    query: queryAll
     queryFrequency: 'PT6M'
-    queryPeriod: 'PT8H'
+    queryPeriod: 'PT9H'
     triggerOperator: 'GreaterThan'
     triggerThreshold: 0
     suppressionDuration: 'PT5H'
@@ -176,7 +177,7 @@ resource sentinelRuleSync 'Microsoft.OperationalInsights/workspaces/providers/al
     description: ''
     severity: 'Medium'
     enabled: true
-    query: concat(replace(baseQueryVar1, 'WORKLOADSREPLACE', string(workload.Names)), replace(baseQueryVar2, 'WORKLOADALIASREPLACE', workload.Alias), baseQuery)
+    query: concat(replace(querySyncVar1, 'WORKLOADSREPLACE', string(workload.Names)), replace(querySyncVar2, 'WORKLOADALIASREPLACE', workload.Alias), querySync)
     queryFrequency: 'PT5M'
     queryPeriod: 'PT10M'
     triggerOperator: 'GreaterThan'
