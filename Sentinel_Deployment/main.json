@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.17.1.54307",
-      "templateHash": "15521843981578273225"
+      "templateHash": "7025968019565394556"
     }
   },
   "parameters": {
@@ -1376,7 +1376,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.17.1.54307",
-              "templateHash": "17438801836654139114"
+              "templateHash": "4814367920085778544"
             }
           },
           "parameters": {
@@ -1601,7 +1601,7 @@
                 "enabled": true,
                 "query": "[concat(replace(variables('baseQueryVar1'), 'WORKLOADSREPLACE', string(variables('workloads')[copyIndex()].Names)), replace(variables('baseQueryVar2'), 'WORKLOADALIASREPLACE', variables('workloads')[copyIndex()].Alias), variables('baseQuery'))]",
                 "queryFrequency": "PT5M",
-                "queryPeriod": "PT5M",
+                "queryPeriod": "PT10M",
                 "triggerOperator": "GreaterThan",
                 "triggerThreshold": 0,
                 "suppressionDuration": "PT5H",

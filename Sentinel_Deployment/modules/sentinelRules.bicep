@@ -178,7 +178,7 @@ resource sentinelRuleSync 'Microsoft.OperationalInsights/workspaces/providers/al
     enabled: true
     query: concat(replace(baseQueryVar1, 'WORKLOADSREPLACE', string(workload.Names)), replace(baseQueryVar2, 'WORKLOADALIASREPLACE', workload.Alias), baseQuery)
     queryFrequency: 'PT5M'
-    queryPeriod: 'PT5M'
+    queryPeriod: 'PT10M'
     triggerOperator: 'GreaterThan'
     triggerThreshold: 0
     suppressionDuration: 'PT5H'
