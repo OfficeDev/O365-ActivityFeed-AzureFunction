@@ -22,7 +22,6 @@ $tolocal = @()
 #All Content Workspace, used for the central team
 $AllContent = @{"Countries" = "ALLContent"; "Workspacekey" = $env:workspaceKey; "Workspace" = $env:workspaceId }
 
-
 # Specify the name of the record type that you'll be creating
 $LogType = $env:customLogName
 
@@ -92,7 +91,7 @@ function Set-DetectedValues {
                             $nameHash = $hasher.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($value.Name))
                             $nameHashString = [System.BitConverter]::ToString($nameHash)
                             $nameHash = $nameHashString.Replace('-', '')
-                            $valueHash = $hasher.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($value.Name))
+                            $valueHash = $hasher.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($value.Value))
                             $valueHashString = [System.BitConverter]::ToString($valueHash)
                             $valueHash = $valueHashString.Replace('-', '')
                             $value.Name = $nameHash.toLower()
@@ -115,7 +114,6 @@ $loginURL = "https://login.microsoftonline.com"
 $tenantGUID = "$env:TenantGuid"
 $resource = "https://manage.office.com"
 
-
 # Get an Oauth 2 access token based on client id, secret and tenant domain
 $body = @{grant_type = "client_credentials"; resource = $resource; client_id = $ClientID; client_secret = $ClientSecret }
 
@@ -125,7 +123,6 @@ $headerParams = @{'Authorization' = "$($oauth.token_type) $($oauth.access_token)
 
 #$message = $queueitem | convertfrom-json
 $content = $queueitem
-
 
 if ($queueitem.count -eq 1) { $content = $queueitem | convertfrom-json }
 
@@ -139,7 +136,6 @@ foreach ( $url in $content) {
 
 $records.count
 
-
 #Here starts the enrichment functionality and routing function.
 
 #Make the GRAPH Call to get additional information, require different audience tag.
@@ -148,55 +144,7 @@ $bodyG = @{grant_type = "client_credentials"; resource = $resourceG; client_id =
 $oauthG = Invoke-RestMethod -Method Post -Uri $loginURL/$tenantGUID/oauth2/token?api-version=1.0 -Body $bodyG 
 $headerParamsG = @{'Authorization' = "$($oauthG.token_type) $($oauthG.access_token)" }
 
-
 Foreach ($user in $records) {
-    #Capture detection entries that are too long for LA to store
-    if (($user.PolicyDetails.rules.ConditionsMatched.SensitiveInformation.SensitiveInformationDetections.ResultsTruncated -eq "true") -or ($user.PolicyDetails.rules.ConditionsMatched.SensitiveInformation.SensitiveInformationDetections.DetectedValues.Count -gt 60)) { 
-        while (($user.PolicyDetails.rules.ConditionsMatched.SensitiveInformation.SensitiveInformationDetections | convertto-json -depth 20 | measure-object -Character).characters -gt "24000") {
-            $sit = $user.PolicyDetails.rules.ConditionsMatched.SensitiveInformation.SensitiveInformationDetections.count 
-            for ($i = 0; $i -lt $SIT) {
-                $i
-                $detectedrows = $user.PolicyDetails.rules.ConditionsMatched.SensitiveInformation.SensitiveInformationDetections[$i].DetectedValues.count
-                do {
-
-                    $dec = 1
-                    if ($detectedrows -gt 30) { $dec = 2 }
-                    $increment = [math]::truncate($detectedrows / $dec)
-                    $detected = $user.PolicyDetails.rules.ConditionsMatched.SensitiveInformation.SensitiveInformationDetections[$i].DetectedValues[0..$increment]
-                    $detectedcount = $detected.value | Measure-object -Character
-                    $detectedrows = [math]::truncate($increment * 1.5)
-                } until ($detectedcount.Characters -le "10240" )
-                $user.PolicyDetails.rules.ConditionsMatched.SensitiveInformation.SensitiveInformationDetections[$i].DetectedValues = $detected
-                $user.PolicyDetails.rules.ConditionsMatched.SensitiveInformation.SensitiveInformationDetections[$i].DetectedValues.count                                                                                                        
-                $i++
-            }
-        }
-    }
-
-    #Endpoint code to capture entries too long for LA store
-    if (($user.EndpointMetaData.SensitiveInfoTypeData.SensitiveInformationDetectionsInfo.detectedvalues.count -gt 30)) {
-        $sit = @()
-        $detected = @()
-        $detectedrows = @()
-        while (($user.EndpointMetaData.SensitiveInfoTypeData.SensitiveInformationDetectionsInfo | convertto-json -depth 20 | measure-object -Character).characters -gt "20000") {
-            $sit = $user.EndpointMetaData.SensitiveInfoTypeData.SensitiveInformationDetectionsInfo.count 
-            for ($i = 0; $i -lt $SIT) {
-                $detectedrows = $user.EndpointMetaData.SensitiveInfoTypeData.SensitiveInformationDetectionsInfo[$i].DetectedValues.count
-                do {
-                    $dec = 1
-                    if ($detectedrows -gt 4) { $dec = 2 }
-                    $increment = [math]::truncate($detectedrows / $dec)
-                    $detected = $user.EndpointMetaData.SensitiveInfoTypeData.SensitiveInformationDetectionsInfo[$i].DetectedValues[0..$increment]
-                    $detectedcount = $detected.value | Measure-object -Character
-                    $detectedrows = [math]::truncate($increment * 1.5)
-                } until ($detectedcount.Characters -le "10240" )
-                $user.EndpointMetaData.SensitiveInfoTypeData.SensitiveInformationDetectionsInfo[$i].DetectedValues = $detected
-                $user.EndpointMetaData.SensitiveInfoTypeData.SensitiveInformationDetectionsInfo[$i].DetectedValues.count                                                                                                        
-                $i++
-            }
-        }
-    }
-
     #Exchange and Teams upload data process
     $user.workload
     if (($user.workload -eq "Exchange" -and $user.operation -ne "MipLabel") -or ($user.Workload -eq "MicrosoftTeams")) {
@@ -317,9 +265,6 @@ Foreach ($user in $records) {
     }
 }
 
-
-
-
 #Add required .Net assemblies to handle the Azure Monitor ingestion.
 Add-Type -Path .\StoreDLPEvents\lib\Azure.Monitor.Ingestion.dll
 Add-Type -Path .\StoreDLPEvents\lib\Azure.Identity.dll
@@ -329,7 +274,6 @@ $credential = New-Object Azure.Identity.ManagedIdentityCredential($uamiClientId)
 
 #Create LogsIngestionClient to handle sending data to Azure Monitor.
 $logIngestionClient = New-Object Azure.Monitor.Ingestion.LogsIngestionClient($dceURI, $credential)
-
 
 #Determine which Sentinel Workspace to route the information,
 $uploadWS = @{}
@@ -371,7 +315,7 @@ if ($workspace) {
 $allWS += $exupload
 $allWS += $spoupload
 $allWS += $endpointupload
-$allWS += $powerbiupload
+#$allWS += $powerbiupload
 if ($allWS) {
     #Add required TimeGenerated field and create alias for Id field since that name is not allowed by Azure Monitor.
     $allWS | Add-Member -MemberType AliasProperty -Name 'TimeGenerated' -Value CreationTime

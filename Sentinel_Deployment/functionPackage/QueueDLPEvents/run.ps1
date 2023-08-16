@@ -39,8 +39,14 @@ Foreach ($workload in $workloads) {
 
     #$StoredTime = "2020-01-27T20:00:35.464Z"
 
+    try {
+        $adjustTime = New-TimeSpan -start $storedTime -End $endTime    
+    }
+    catch {
+        throw "Unable to calculate start time. Ensure valid timestamp is in [workload].log file."
+    }
+    
     #If events are longer apart than 24 hours
-    $adjustTime = New-TimeSpan -start $storedTime -End $endTime
     If ($adjustTime.TotalHours -gt 24) {
         $hours = $adjustTime.TotalHours - 23.9
         $storedTime = (get-date $storedTime).AddHours($hours)
@@ -116,7 +122,14 @@ Foreach ($workload in $workloads) {
         }
         #Updating timers on success, registering the date from the latest entry returned from the API and adding 1 millisecond to avoid overlap
         $time = $pagearray[0].Content | convertfrom-json
-        $Lastentry = (get-date ($time[$Time.contentcreated.Count - 1].contentCreated)).AddMilliseconds(1).ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
+        
+        try {
+            $Lastentry = (get-date ($time[$Time.contentcreated.Count - 1].contentCreated)).AddMilliseconds(1).ToString("yyyy-MM-ddTHH:mm:ss.fffZ")    
+        }
+        catch {
+            throw "Unable to get date from last entry."
+        }
+        
         if ($Lastentry -ge $storedTime) { out-file -FilePath $Tracker -NoNewline -InputObject $Lastentry } 
 
     } 
