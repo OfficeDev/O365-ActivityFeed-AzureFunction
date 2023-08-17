@@ -12,8 +12,8 @@ param guids array = [
 var workloads = loadJsonContent('../functionPackage/SyncDLPAnalyticsRules/workloads.json')
 var querySyncVar1 = 'let Workloads = dynamic(WORKLOADSREPLACE);\r\n'
 var querySyncVar2 = 'let WorkloadAlias = "WORKLOADALIASREPLACE";\r\n'
-var querySync = 'let AlertProductName = "Microsoft Data Loss Prevention (Custom)";\r\nlet Lookback = 8h;\r\n\r\nlet PolicyWatchlist = _GetWatchlist("Policy")\r\n    | extend Workload = column_ifexists("Workload", ""), Name = column_ifexists("Name", "")\r\n    | where Workload == WorkloadAlias\r\n    | project SearchKey;\r\n\r\nPurviewDLP(Workloads, true)\r\n| where TimeGenerated > ago(Lookback)\r\n| where PolicyName != "" //Do Not Remove\r\n| where not(PolicyName has_any (PolicyWatchlist)) //Do not remove\r\n| extend Product = AlertProductName\r\n| join kind=leftanti (SecurityAlert\r\n    | where TimeGenerated > ago(Lookback + 1h)\r\n    | where ProductName == AlertProductName\r\n    | extend Identifier = substring(AlertLink, indexof(AlertLink, "eventid=") + 8, indexof(AlertLink, "&creationtime") - indexof(AlertLink, "eventid=") - 8)\r\n    ) on Identifier\r\n| order by TimeGenerated asc\r\n| take 150\r\n| order by TimeGenerated'
-var queryAll = 'let AlertProductName = "Microsoft Data Loss Prevention (Custom)";\r\nlet Workloads = dynamic(["Endpoint", "SharePoint", "OneDrive", "Exchange", "MicrosoftTeams"]);\r\nlet Lookback = 8h;\r\n\r\nPurviewDLP(Workloads,true)\r\n| where TimeGenerated > ago(Lookback)\r\n| extend Product = AlertProductName\r\n| join kind=leftanti (SecurityAlert\r\n    | where TimeGenerated > ago(Lookback + 1h)\r\n    | where ProductName == AlertProductName\r\n    | extend Identifier = substring(AlertLink, indexof(AlertLink, "eventid=") + 8, indexof(AlertLink, "&creationtime") - indexof(AlertLink, "eventid=") - 8)\r\n    ) on Identifier\r\n| order by TimeGenerated asc\r\n| take 150\r\n| order by TimeGenerated'
+var querySync = 'let AlertProductName = "Microsoft Data Loss Prevention (Custom)";\r\n\r\nlet PolicyWatchlist = _GetWatchlist("Policy")\r\n    | extend Workload = column_ifexists("Workload", ""), Name = column_ifexists("Name", "")\r\n    | where Workload == WorkloadAlias\r\n    | project SearchKey;\r\n\r\nPurviewDLP(Workloads, true)\r\n| where PolicyName != "" //Do Not Remove\r\n| where not(PolicyName has_any (PolicyWatchlist)) //Do not remove\r\n| extend Product = AlertProductName\r\n| order by TimeGenerated'
+var queryAll = 'let AlertProductName = "Microsoft Data Loss Prevention (Custom)";\r\n\r\nPurviewDLP(Workloads,true)\r\n| extend Product = AlertProductName\r\n| order by TimeGenerated'
 
 resource sentinelRuleAll 'Microsoft.OperationalInsights/workspaces/providers/alertRules@2022-11-01-preview' = if (policySync == false) {
   name: '${workspace}/Microsoft.SecurityInsights/64621844-3809-45b1-a072-50b93283e095'
@@ -24,8 +24,8 @@ resource sentinelRuleAll 'Microsoft.OperationalInsights/workspaces/providers/ale
     severity: 'Medium'
     enabled: true
     query: queryAll
-    queryFrequency: 'PT6M'
-    queryPeriod: 'PT9H'
+    queryFrequency: 'PT10M'
+    queryPeriod: 'PT10M'
     triggerOperator: 'GreaterThan'
     triggerThreshold: 0
     suppressionDuration: 'PT5H'
@@ -178,8 +178,8 @@ resource sentinelRuleSync 'Microsoft.OperationalInsights/workspaces/providers/al
     severity: 'Medium'
     enabled: true
     query: concat(replace(querySyncVar1, 'WORKLOADSREPLACE', string(workload.Names)), replace(querySyncVar2, 'WORKLOADALIASREPLACE', workload.Alias), querySync)
-    queryFrequency: 'PT6M'
-    queryPeriod: 'PT9H'
+    queryFrequency: 'PT10M'
+    queryPeriod: 'PT10M'
     triggerOperator: 'GreaterThan'
     triggerThreshold: 0
     suppressionDuration: 'PT5H'

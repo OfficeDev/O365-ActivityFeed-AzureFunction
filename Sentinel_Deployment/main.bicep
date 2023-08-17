@@ -439,7 +439,7 @@ resource deploymentScript 'Microsoft.Resources/deploymentScripts@2020-10-01' = i
     }
   }
   properties: {
-    azPowerShellVersion: '8.3'
+    azPowerShellVersion: '10.0'
     retentionInterval: 'PT1H'
     timeout: 'PT10M'
     cleanupPreference: 'Always'

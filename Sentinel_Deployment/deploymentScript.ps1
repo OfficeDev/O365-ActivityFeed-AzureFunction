@@ -8,9 +8,6 @@ $clientSecret = $env:ClientSecret
 $loginURL = "https://login.microsoftonline.com"
 $resource = "https://manage.office.com"
 
-#Give Function App some time to startup.
-Start-Sleep -Seconds 300
-
 #Get an Oauth 2 access token based on client id, secret and tenant domain
 $body = @{grant_type="client_credentials";resource=$resource;client_id=$clientId;client_secret=$clientSecret}
 $oauth = Invoke-RestMethod -Method Post -Uri $loginURL/$tenantId/oauth2/token?api-version=1.0 -Body $body
