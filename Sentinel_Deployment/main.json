@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.20.4.51522",
-      "templateHash": "7275885743570561571"
+      "templateHash": "1236244995244934940"
     }
   },
   "parameters": {
@@ -1376,7 +1376,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.20.4.51522",
-              "templateHash": "11321286702705361558"
+              "templateHash": "16361790951611947519"
             }
           },
           "parameters": {
@@ -1426,7 +1426,7 @@
             "querySyncVar1": "let Workloads = dynamic(WORKLOADSREPLACE);\r\n",
             "querySyncVar2": "let WorkloadAlias = \"WORKLOADALIASREPLACE\";\r\n",
             "querySync": "let AlertProductName = \"Microsoft Data Loss Prevention (Custom)\";\r\n\r\nlet PolicyWatchlist = _GetWatchlist(\"Policy\")\r\n    | extend Workload = column_ifexists(\"Workload\", \"\"), Name = column_ifexists(\"Name\", \"\")\r\n    | where Workload == WorkloadAlias\r\n    | project SearchKey;\r\n\r\nPurviewDLP(Workloads, true)\r\n| where PolicyName != \"\" //Do Not Remove\r\n| where not(PolicyName has_any (PolicyWatchlist)) //Do not remove\r\n| extend Product = AlertProductName\r\n| order by TimeGenerated",
-            "queryAll": "let AlertProductName = \"Microsoft Data Loss Prevention (Custom)\";\r\n\r\nPurviewDLP(Workloads,true)\r\n| extend Product = AlertProductName\r\n| order by TimeGenerated"
+            "queryAll": "let AlertProductName = \"Microsoft Data Loss Prevention (Custom)\";\r\nlet Workloads = dynamic([\"Endpoint\", \"SharePoint\", \"OneDrive\", \"Exchange\", \"MicrosoftTeams\"]);\r\n\r\nPurviewDLP(Workloads,true)\r\n| extend Product = AlertProductName\r\n| order by TimeGenerated"
           },
           "resources": [
             {
