@@ -305,7 +305,7 @@ if ($workspace) {
             $uploadWS.$activeWS | Add-Member -MemberType AliasProperty -Name Identifier -Value Id
 
             #Send received data to Azure Monitor.
-            Send-DataToAzureMonitor -Data $uploadWS.$activeWS -BatchSize 500 -TableName ("Custom-$LogType" + "_CL") -JsonDepth 100
+            Send-DataToAzureMonitor -Data $uploadWS.$activeWS -BatchSize 50 -TableName ("Custom-$LogType" + "_CL") -JsonDepth 100
         }
 
     }
@@ -322,7 +322,7 @@ if ($allWS) {
     $allWS | Add-Member -MemberType AliasProperty -Name Identifier -Value Id
 
     #Send received data to Azure Monitor.
-    Send-DataToAzureMonitor -Data $allWS -BatchSize 500 -TableName ("Custom-$LogType" + "_CL") -JsonDepth 100
+    Send-DataToAzureMonitor -Data $allWS -BatchSize 50 -TableName ("Custom-$LogType" + "_CL") -JsonDepth 100
 }
 
 
