@@ -84,6 +84,7 @@ resource sentinelRuleAll 'Microsoft.OperationalInsights/workspaces/providers/ale
       Subject: 'EmailSubject'
       Operation: 'EndpointOperation'
       Application: 'EndpointApplication'
+      CreationTime: 'CreationTime'
     }
     entityMappings: [
       {
@@ -238,6 +239,7 @@ resource sentinelRuleSync 'Microsoft.OperationalInsights/workspaces/providers/al
       Subject: 'EmailSubject'
       Operation: 'EndpointOperation'
       Application: 'EndpointApplication'
+      CreationTime: 'CreationTime'
     }
     entityMappings: workload.Alias == 'EXOT' ? [
       {
