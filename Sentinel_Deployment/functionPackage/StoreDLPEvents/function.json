@@ -1,0 +1,12 @@
+﻿{
+  "bindings": [
+    {
+      "name": "QueueItem",
+      "type": "queueTrigger",
+      "direction": "in",
+      "queueName": "dlpqueue",
+      "connection": "AzureWebJobsStorage"
+    }
+  ],
+  "disabled": false
+}
