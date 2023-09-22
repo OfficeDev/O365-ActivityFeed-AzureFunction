@@ -67,15 +67,38 @@ function Test-Command {
 
 #Function to split data into specified batch sizes (so we do not exceed the maximum body size) and send to Azure Monitor.
 function Send-DataToAzureMonitor {
-    param ($Data, $BatchSize, $TableName, $JsonDepth)
+    param ($Data, $BatchSize, $TableName, $JsonDepth, $Maximum = 5)
     $skip = 0
+    $cnt = 0
     do {
-        $batchedData = $Data | Select-Object -Skip $skip | Select-Object -First $BatchSize
-        $logIngestionClient.Upload($dcrImmutableId, $TableName, ($batchedData | ConvertTo-Json -Depth $JsonDepth -AsArray))
-        $skip += $BatchSize
-    } until (
-        $skip -ge $Data.Count
-    )
+        $cnt++
+        try {
+            do {
+                $batchedData = $Data | Select-Object -Skip $skip | Select-Object -First $BatchSize
+                $logIngestionClient.Upload($dcrImmutableId, $TableName, ($batchedData | ConvertTo-Json -Depth $JsonDepth -AsArray))
+                $skip += $BatchSize
+            } until (
+                $skip -ge $Data.Count
+            )
+            return
+        }
+        catch {
+            if ($_.Exception.InnerException.Message -like "*ErrorCode: ContentLengthLimitExceeded*") { 
+                if ($BatchSize -le 1) {
+                    Write-Error "Single event is too large to submit to Azure Monitor. Try reducing size or breaking up into smaller events." -ErrorAction Continue
+                    $cnt = $Maximum
+                }
+                else {
+                    $BatchSize = [math]::Round($BatchSize / 2)
+                    if ($BatchSize -lt 1) { $BatchSize = 1 }
+                    Write-Host ("Data too large, reducing batch size to: $BatchSize")
+                }
+            }
+            else { $cnt = $Maximum }
+        }
+    } while ($cnt -lt $Maximum) {
+        throw 'Failed to write data to Azure Monitor.'
+    }
 }
 
 #Function to hash or remove the sensitive data detected.
@@ -96,15 +119,40 @@ function Set-DetectedValues {
                             $valueHash = $valueHashString.Replace('-', '')
                             $value.Name = $nameHash.toLower()
                             $value.Value = $valueHash.toLower()
-                        } else {
+                        }
+                        else {
                             $value.Name = 'Removed'
                             $value.Value = 'Removed'
                         }
                     }
                 }
-                
             }
         }
+    }
+}
+
+function Set-DetectedValuesEndpoint {
+    param($Data, $Method)
+    foreach ($SensitiveInfoTypeData in $Data.EndpointMetaData.SensitiveInfoTypeData) {
+        foreach ($SensitiveInformationDetectionsInfo in $SensitiveInfoTypeData.SensitiveInformationDetectionsInfo) {
+            foreach ($value in $SensitiveInformationDetectionsInfo.DetectedValues) {
+                if ($Method -eq 'Hash') {
+                    $hasher = [System.Security.Cryptography.HashAlgorithm]::Create('sha256')
+                    $nameHash = $hasher.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($value.Name))
+                    $nameHashString = [System.BitConverter]::ToString($nameHash)
+                    $nameHash = $nameHashString.Replace('-', '')
+                    $valueHash = $hasher.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($value.Value))
+                    $valueHashString = [System.BitConverter]::ToString($valueHash)
+                    $valueHash = $valueHashString.Replace('-', '')
+                    $value.Name = $nameHash.toLower()
+                    $value.Value = $valueHash.toLower()
+                }
+                else {
+                    $value.Name = 'Removed'
+                    $value.Value = 'Removed'
+                }
+            }
+        }     
     }
 }
 
@@ -150,14 +198,15 @@ Foreach ($user in $records) {
     if (($user.workload -eq "Exchange" -and $user.operation -ne "MipLabel") -or ($user.Workload -eq "MicrosoftTeams")) {
         #Remove/hash sensitive info if specified.
         if ($sensitiveDataHandling -eq 'Keep') {}
-        else {Set-DetectedValues -Data $user -Method $sensitiveDataHandling}
+        else { Set-DetectedValues -Data $user -Method $sensitiveDataHandling }
         
         #Determine if the email is from external or internal if from external associate with first recipient on the to line
         if (($env:domains).split(",") -Contains ($user.ExchangeMetaData.from.Split('@'))[1]) { $exuser = $user.ExchangeMetaData.from }
 
         if ([string]::IsNullOrEmpty($exuser)) {
             $tolocal = $user.ExchangeMetaData.to | select-string -pattern ($env:domains).split(",") -simplematch
-            $exuser = $tolocal[0]
+            if ($null -ne $tolocal) { $exuser = $tolocal[0] } 
+            else { Write-Warning "Could not find any matching internal domains within the To or From fields. Make sure the internal domains list is up to date." }            
         }
 
         #Avoiding enrichment for system messages that may have slipped through
@@ -192,7 +241,7 @@ Foreach ($user in $records) {
     if (($user.Workload -eq "OneDrive") -or ($user.Workload -eq "SharePoint")) {
         #Remove/hash sensitive info if specified.
         if ($sensitiveDataHandling -eq 'Keep') {}
-        else {Set-DetectedValues -Data $user -Method $sensitiveDataHandling}
+        else { Set-DetectedValues -Data $user -Method $sensitiveDataHandling }
 
         #Add the additional attributes needed to enrich the event stored in Log Analytics for SharePoint
         $queryString = $user.SharePointMetaData.From + "?$" + "select=usageLocation,Manager,department,state,jobTitle"
@@ -212,8 +261,11 @@ Foreach ($user in $records) {
     }
                             
     #EndpointDLP upload
-    if ($user.Workload -eq "EndPoint") {
-
+    if ($user.Workload -eq "Endpoint") {
+        #Remove/hash sensitive info if specified.
+        if ($sensitiveDataHandling -eq 'Keep') {}
+        else { Set-DetectedValuesEndpoint -Data $user -Method $sensitiveDataHandling }
+        
         #Add the additional attributes needed to enrich the event stored
         $queryString = $user.UserKey + "?$" + "select=usageLocation,Manager,department,state,jobTitle"
         $info = Invoke-RestMethod -Headers $headerParamsG -Uri "https://graph.microsoft.com/v1.0/users/$queryString" -Method GET -SkipHttpErrorCheck
@@ -240,7 +292,7 @@ Foreach ($user in $records) {
     if ($user.Workload -eq "PowerBI") {
         #Remove/hash sensitive info if specified.
         if ($sensitiveDataHandling -eq 'Keep') {}
-        else {Set-DetectedValues -Data $user -Method $sensitiveDataHandling}
+        else { Set-DetectedValues -Data $user -Method $sensitiveDataHandling }
 
         #Add the additional attributes needed to enrich the event stored
         $queryString = $user.UserId + "?$" + "select=usageLocation,Manager,department,state,jobTitle"
