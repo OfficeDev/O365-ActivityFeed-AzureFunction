@@ -24,8 +24,8 @@ resource sentinelRuleAll 'Microsoft.OperationalInsights/workspaces/providers/ale
     severity: 'Medium'
     enabled: true
     query: queryAll
-    queryFrequency: 'PT10M'
-    queryPeriod: 'PT10M'
+    queryFrequency: 'PT5M'
+    queryPeriod: 'PT5M'
     triggerOperator: 'GreaterThan'
     triggerThreshold: 0
     suppressionDuration: 'PT5H'
@@ -84,6 +84,7 @@ resource sentinelRuleAll 'Microsoft.OperationalInsights/workspaces/providers/ale
       Subject: 'EmailSubject'
       Operation: 'EndpointOperation'
       Application: 'EndpointApplication'
+      CreationTime: 'CreationTime'
     }
     entityMappings: [
       {
@@ -178,8 +179,8 @@ resource sentinelRuleSync 'Microsoft.OperationalInsights/workspaces/providers/al
     severity: 'Medium'
     enabled: true
     query: concat(replace(querySyncVar1, 'WORKLOADSREPLACE', string(workload.Names)), replace(querySyncVar2, 'WORKLOADALIASREPLACE', workload.Alias), querySync)
-    queryFrequency: 'PT10M'
-    queryPeriod: 'PT10M'
+    queryFrequency: 'PT5M'
+    queryPeriod: 'PT5M'
     triggerOperator: 'GreaterThan'
     triggerThreshold: 0
     suppressionDuration: 'PT5H'
@@ -238,6 +239,7 @@ resource sentinelRuleSync 'Microsoft.OperationalInsights/workspaces/providers/al
       Subject: 'EmailSubject'
       Operation: 'EndpointOperation'
       Application: 'EndpointApplication'
+      CreationTime: 'CreationTime'
     }
     entityMappings: workload.Alias == 'EXOT' ? [
       {

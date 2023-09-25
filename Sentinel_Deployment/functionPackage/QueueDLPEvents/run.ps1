@@ -32,7 +32,8 @@ Foreach ($workload in $workloads) {
         $storedTime = Get-content $Tracker
     }
     else {
-        $date = (Get-date).AddMinutes(-5).ToString('yyyy-MM-ddTHH:mm:ss.fffZ')
+        Write-Host "Time tracker log file not found. Creating new file and using 1 minute lookback."
+        $date = (Get-date).AddMinutes(-1).ToString('yyyy-MM-ddTHH:mm:ss.fffZ')
         out-file d:\home\$workload.log -InputObject $date
         $storedTime = Get-content $Tracker
     }
