@@ -74,7 +74,7 @@ function Send-DataToAzureMonitor {
         $cnt++
         try {
             do {
-                $batchedData = $Data | Select-Object -Skip $skip | Select-Object -First $BatchSize
+                $batchedData = $Data | Select-Object -Skip $skip -First $BatchSize
                 $logIngestionClient.Upload($dcrImmutableId, $TableName, ($batchedData | ConvertTo-Json -Depth $JsonDepth -AsArray))
                 $skip += $BatchSize
             } until (
@@ -96,9 +96,8 @@ function Send-DataToAzureMonitor {
             }
             else { $cnt = $Maximum }
         }
-    } while ($cnt -lt $Maximum) {
-        throw 'Failed to write data to Azure Monitor.'
-    }
+    } while ($cnt -lt $Maximum)
+    throw 'Failed to write data to Azure Monitor.'
 }
 
 #Function to hash or remove the sensitive data detected.
