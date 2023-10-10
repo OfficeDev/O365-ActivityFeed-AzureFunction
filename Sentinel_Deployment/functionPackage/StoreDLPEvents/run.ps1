@@ -65,41 +65,6 @@ function Test-Command {
     }
 }
 
-#Function to split data into specified batch sizes (so we do not exceed the maximum body size) and send to Azure Monitor.
-function Send-DataToAzureMonitor {
-    param ($Data, $BatchSize, $TableName, $JsonDepth, $Maximum = 5)
-    $skip = 0
-    $cnt = 0
-    do {
-        $cnt++
-        try {
-            do {
-                $batchedData = $Data | Select-Object -Skip $skip -First $BatchSize
-                $logIngestionClient.Upload($dcrImmutableId, $TableName, ($batchedData | ConvertTo-Json -Depth $JsonDepth -AsArray))
-                $skip += $BatchSize
-            } until (
-                $skip -ge $Data.Count
-            )
-            return
-        }
-        catch {
-            if ($_.Exception.InnerException.Message -like "*ErrorCode: ContentLengthLimitExceeded*") { 
-                if ($BatchSize -le 1) {
-                    Write-Error "Single event is too large to submit to Azure Monitor. Try reducing size or breaking up into smaller events." -ErrorAction Continue
-                    $cnt = $Maximum
-                }
-                else {
-                    $BatchSize = [math]::Round($BatchSize / 2)
-                    if ($BatchSize -lt 1) { $BatchSize = 1 }
-                    Write-Host ("Data too large, reducing batch size to: $BatchSize")
-                }
-            }
-            else { $cnt = $Maximum }
-        }
-    } while ($cnt -lt $Maximum)
-    throw 'Failed to write data to Azure Monitor.'
-}
-
 #Function to hash or remove the sensitive data detected.
 function Set-DetectedValues {
     param($Data, $Method)
@@ -107,21 +72,24 @@ function Set-DetectedValues {
         foreach ($rule in $policy.Rules) {
             foreach ($sit in $rule.ConditionsMatched.SensitiveInformation) {
                 foreach ($detection in $sit.SensitiveInformationDetections) {
-                    foreach ($value in $detection.DetectedValues) {
-                        if ($Method -eq 'Hash') {
-                            $hasher = [System.Security.Cryptography.HashAlgorithm]::Create('sha256')
-                            $nameHash = $hasher.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($value.Name))
-                            $nameHashString = [System.BitConverter]::ToString($nameHash)
-                            $nameHash = $nameHashString.Replace('-', '')
-                            $valueHash = $hasher.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($value.Value))
-                            $valueHashString = [System.BitConverter]::ToString($valueHash)
-                            $valueHash = $valueHashString.Replace('-', '')
-                            $value.Name = $nameHash.toLower()
-                            $value.Value = $valueHash.toLower()
-                        }
-                        else {
-                            $value.Name = 'Removed'
-                            $value.Value = 'Removed'
+                    $detection.DetectedValues = $detection.DetectedValues[0..5]
+                    if ($Method -ne 'Keep') {
+                        foreach ($value in $detection.DetectedValues) {
+                            if ($Method -eq 'Hash') {
+                                $hasher = [System.Security.Cryptography.HashAlgorithm]::Create('sha256')
+                                $nameHash = $hasher.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($value.Name))
+                                $nameHashString = [System.BitConverter]::ToString($nameHash)
+                                $nameHash = $nameHashString.Replace('-', '')
+                                $valueHash = $hasher.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($value.Value))
+                                $valueHashString = [System.BitConverter]::ToString($valueHash)
+                                $valueHash = $valueHashString.Replace('-', '')
+                                $value.Name = $nameHash.toLower()
+                                $value.Value = $valueHash.toLower()
+                            }
+                            elseif ($Method -eq 'Remove') {
+                                $value.Name = 'Removed'
+                                $value.Value = 'Removed'
+                            }
                         }
                     }
                 }
@@ -134,21 +102,24 @@ function Set-DetectedValuesEndpoint {
     param($Data, $Method)
     foreach ($SensitiveInfoTypeData in $Data.EndpointMetaData.SensitiveInfoTypeData) {
         foreach ($SensitiveInformationDetectionsInfo in $SensitiveInfoTypeData.SensitiveInformationDetectionsInfo) {
-            foreach ($value in $SensitiveInformationDetectionsInfo.DetectedValues) {
-                if ($Method -eq 'Hash') {
-                    $hasher = [System.Security.Cryptography.HashAlgorithm]::Create('sha256')
-                    $nameHash = $hasher.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($value.Name))
-                    $nameHashString = [System.BitConverter]::ToString($nameHash)
-                    $nameHash = $nameHashString.Replace('-', '')
-                    $valueHash = $hasher.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($value.Value))
-                    $valueHashString = [System.BitConverter]::ToString($valueHash)
-                    $valueHash = $valueHashString.Replace('-', '')
-                    $value.Name = $nameHash.toLower()
-                    $value.Value = $valueHash.toLower()
-                }
-                else {
-                    $value.Name = 'Removed'
-                    $value.Value = 'Removed'
+            $SensitiveInformationDetectionsInfo.DetectedValues = $SensitiveInformationDetectionsInfo.DetectedValues[0..5]
+            if ($Method -ne 'Keep') {
+                foreach ($value in $SensitiveInformationDetectionsInfo.DetectedValues) {
+                    if ($Method -eq 'Hash') {
+                        $hasher = [System.Security.Cryptography.HashAlgorithm]::Create('sha256')
+                        $nameHash = $hasher.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($value.Name))
+                        $nameHashString = [System.BitConverter]::ToString($nameHash)
+                        $nameHash = $nameHashString.Replace('-', '')
+                        $valueHash = $hasher.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($value.Value))
+                        $valueHashString = [System.BitConverter]::ToString($valueHash)
+                        $valueHash = $valueHashString.Replace('-', '')
+                        $value.Name = $nameHash.toLower()
+                        $value.Value = $valueHash.toLower()
+                    }
+                    elseif ($Method -eq 'Remove') {
+                        $value.Name = 'Removed'
+                        $value.Value = 'Removed'
+                    }
                 }
             }
         }     
@@ -196,8 +167,7 @@ Foreach ($user in $records) {
     $user.workload
     if (($user.workload -eq "Exchange" -and $user.operation -ne "MipLabel") -or ($user.Workload -eq "MicrosoftTeams")) {
         #Remove/hash sensitive info if specified.
-        if ($sensitiveDataHandling -eq 'Keep') {}
-        else { Set-DetectedValues -Data $user -Method $sensitiveDataHandling }
+        Set-DetectedValues -Data $user -Method $sensitiveDataHandling
         
         #Determine if the email is from external or internal if from external associate with first recipient on the to line
         if (($env:domains).split(",") -Contains ($user.ExchangeMetaData.from.Split('@'))[1]) { $exuser = $user.ExchangeMetaData.from }
@@ -239,8 +209,7 @@ Foreach ($user in $records) {
     #SharePoint and OneDrive upload data process
     if (($user.Workload -eq "OneDrive") -or ($user.Workload -eq "SharePoint")) {
         #Remove/hash sensitive info if specified.
-        if ($sensitiveDataHandling -eq 'Keep') {}
-        else { Set-DetectedValues -Data $user -Method $sensitiveDataHandling }
+        Set-DetectedValues -Data $user -Method $sensitiveDataHandling
 
         #Add the additional attributes needed to enrich the event stored in Log Analytics for SharePoint
         $queryString = $user.SharePointMetaData.From + "?$" + "select=usageLocation,Manager,department,state,jobTitle"
@@ -262,8 +231,7 @@ Foreach ($user in $records) {
     #EndpointDLP upload
     if ($user.Workload -eq "Endpoint") {
         #Remove/hash sensitive info if specified.
-        if ($sensitiveDataHandling -eq 'Keep') {}
-        else { Set-DetectedValuesEndpoint -Data $user -Method $sensitiveDataHandling }
+        Set-DetectedValuesEndpoint -Data $user -Method $sensitiveDataHandling
         
         #Add the additional attributes needed to enrich the event stored
         $queryString = $user.UserKey + "?$" + "select=usageLocation,Manager,department,state,jobTitle"
@@ -290,8 +258,7 @@ Foreach ($user in $records) {
     #PowerBI upload
     if ($user.Workload -eq "PowerBI") {
         #Remove/hash sensitive info if specified.
-        if ($sensitiveDataHandling -eq 'Keep') {}
-        else { Set-DetectedValues -Data $user -Method $sensitiveDataHandling }
+        Set-DetectedValues -Data $user -Method $sensitiveDataHandling
 
         #Add the additional attributes needed to enrich the event stored
         $queryString = $user.UserId + "?$" + "select=usageLocation,Manager,department,state,jobTitle"
@@ -315,16 +282,6 @@ Foreach ($user in $records) {
         Clear-Variable -name info
     }
 }
-
-#Add required .Net assemblies to handle the Azure Monitor ingestion.
-Add-Type -Path .\StoreDLPEvents\lib\Azure.Monitor.Ingestion.dll
-Add-Type -Path .\StoreDLPEvents\lib\Azure.Identity.dll
-
-#Create Azure.Identity credential via User Assigned Managed Identity.
-$credential = New-Object Azure.Identity.ManagedIdentityCredential($uamiClientId)
-
-#Create LogsIngestionClient to handle sending data to Azure Monitor.
-$logIngestionClient = New-Object Azure.Monitor.Ingestion.LogsIngestionClient($dceURI, $credential)
 
 #Determine which Sentinel Workspace to route the information,
 $uploadWS = @{}
@@ -356,7 +313,7 @@ if ($workspace) {
             $uploadWS.$activeWS | Add-Member -MemberType AliasProperty -Name Identifier -Value Id
 
             #Send received data to Azure Monitor.
-            Send-DataToAzureMonitor -Data $uploadWS.$activeWS -BatchSize 50 -TableName ("Custom-$LogType" + "_CL") -JsonDepth 100
+            Send-DataToAzureMonitorBatched -Data $uploadWS.$activeWS -BatchSize 50 -TableName ("Custom-$LogType" + "_CL") -JsonDepth 100 -UamiClientId $uamiClientId -DceURI $dceUri -DcrImmutableId $dcrImmutableId -SortBySize $true -EventIdPropertyName 'Identifier'
         }
 
     }
@@ -373,7 +330,7 @@ if ($allWS) {
     $allWS | Add-Member -MemberType AliasProperty -Name Identifier -Value Id
 
     #Send received data to Azure Monitor.
-    Send-DataToAzureMonitor -Data $allWS -BatchSize 50 -TableName ("Custom-$LogType" + "_CL") -JsonDepth 100
+    Send-DataToAzureMonitorBatched -Data $allWS -BatchSize 50 -TableName ("Custom-$LogType" + "_CL") -JsonDepth 100 -UamiClientId $uamiClientId -DceURI $dceUri -DcrImmutableId $dcrImmutableId -SortBySize $true -EventIdPropertyName 'Identifier'
 }
 
 
