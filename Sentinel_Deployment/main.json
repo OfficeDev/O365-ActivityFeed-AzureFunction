@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.21.1.54444",
-      "templateHash": "2516781984382449223"
+      "templateHash": "4659309058079678729"
     }
   },
   "parameters": {
@@ -191,8 +191,8 @@
   },
   "variables": {
     "location": "[resourceGroup().location]",
-    "functionAppPackageUri": "https://raw.githubusercontent.com/anders-alex/O365-ActivityFeed-AzureFunction/Sentinel_Deployment/Sentinel_Deployment2/functionPackage.zip",
-    "deploymentScriptUri": "https://raw.githubusercontent.com/anders-alex/O365-ActivityFeed-AzureFunction/Sentinel_Deployment/Sentinel_Deployment2/deploymentScript.ps1"
+    "functionAppPackageUri": "https://raw.githubusercontent.com/anders-alex/O365-ActivityFeed-AzureFunction/Sentinel_Deployment2/Sentinel_Deployment/functionPackage.zip",
+    "deploymentScriptUri": "https://raw.githubusercontent.com/anders-alex/O365-ActivityFeed-AzureFunction/Sentinel_Deployment2/Sentinel_Deployment/deploymentScript.ps1"
   },
   "resources": [
     {
