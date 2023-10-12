@@ -38,6 +38,9 @@
  .Parameter EventIdPropertyName
   (Optional) The property within the object that represents the unique id of the object/event. If specified, this property will be logged in the event an object is too large to send to Azure Monitor.
 
+ .Parameter Timeout
+  (Optional) Number of seconds the operation needs to complete within before terminating. Default is 300 seconds (5 minutes).
+
  .Example
    # Send an array of objects to Azure Monitor Logs.
    Send-DataToAzureMonitorBatched -Data $array -TableName "Custom-TableName_CL" -JsonDepth 100 -UamiClientId  -dceURI $dceURI -dcrImmutableId $dcrImmutableId -DataAlreadyGZipEncoded $false -SortBySize $true -DelayInMilliseconds 0 -BatchSize 10000 -EventIdPropertyName 'Identifier'
@@ -55,10 +58,12 @@ function Send-DataToAzureMonitorBatched {
         [boolean] $SortBySize = $true,
         [int] $Delay = 0,
         [int] $MaxRetries = 5,
-        [string] $EventIdPropertyName
+        [string] $EventIdPropertyName,
+        [int] $Timeout = 300
     )
     $skip = 0
     $errorCount = 0
+    $time = Get-Date
     if ($BatchSize -eq 0) { $BatchSize = $Data.Count }
     #Sort data by size, smallest to largest to get optimal batching.
     if ($SortBySize -eq $true) { 
@@ -67,7 +72,7 @@ function Send-DataToAzureMonitorBatched {
         $Data = $Data | Sort-Object -Property $getSize 
     }
     #Enter error handling loop to send data.
-    Write-Host "Sending data to Azure Monitor..."
+    Write-Host ("Sending " + $Data.Count + " events/objects to Azure Monitor...")
     do {
         try {
             do {
@@ -78,6 +83,7 @@ function Send-DataToAzureMonitorBatched {
                 $skip += $BatchSize
                 Start-Sleep -Milliseconds $Delay
             } until ($skip -ge $Data.Count)
+            Write-Host "Completed sending data to Azure Monitor."
             return
         }
         catch {
@@ -101,8 +107,10 @@ function Send-DataToAzureMonitorBatched {
                 Write-Error $_ -ErrorAction Continue
                 $errorCount++
             }
+            if ($errorCount -ge $MaxRetries) { Write-Error "Max number of retries reached, aborting." -ErrorAction Continue}
+            if ((Get-Date) -ge $time.AddSeconds($Timeout)) { Write-Error "Timeout reached, aborting." -ErrorAction Continue }
         }
-    } while ($errorCount -le $MaxRetries)
+    } until ($errorCount -ge $MaxRetries -or (Get-Date) -ge $time.AddSeconds($Timeout))
 }
 
 <#
