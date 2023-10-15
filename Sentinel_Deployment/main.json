@@ -4,8 +4,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.21.1.54444",
-      "templateHash": "4659309058079678729"
+      "version": "0.22.6.54827",
+      "templateHash": "2211598887097440414"
     }
   },
   "parameters": {
@@ -191,8 +191,8 @@
   },
   "variables": {
     "location": "[resourceGroup().location]",
-    "functionAppPackageUri": "https://raw.githubusercontent.com/anders-alex/O365-ActivityFeed-AzureFunction/Sentinel_Deployment2/Sentinel_Deployment/functionPackage.zip",
-    "deploymentScriptUri": "https://raw.githubusercontent.com/anders-alex/O365-ActivityFeed-AzureFunction/Sentinel_Deployment2/Sentinel_Deployment/deploymentScript.ps1"
+    "functionAppPackageUri": "https://raw.githubusercontent.com/anders-alex/O365-ActivityFeed-AzureFunction/Sentinel_Deployment3/Sentinel_Deployment/functionPackage.zip",
+    "deploymentScriptUri": "https://raw.githubusercontent.com/anders-alex/O365-ActivityFeed-AzureFunction/Sentinel_Deployment3/Sentinel_Deployment/deploymentScript.ps1"
   },
   "resources": [
     {
@@ -533,21 +533,21 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.21.1.54444",
-              "templateHash": "11337856949673258258"
+              "version": "0.22.6.54827",
+              "templateHash": "11190268364182055247"
             }
           },
           "parameters": {
             "DataCollectionEndpointName": {
               "type": "string",
-              "defaultValue": "[format('dce-mdvm-{0}', uniqueString(resourceGroup().id))]",
+              "defaultValue": "[format('dce-{0}', uniqueString(resourceGroup().id))]",
               "metadata": {
                 "description": "Name for Data Collection Endpoint used to ingest data into Log Analytics workspace."
               }
             },
             "DataCollectionRuleName": {
               "type": "string",
-              "defaultValue": "[format('dcr-mdmv-{0}', uniqueString(resourceGroup().id))]",
+              "defaultValue": "[format('dcr-{0}', uniqueString(resourceGroup().id))]",
               "metadata": {
                 "description": "Name for Data Collection Rule used to ingest data into Log Analytics workspace."
               }
@@ -555,7 +555,7 @@
             "LogAnalyticsWorkspaceResourceId": {
               "type": "string",
               "metadata": {
-                "description": "Azure Resource Id of the Log Analytics Workspace where you like the MDVM and optional Function App Application Insights data to reside. The format is: \"/subscriptions/xxxxxxxx-xxxxxxxx-xxxxxxxx-xxxxxxxx-xxxxxxxx/resourcegroups/xxxxxxxx/providers/microsoft.operationalinsights/workspaces/xxxxxxxx\""
+                "description": "Azure Resource Id of the Log Analytics Workspace where you like the data and optional Function App Application Insights data to reside. The format is: \"/subscriptions/xxxxxxxx-xxxxxxxx-xxxxxxxx-xxxxxxxx-xxxxxxxx/resourcegroups/xxxxxxxx/providers/microsoft.operationalinsights/workspaces/xxxxxxxx\""
               }
             },
             "LogAnalyticsWorkspaceLocation": {
@@ -778,6 +778,98 @@
                         "type": "string"
                       }
                     ]
+                  },
+                  "Custom-PurviewDLPSIT_CL": {
+                    "columns": [
+                      {
+                        "name": "TimeGenerated",
+                        "type": "datetime"
+                      },
+                      {
+                        "name": "Identifier",
+                        "type": "string"
+                      },
+                      {
+                        "name": "ClassifierType",
+                        "type": "string"
+                      },
+                      {
+                        "name": "Confidence",
+                        "type": "int"
+                      },
+                      {
+                        "name": "Location",
+                        "type": "string"
+                      },
+                      {
+                        "name": "SensitiveInformationTypeName",
+                        "type": "string"
+                      },
+                      {
+                        "name": "SensitiveType",
+                        "type": "string"
+                      },
+                      {
+                        "name": "UniqueCount",
+                        "type": "int"
+                      },
+                      {
+                        "name": "PolicyId",
+                        "type": "string"
+                      },
+                      {
+                        "name": "RuleId",
+                        "type": "string"
+                      },
+                      {
+                        "name": "DetectionResultsTruncated",
+                        "type": "boolean"
+                      },
+                      {
+                        "name": "ClassificationAttributes",
+                        "type": "dynamic"
+                      },
+                      {
+                        "name": "SITCount",
+                        "type": "int"
+                      }
+                    ]
+                  },
+                  "Custom-PurviewDLPDetections_CL": {
+                    "columns": [
+                      {
+                        "name": "TimeGenerated",
+                        "type": "datetime"
+                      },
+                      {
+                        "name": "Identifier",
+                        "type": "string"
+                      },
+                      {
+                        "name": "Name",
+                        "type": "string"
+                      },
+                      {
+                        "name": "Value",
+                        "type": "string"
+                      },
+                      {
+                        "name": "SensitiveType",
+                        "type": "string"
+                      },
+                      {
+                        "name": "SensitiveInfoTypeName",
+                        "type": "string"
+                      },
+                      {
+                        "name": "PolicyId",
+                        "type": "string"
+                      },
+                      {
+                        "name": "RuleId",
+                        "type": "string"
+                      }
+                    ]
                   }
                 },
                 "destinations": {
@@ -798,6 +890,26 @@
                     ],
                     "transformKql": "source",
                     "outputStream": "Custom-PurviewDLP_CL"
+                  },
+                  {
+                    "streams": [
+                      "Custom-PurviewDLPSIT_CL"
+                    ],
+                    "destinations": [
+                      "[split(parameters('LogAnalyticsWorkspaceResourceId'), '/')[8]]"
+                    ],
+                    "transformKql": "source",
+                    "outputStream": "Custom-PurviewDLPSIT_CL"
+                  },
+                  {
+                    "streams": [
+                      "Custom-PurviewDLPDetections_CL"
+                    ],
+                    "destinations": [
+                      "[split(parameters('LogAnalyticsWorkspaceResourceId'), '/')[8]]"
+                    ],
+                    "transformKql": "source",
+                    "outputStream": "Custom-PurviewDLPDetections_CL"
                   }
                 ]
               },
@@ -946,8 +1058,236 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.21.1.54444",
-                      "templateHash": "12357959624949601355"
+                      "version": "0.22.6.54827",
+                      "templateHash": "17270123992256940579"
+                    }
+                  },
+                  "parameters": {
+                    "lawName": {
+                      "type": "string"
+                    },
+                    "tableName": {
+                      "type": "string"
+                    },
+                    "plan": {
+                      "type": "string"
+                    },
+                    "columns": {
+                      "type": "array"
+                    },
+                    "retention": {
+                      "type": "int",
+                      "defaultValue": -1
+                    }
+                  },
+                  "resources": [
+                    {
+                      "type": "Microsoft.OperationalInsights/workspaces/tables",
+                      "apiVersion": "2022-10-01",
+                      "name": "[format('{0}/{1}', parameters('lawName'), parameters('tableName'))]",
+                      "properties": {
+                        "schema": {
+                          "name": "[parameters('tableName')]",
+                          "columns": "[parameters('columns')]"
+                        },
+                        "plan": "[parameters('plan')]",
+                        "retentionInDays": "[if(not(equals(parameters('retention'), -1)), parameters('retention'), '')]"
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "type": "Microsoft.Resources/deployments",
+              "apiVersion": "2022-09-01",
+              "name": "tablePurviewDLPSIT",
+              "subscriptionId": "[split(parameters('LogAnalyticsWorkspaceResourceId'), '/')[2]]",
+              "resourceGroup": "[split(parameters('LogAnalyticsWorkspaceResourceId'), '/')[4]]",
+              "properties": {
+                "expressionEvaluationOptions": {
+                  "scope": "inner"
+                },
+                "mode": "Incremental",
+                "parameters": {
+                  "lawName": {
+                    "value": "[split(parameters('LogAnalyticsWorkspaceResourceId'), '/')[8]]"
+                  },
+                  "tableName": {
+                    "value": "PurviewDLPSIT_CL"
+                  },
+                  "plan": {
+                    "value": "Analytics"
+                  },
+                  "columns": {
+                    "value": [
+                      {
+                        "name": "TimeGenerated",
+                        "type": "datetime"
+                      },
+                      {
+                        "name": "Identifier",
+                        "type": "string"
+                      },
+                      {
+                        "name": "ClassifierType",
+                        "type": "string"
+                      },
+                      {
+                        "name": "Confidence",
+                        "type": "int"
+                      },
+                      {
+                        "name": "Location",
+                        "type": "string"
+                      },
+                      {
+                        "name": "SensitiveInformationTypeName",
+                        "type": "string"
+                      },
+                      {
+                        "name": "UserTypeSensitiveType",
+                        "type": "string"
+                      },
+                      {
+                        "name": "UniqueCount",
+                        "type": "int"
+                      },
+                      {
+                        "name": "PolicyId",
+                        "type": "string"
+                      },
+                      {
+                        "name": "RuleId",
+                        "type": "string"
+                      },
+                      {
+                        "name": "DetectionResultsTruncated",
+                        "type": "boolean"
+                      },
+                      {
+                        "name": "ClassificationAttributes",
+                        "type": "dynamic"
+                      },
+                      {
+                        "name": "SITCount",
+                        "type": "int"
+                      }
+                    ]
+                  }
+                },
+                "template": {
+                  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+                  "contentVersion": "1.0.0.0",
+                  "metadata": {
+                    "_generator": {
+                      "name": "bicep",
+                      "version": "0.22.6.54827",
+                      "templateHash": "17270123992256940579"
+                    }
+                  },
+                  "parameters": {
+                    "lawName": {
+                      "type": "string"
+                    },
+                    "tableName": {
+                      "type": "string"
+                    },
+                    "plan": {
+                      "type": "string"
+                    },
+                    "columns": {
+                      "type": "array"
+                    },
+                    "retention": {
+                      "type": "int",
+                      "defaultValue": -1
+                    }
+                  },
+                  "resources": [
+                    {
+                      "type": "Microsoft.OperationalInsights/workspaces/tables",
+                      "apiVersion": "2022-10-01",
+                      "name": "[format('{0}/{1}', parameters('lawName'), parameters('tableName'))]",
+                      "properties": {
+                        "schema": {
+                          "name": "[parameters('tableName')]",
+                          "columns": "[parameters('columns')]"
+                        },
+                        "plan": "[parameters('plan')]",
+                        "retentionInDays": "[if(not(equals(parameters('retention'), -1)), parameters('retention'), '')]"
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "type": "Microsoft.Resources/deployments",
+              "apiVersion": "2022-09-01",
+              "name": "tablePurviewDLPDetections",
+              "subscriptionId": "[split(parameters('LogAnalyticsWorkspaceResourceId'), '/')[2]]",
+              "resourceGroup": "[split(parameters('LogAnalyticsWorkspaceResourceId'), '/')[4]]",
+              "properties": {
+                "expressionEvaluationOptions": {
+                  "scope": "inner"
+                },
+                "mode": "Incremental",
+                "parameters": {
+                  "lawName": {
+                    "value": "[split(parameters('LogAnalyticsWorkspaceResourceId'), '/')[8]]"
+                  },
+                  "tableName": {
+                    "value": "PurviewDLPDetections_CL"
+                  },
+                  "plan": {
+                    "value": "Analytics"
+                  },
+                  "columns": {
+                    "value": [
+                      {
+                        "name": "TimeGenerated",
+                        "type": "datetime"
+                      },
+                      {
+                        "name": "Identifier",
+                        "type": "string"
+                      },
+                      {
+                        "name": "Name",
+                        "type": "string"
+                      },
+                      {
+                        "name": "Value",
+                        "type": "string"
+                      },
+                      {
+                        "name": "SensitiveType",
+                        "type": "string"
+                      },
+                      {
+                        "name": "SensitiveInfoTypeName",
+                        "type": "string"
+                      },
+                      {
+                        "name": "PolicyId",
+                        "type": "string"
+                      },
+                      {
+                        "name": "RuleId",
+                        "type": "string"
+                      }
+                    ]
+                  }
+                },
+                "template": {
+                  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+                  "contentVersion": "1.0.0.0",
+                  "metadata": {
+                    "_generator": {
+                      "name": "bicep",
+                      "version": "0.22.6.54827",
+                      "templateHash": "17270123992256940579"
                     }
                   },
                   "parameters": {
@@ -1047,8 +1387,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.21.1.54444",
-              "templateHash": "3041039074840138124"
+              "version": "0.22.6.54827",
+              "templateHash": "14663270083665353918"
             }
           },
           "parameters": {
@@ -1139,8 +1479,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.21.1.54444",
-              "templateHash": "17336398134751577297"
+              "version": "0.22.6.54827",
+              "templateHash": "9626944654324187760"
             }
           },
           "parameters": {
@@ -1240,8 +1580,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.21.1.54444",
-              "templateHash": "1237290895741593830"
+              "version": "0.22.6.54827",
+              "templateHash": "3474600768667580142"
             }
           },
           "parameters": {
@@ -1299,8 +1639,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.21.1.54444",
-              "templateHash": "6639898263349721989"
+              "version": "0.22.6.54827",
+              "templateHash": "14100457929255342079"
             }
           },
           "parameters": {
@@ -1375,8 +1715,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.21.1.54444",
-              "templateHash": "14343037080737462535"
+              "version": "0.22.6.54827",
+              "templateHash": "2914442217105021269"
             }
           },
           "parameters": {
@@ -1699,8 +2039,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.21.1.54444",
-              "templateHash": "18365559711675873624"
+              "version": "0.22.6.54827",
+              "templateHash": "12480126731949421794"
             }
           },
           "parameters": {

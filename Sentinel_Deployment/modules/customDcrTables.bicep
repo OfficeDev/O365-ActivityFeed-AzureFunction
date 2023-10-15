@@ -1,8 +1,8 @@
 @description('Name for Data Collection Endpoint used to ingest data into Log Analytics workspace.')
-param DataCollectionEndpointName string = 'dce-mdvm-${uniqueString(resourceGroup().id)}'
+param DataCollectionEndpointName string = 'dce-${uniqueString(resourceGroup().id)}'
 @description('Name for Data Collection Rule used to ingest data into Log Analytics workspace.')
-param DataCollectionRuleName string = 'dcr-mdmv-${uniqueString(resourceGroup().id)}'
-@description('Azure Resource Id of the Log Analytics Workspace where you like the MDVM and optional Function App Application Insights data to reside. The format is: "/subscriptions/xxxxxxxx-xxxxxxxx-xxxxxxxx-xxxxxxxx-xxxxxxxx/resourcegroups/xxxxxxxx/providers/microsoft.operationalinsights/workspaces/xxxxxxxx"')
+param DataCollectionRuleName string = 'dcr-${uniqueString(resourceGroup().id)}'
+@description('Azure Resource Id of the Log Analytics Workspace where you like the data and optional Function App Application Insights data to reside. The format is: "/subscriptions/xxxxxxxx-xxxxxxxx-xxxxxxxx-xxxxxxxx-xxxxxxxx/resourcegroups/xxxxxxxx/providers/microsoft.operationalinsights/workspaces/xxxxxxxx"')
 param LogAnalyticsWorkspaceResourceId string
 @description('Azure location/region of the Log Analytics Workspace referenced in the LogAnalyticsWorkspaceResourceId parameter.')
 @allowed(
@@ -212,6 +212,98 @@ resource dcr 'Microsoft.Insights/dataCollectionRules@2021-09-01-preview' = {
           }
         ]        
       }
+      'Custom-PurviewDLPSIT_CL': {
+        columns: [
+          {
+            name: 'TimeGenerated'
+            type: 'datetime'
+          }
+          {
+            name: 'Identifier'
+            type: 'string'
+          }
+          {
+            name: 'ClassifierType'
+            type: 'string'
+          }
+          {
+            name: 'Confidence'
+            type: 'int'
+          }
+          {
+            name: 'Location'
+            type: 'string'
+          }
+          {
+            name: 'SensitiveInformationTypeName'
+            type: 'string'
+          }
+          {
+            name: 'SensitiveType'
+            type: 'string'
+          }
+          {
+            name: 'UniqueCount'
+            type: 'int'
+          }
+          {
+            name: 'PolicyId'
+            type: 'string'
+          }
+          {
+            name: 'RuleId'
+            type: 'string'
+          }
+          {
+            name: 'DetectionResultsTruncated'
+            type: 'boolean'
+          }
+          {
+            name: 'ClassificationAttributes'
+            type: 'dynamic'
+          }
+          {
+            name: 'SITCount'
+            type: 'int'
+          }
+        ]        
+      }
+      'Custom-PurviewDLPDetections_CL': {
+        columns: [
+          {
+            name: 'TimeGenerated'
+            type: 'datetime'
+          }
+          {
+            name: 'Identifier'
+            type: 'string'
+          }
+          {
+            name: 'Name'
+            type: 'string'
+          }
+          {
+            name: 'Value'
+            type: 'string'
+          }
+          {
+            name: 'SensitiveType'
+            type: 'string'
+          }
+          {
+            name: 'SensitiveInfoTypeName'
+            type: 'string'
+          }
+          {
+            name: 'PolicyId'
+            type: 'string'
+          }
+          {
+            name: 'RuleId'
+            type: 'string'
+          }
+        ]        
+      }
     }
     destinations: {
       logAnalytics: [
@@ -231,6 +323,26 @@ resource dcr 'Microsoft.Insights/dataCollectionRules@2021-09-01-preview' = {
         ]
         transformKql: 'source'
         outputStream: 'Custom-PurviewDLP_CL'
+      }
+      {
+        streams: [
+          'Custom-PurviewDLPSIT_CL'
+        ]
+        destinations: [
+          split(LogAnalyticsWorkspaceResourceId, '/')[8]
+        ]
+        transformKql: 'source'
+        outputStream: 'Custom-PurviewDLPSIT_CL'
+      }
+      {
+        streams: [
+          'Custom-PurviewDLPDetections_CL'
+        ]
+        destinations: [
+          split(LogAnalyticsWorkspaceResourceId, '/')[8]
+        ]
+        transformKql: 'source'
+        outputStream: 'Custom-PurviewDLPDetections_CL'
       }
     ]
   }
@@ -350,6 +462,114 @@ module tablePurviewDLP 'lawCustomTable.bicep' = {
       }
       {
         name: 'jobTitle'
+        type: 'string'
+      }
+    ]    
+  }
+}
+
+module tablePurviewDLPSIT 'lawCustomTable.bicep' = {
+  name: 'tablePurviewDLPSIT'
+  scope: resourceGroup(split(LogAnalyticsWorkspaceResourceId, '/')[2], split(LogAnalyticsWorkspaceResourceId, '/')[4])
+  params: {
+    lawName: split(LogAnalyticsWorkspaceResourceId, '/')[8]
+    tableName: 'PurviewDLPSIT_CL'
+    plan: 'Analytics'
+    columns: [
+      {
+        name: 'TimeGenerated'
+        type: 'datetime'
+      }
+      {
+        name: 'Identifier'
+        type: 'string'
+      }
+      {
+        name: 'ClassifierType'
+        type: 'string'
+      }
+      {
+        name: 'Confidence'
+        type: 'int'
+      }
+      {
+        name: 'Location'
+        type: 'string'
+      }
+      {
+        name: 'SensitiveInformationTypeName'
+        type: 'string'
+      }
+      {
+        name: 'UserTypeSensitiveType'
+        type: 'string'
+      }
+      {
+        name: 'UniqueCount'
+        type: 'int'
+      }
+      {
+        name: 'PolicyId'
+        type: 'string'
+      }
+      {
+        name: 'RuleId'
+        type: 'string'
+      }
+      {
+        name: 'DetectionResultsTruncated'
+        type: 'boolean'
+      }
+      {
+        name: 'ClassificationAttributes'
+        type: 'dynamic'
+      }
+      {
+        name: 'SITCount'
+        type: 'int'
+      }
+    ]    
+  }
+}
+
+module tablePurviewDLPDetections 'lawCustomTable.bicep' = {
+  name: 'tablePurviewDLPDetections'
+  scope: resourceGroup(split(LogAnalyticsWorkspaceResourceId, '/')[2], split(LogAnalyticsWorkspaceResourceId, '/')[4])
+  params: {
+    lawName: split(LogAnalyticsWorkspaceResourceId, '/')[8]
+    tableName: 'PurviewDLPDetections_CL'
+    plan: 'Analytics'
+    columns: [
+      {
+        name: 'TimeGenerated'
+        type: 'datetime'
+      }
+      {
+        name: 'Identifier'
+        type: 'string'
+      }
+      {
+        name: 'Name'
+        type: 'string'
+      }
+      {
+        name: 'Value'
+        type: 'string'
+      }
+      {
+        name: 'SensitiveType'
+        type: 'string'
+      }
+      {
+        name: 'SensitiveInfoTypeName'
+        type: 'string'
+      }
+      {
+        name: 'PolicyId'
+        type: 'string'
+      }
+      {
+        name: 'RuleId'
         type: 'string'
       }
     ]    

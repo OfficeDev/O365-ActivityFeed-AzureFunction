@@ -70,9 +70,24 @@ function Set-DetectedValues {
     param($Data, $Method)
     foreach ($policy in $Data.PolicyDetails) {
         foreach ($rule in $policy.Rules) {
+            $rule.ConditionsMatched | Add-Member @{
+                TotalCount = [int] ($rule.ConditionsMatched.SensitiveInformation | Measure-Object -Property Count -Sum).Sum
+            } -PassThru | Out-Null
             foreach ($sit in $rule.ConditionsMatched.SensitiveInformation) {
+                $sit | Add-Member -Force -NotePropertyMembers @{
+                    Identifier                   = $Data.Id
+                    PolicyId                     = $policy.PolicyId
+                    RuleId                       = $rule.RuleId
+                    SensitiveType                = $sit.SensitiveType
+                    SensitiveInformationTypeName = $sit.SensitiveInformationTypeName
+                    DetectionResultsTruncated    = $sit.SensitiveInformationDetections.ResultsTruncated
+                    SITCount                     = $sit.Count
+                    ClassificationAttributes     = $sit.SensitiveInformationDetailedClassificationAttributes
+                } -PassThru | Out-Null
+                $sit.PSObject.Properties.Remove('Count')
+                $sit.PSObject.Properties.Remove('SensitiveInformationDetailedClassificationAttributes')
+                $sits.Add($sit) | Out-Null
                 foreach ($detection in $sit.SensitiveInformationDetections) {
-                    $detection.DetectedValues = $detection.DetectedValues[0..5]
                     if ($Method -ne 'Keep') {
                         foreach ($value in $detection.DetectedValues) {
                             if ($Method -eq 'Hash') {
@@ -90,21 +105,53 @@ function Set-DetectedValues {
                                 $value.Name = 'Removed'
                                 $value.Value = 'Removed'
                             }
+                            $value | Add-Member -Force -NotePropertyMembers @{
+                                Identifier            = $Data.Id
+                                PolicyId              = $policy.PolicyId
+                                RuleId                = $rule.RuleId
+                                SensitiveType         = $sit.SensitiveType
+                                SensitiveInfoTypeName = $sit.SensitiveInformationTypeName
+                                Name                  = $value.Name
+                                Value                 = $value.Value                         
+                            } -PassThru | Out-Null
+                            $detections.Add($value) | Out-Null                        
                         }
                     }
                 }
             }
         }
     }
+    foreach ($policy in $Data.PolicyDetails) {
+        foreach ($rule in $policy.Rules) {
+            foreach ($sit in $rule.ConditionsMatched) {
+                $sit.PSObject.Properties.Remove('SensitiveInformation')
+            }
+        }
+    }
+    foreach ($sit in $sits) {
+        $sit.PSObject.Properties.Remove('SensitiveInformationDetections')
+    }
 }
 
 function Set-DetectedValuesEndpoint {
     param($Data, $Method)
-    foreach ($SensitiveInfoTypeData in $Data.EndpointMetaData.SensitiveInfoTypeData) {
-        foreach ($SensitiveInformationDetectionsInfo in $SensitiveInfoTypeData.SensitiveInformationDetectionsInfo) {
-            $SensitiveInformationDetectionsInfo.DetectedValues = $SensitiveInformationDetectionsInfo.DetectedValues[0..5]
+    $Data.EndpointMetaData | Add-Member @{
+        SensitiveInfoTypeTotalCount = [int] ($Data.EndpointMetaData.SensitiveInfoTypeData | Measure-Object -Property Count -Sum).Sum
+    } -PassThru | Out-Null
+    foreach ($sit in $Data.EndpointMetaData.SensitiveInfoTypeData) {
+        $sit | Add-Member -Force -NotePropertyMembers @{
+            Identifier                   = $Data.Id
+            SITCount                     = $sit.Count
+            SensitiveInfoTypeId          = $sit.SensitiveInfoTypeId
+            SensitiveInformationTypeName = $sit.SensitiveInfoTypeName
+            ClassificationAttributes     = $sit.SensitiveInformationDetailedClassificationAttributes 
+        } -PassThru | Out-Null
+        $sit.PSObject.Properties.Remove('Count')
+        $sit.PSObject.Properties.Remove('SensitiveInformationDetailedClassificationAttributes')
+        $sits.Add($sit) | Out-Null
+        foreach ($detection in $sit.SensitiveInformationDetectionsInfo) {
             if ($Method -ne 'Keep') {
-                foreach ($value in $SensitiveInformationDetectionsInfo.DetectedValues) {
+                foreach ($value in $detection.DetectedValues) {
                     if ($Method -eq 'Hash') {
                         $hasher = [System.Security.Cryptography.HashAlgorithm]::Create('sha256')
                         $nameHash = $hasher.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($value.Name))
@@ -120,9 +167,19 @@ function Set-DetectedValuesEndpoint {
                         $value.Name = 'Removed'
                         $value.Value = 'Removed'
                     }
+                    $value | Add-Member -Force -NotePropertyMembers @{
+                        Identifier            = $Data.Id
+                        SensitiveType         = $sit.SensitiveType
+                        SensitiveInfoTypeName = $sit.SensitiveInformationTypeName                      
+                    } -PassThru | Out-Null
+                    $detections.Add($value) | Out-Null    
                 }
             }
         }     
+    }
+    foreach ($sit in $Data.EndpointMetaData) {
+        $sit.PSObject.Properties.Remove('SensitiveInfoTypeData')
+        $sit.PSObject.Properties.Remove('SensitiveInformationDetectionsInfo') 
     }
 }
 
@@ -161,6 +218,10 @@ $resourceG = "https://graph.microsoft.com"
 $bodyG = @{grant_type = "client_credentials"; resource = $resourceG; client_id = $ClientID; client_secret = $ClientSecret }
 $oauthG = Invoke-RestMethod -Method Post -Uri $loginURL/$tenantGUID/oauth2/token?api-version=1.0 -Body $bodyG 
 $headerParamsG = @{'Authorization' = "$($oauthG.token_type) $($oauthG.access_token)" }
+
+#Initialize arrays to hold sensitive info type and detected values data.
+$sits = New-Object System.Collections.ArrayList
+$detections = New-Object System.Collections.ArrayList
 
 Foreach ($user in $records) {
     #Exchange and Teams upload data process
@@ -326,15 +387,14 @@ $allWS += $endpointupload
 #$allWS += $powerbiupload
 if ($allWS) {
     #Add required TimeGenerated field and create alias for Id field since that name is not allowed by Azure Monitor.
-    $allWS | Add-Member -NotePropertyName 'TimeGenerated' -NotePropertyValue (Get-Date -Format 'yyyy-MM-ddTHH:mm:ssZ' -AsUTC)
+    $timeGenerated = (Get-Date -Format 'yyyy-MM-ddTHH:mm:ssZ' -AsUTC)
+    $allWS | Add-Member -NotePropertyName 'TimeGenerated' -NotePropertyValue $timeGenerated
     $allWS | Add-Member -MemberType AliasProperty -Name Identifier -Value Id
+    $sits | Add-Member -NotePropertyName 'TimeGenerated' -NotePropertyValue $timeGenerated
+    $detections | Add-Member -NotePropertyName 'TimeGenerated' -NotePropertyValue $timeGenerated
 
     #Send received data to Azure Monitor.
-    Send-DataToAzureMonitorBatched -Data $allWS -BatchSize 50 -TableName ("Custom-$LogType" + "_CL") -JsonDepth 100 -UamiClientId $uamiClientId -DceURI $dceUri -DcrImmutableId $dcrImmutableId -SortBySize $true -EventIdPropertyName 'Identifier'
+    Send-DataToAzureMonitorBatched -Data $allWS -BatchSize 10000 -TableName ("Custom-$LogType" + "_CL") -JsonDepth 100 -UamiClientId $uamiClientId -DceURI $dceUri -DcrImmutableId $dcrImmutableId -SortBySize $true -EventIdPropertyName 'Identifier'
+    Send-DataToAzureMonitorBatched -Data $sits -BatchSize 10000 -TableName ("Custom-$LogType" + "SIT_CL") -JsonDepth 100 -UamiClientId $uamiClientId -DceURI $dceUri -DcrImmutableId $dcrImmutableId -SortBySize $true -EventIdPropertyName 'Identifier'
+    Send-DataToAzureMonitorBatched -Data $detections -BatchSize 10000 -TableName ("Custom-$LogType" + "Detections_CL") -JsonDepth 100 -UamiClientId $uamiClientId -DceURI $dceUri -DcrImmutableId $dcrImmutableId -SortBySize $true -EventIdPropertyName 'Identifier'
 }
-
-
-
-
-
-
