@@ -74,6 +74,8 @@ function Set-DetectedValues {
                 TotalCount = [int] ($rule.ConditionsMatched.SensitiveInformation | Measure-Object -Property Count -Sum).Sum
             } -PassThru | Out-Null
             foreach ($sit in $rule.ConditionsMatched.SensitiveInformation) {
+                $index = ($rule.ConditionsMatched.SensitiveInformation).IndexOf($sit)
+                $sitId = (New-Guid).Guid
                 $sit | Add-Member -Force -NotePropertyMembers @{
                     Identifier                   = $Data.Id
                     PolicyId                     = $policy.PolicyId
@@ -83,10 +85,13 @@ function Set-DetectedValues {
                     DetectionResultsTruncated    = $sit.SensitiveInformationDetections.ResultsTruncated
                     SITCount                     = $sit.Count
                     ClassificationAttributes     = $sit.SensitiveInformationDetailedClassificationAttributes
+                    SensitiveInfoId              = $sitId
                 } -PassThru | Out-Null
                 $sit.PSObject.Properties.Remove('Count')
                 $sit.PSObject.Properties.Remove('SensitiveInformationDetailedClassificationAttributes')
-                $sits.Add($sit) | Out-Null
+                $sitAdd =  $sit.PsObject.Copy()
+                $sitAdd.PSObject.Properties.Remove('SensitiveInformationDetections')
+                $sits.Add($sitAdd) | Out-Null
                 foreach ($detection in $sit.SensitiveInformationDetections) {
                     if ($Method -ne 'Keep') {
                         foreach ($value in $detection.DetectedValues) {
@@ -106,30 +111,21 @@ function Set-DetectedValues {
                                 $value.Value = 'Removed'
                             }
                             $value | Add-Member -Force -NotePropertyMembers @{
-                                Identifier            = $Data.Id
-                                PolicyId              = $policy.PolicyId
-                                RuleId                = $rule.RuleId
-                                SensitiveType         = $sit.SensitiveType
-                                SensitiveInfoTypeName = $sit.SensitiveInformationTypeName
-                                Name                  = $value.Name
-                                Value                 = $value.Value                         
+                                Identifier      = $Data.Id
+                                SensitiveInfoId = $sitId
+                                Name            = $value.Name
+                                Value           = $value.Value                         
                             } -PassThru | Out-Null
                             $detections.Add($value) | Out-Null                        
                         }
                     }
                 }
+                if ($index -eq (($rule.ConditionsMatched.SensitiveInformation).Count -1))
+                {
+                    $rule.ConditionsMatched.PSObject.Properties.Remove('SensitiveInformation')
+                }
             }
         }
-    }
-    foreach ($policy in $Data.PolicyDetails) {
-        foreach ($rule in $policy.Rules) {
-            foreach ($sit in $rule.ConditionsMatched) {
-                $sit.PSObject.Properties.Remove('SensitiveInformation')
-            }
-        }
-    }
-    foreach ($sit in $sits) {
-        $sit.PSObject.Properties.Remove('SensitiveInformationDetections')
     }
 }
 
@@ -144,7 +140,7 @@ function Set-DetectedValuesEndpoint {
             SITCount                     = $sit.Count
             SensitiveInfoTypeId          = $sit.SensitiveInfoTypeId
             SensitiveInformationTypeName = $sit.SensitiveInfoTypeName
-            ClassificationAttributes     = $sit.SensitiveInformationDetailedClassificationAttributes 
+            ClassificationAttributes     = $sit.SensitiveInformationDetailedClassificationAttributes
         } -PassThru | Out-Null
         $sit.PSObject.Properties.Remove('Count')
         $sit.PSObject.Properties.Remove('SensitiveInformationDetailedClassificationAttributes')
@@ -168,19 +164,14 @@ function Set-DetectedValuesEndpoint {
                         $value.Value = 'Removed'
                     }
                     $value | Add-Member -Force -NotePropertyMembers @{
-                        Identifier            = $Data.Id
-                        SensitiveType         = $sit.SensitiveType
-                        SensitiveInfoTypeName = $sit.SensitiveInformationTypeName                      
+                        Identifier            = $Data.Id                 
                     } -PassThru | Out-Null
-                    $detections.Add($value) | Out-Null    
+                    $detections.Add($value) | Out-Null
                 }
             }
         }     
     }
-    foreach ($sit in $Data.EndpointMetaData) {
-        $sit.PSObject.Properties.Remove('SensitiveInfoTypeData')
-        $sit.PSObject.Properties.Remove('SensitiveInformationDetectionsInfo') 
-    }
+    $Data.EndpointMetaData.PSObject.Properties.Remove('SensitiveInfoTypeData')
 }
 
 $clientID = "$env:clientID"

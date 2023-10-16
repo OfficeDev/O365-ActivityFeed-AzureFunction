@@ -266,6 +266,10 @@ resource dcr 'Microsoft.Insights/dataCollectionRules@2021-09-01-preview' = {
             name: 'SITCount'
             type: 'int'
           }
+          {
+            name: 'SensitiveInfoId'
+            type: 'string'
+          }
         ]        
       }
       'Custom-PurviewDLPDetections_CL': {
@@ -295,11 +299,7 @@ resource dcr 'Microsoft.Insights/dataCollectionRules@2021-09-01-preview' = {
             type: 'string'
           }
           {
-            name: 'PolicyId'
-            type: 'string'
-          }
-          {
-            name: 'RuleId'
+            name: 'SensitiveInfoId'
             type: 'string'
           }
         ]        
@@ -528,6 +528,10 @@ module tablePurviewDLPSIT 'lawCustomTable.bicep' = {
         name: 'SITCount'
         type: 'int'
       }
+      {
+        name: 'SensitiveInfoId'
+        type: 'string'
+      }
     ]    
   }
 }
@@ -565,11 +569,7 @@ module tablePurviewDLPDetections 'lawCustomTable.bicep' = {
         type: 'string'
       }
       {
-        name: 'PolicyId'
-        type: 'string'
-      }
-      {
-        name: 'RuleId'
+        name: 'SensitiveInfoId'
         type: 'string'
       }
     ]    
