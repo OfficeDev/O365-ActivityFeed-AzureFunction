@@ -135,12 +135,14 @@ function Set-DetectedValuesEndpoint {
         SensitiveInfoTypeTotalCount = [int] ($Data.EndpointMetaData.SensitiveInfoTypeData | Measure-Object -Property Count -Sum).Sum
     } -PassThru | Out-Null
     foreach ($sit in $Data.EndpointMetaData.SensitiveInfoTypeData) {
+        $sitId = (New-Guid).Guid
         $sit | Add-Member -Force -NotePropertyMembers @{
             Identifier                   = $Data.Id
             SITCount                     = $sit.Count
             SensitiveInfoTypeId          = $sit.SensitiveInfoTypeId
             SensitiveInformationTypeName = $sit.SensitiveInfoTypeName
             ClassificationAttributes     = $sit.SensitiveInformationDetailedClassificationAttributes
+            SensitiveInfoId              = $sitId
         } -PassThru | Out-Null
         $sit.PSObject.Properties.Remove('Count')
         $sit.PSObject.Properties.Remove('SensitiveInformationDetailedClassificationAttributes')
@@ -164,7 +166,8 @@ function Set-DetectedValuesEndpoint {
                         $value.Value = 'Removed'
                     }
                     $value | Add-Member -Force -NotePropertyMembers @{
-                        Identifier            = $Data.Id                 
+                        Identifier      = $Data.Id
+                        SensitiveInfoId = $sitId              
                     } -PassThru | Out-Null
                     $detections.Add($value) | Out-Null
                 }
