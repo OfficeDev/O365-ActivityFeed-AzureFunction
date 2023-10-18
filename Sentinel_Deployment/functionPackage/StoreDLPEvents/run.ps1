@@ -65,9 +65,16 @@ function Test-Command {
     }
 }
 
-#Function to hash or remove the sensitive data detected.
+#Functions to hash or remove the sensitive data detected.
+function Get-Hash ($Value) {
+    $hasher = [System.Security.Cryptography.HashAlgorithm]::Create('sha256')
+    $hash = $hasher.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($Value))
+    $hashString = [System.BitConverter]::ToString($hash)
+    $hash = $hashString.Replace('-', '')
+    return $hash.ToLower()
+}
 function Set-DetectedValues {
-    param($Data, $Method)
+    param($Data, $Method = 'Hash')
     foreach ($policy in $Data.PolicyDetails) {
         foreach ($rule in $policy.Rules) {
             $rule.ConditionsMatched | Add-Member @{
@@ -76,52 +83,38 @@ function Set-DetectedValues {
             foreach ($sit in $rule.ConditionsMatched.SensitiveInformation) {
                 $index = ($rule.ConditionsMatched.SensitiveInformation).IndexOf($sit)
                 $sitId = (New-Guid).Guid
-                $sit | Add-Member -Force -NotePropertyMembers @{
-                    Identifier                   = $Data.Id
-                    PolicyId                     = $policy.PolicyId
-                    RuleId                       = $rule.RuleId
-                    SensitiveType                = $sit.SensitiveType
-                    SensitiveInformationTypeName = $sit.SensitiveInformationTypeName
-                    DetectionResultsTruncated    = $sit.SensitiveInformationDetections.ResultsTruncated
-                    SITCount                     = $sit.Count
-                    ClassificationAttributes     = $sit.SensitiveInformationDetailedClassificationAttributes
-                    SensitiveInfoId              = $sitId
+                $sit | Add-Member -NotePropertyMembers @{
+                    Identifier                = $Data.Id
+                    PolicyId                  = $policy.PolicyId
+                    RuleId                    = $rule.RuleId
+                    DetectionResultsTruncated = $sit.SensitiveInformationDetections.ResultsTruncated
+                    SITCount                  = $sit.Count
+                    ClassificationAttributes  = $sit.SensitiveInformationDetailedClassificationAttributes
+                    SensitiveInfoId           = $sitId
                 } -PassThru | Out-Null
                 $sit.PSObject.Properties.Remove('Count')
                 $sit.PSObject.Properties.Remove('SensitiveInformationDetailedClassificationAttributes')
-                $sitAdd =  $sit.PsObject.Copy()
+                $sitAdd = $sit.PsObject.Copy()
                 $sitAdd.PSObject.Properties.Remove('SensitiveInformationDetections')
                 $sits.Add($sitAdd) | Out-Null
                 foreach ($detection in $sit.SensitiveInformationDetections) {
-                    if ($Method -ne 'Keep') {
+                    if ($Method -ne 'Remove') {
                         foreach ($value in $detection.DetectedValues) {
-                            if ($Method -eq 'Hash') {
-                                $hasher = [System.Security.Cryptography.HashAlgorithm]::Create('sha256')
-                                $nameHash = $hasher.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($value.Name))
-                                $nameHashString = [System.BitConverter]::ToString($nameHash)
-                                $nameHash = $nameHashString.Replace('-', '')
-                                $valueHash = $hasher.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($value.Value))
-                                $valueHashString = [System.BitConverter]::ToString($valueHash)
-                                $valueHash = $valueHashString.Replace('-', '')
-                                $value.Name = $nameHash.toLower()
-                                $value.Value = $valueHash.toLower()
-                            }
-                            elseif ($Method -eq 'Remove') {
-                                $value.Name = 'Removed'
-                                $value.Value = 'Removed'
-                            }
-                            $value | Add-Member -Force -NotePropertyMembers @{
-                                Identifier      = $Data.Id
-                                SensitiveInfoId = $sitId
-                                Name            = $value.Name
-                                Value           = $value.Value                         
-                            } -PassThru | Out-Null
-                            $detections.Add($value) | Out-Null                        
+                            foreach ($detection in $sit.SensitiveInformationDetections) {
+                                if ($Method -eq 'Hash') {
+                                    $value.Name = Get-Hash -Value $value.Name
+                                    $value.Value = Get-Hash -Value $value.Value
+                                }
+                                $value | Add-Member -NotePropertyMembers @{
+                                    Identifier      = $Data.Id
+                                    SensitiveInfoId = $sitId            
+                                } -PassThru | Out-Null
+                                $detections.Add($value) | Out-Null
+                            }                       
                         }
                     }
                 }
-                if ($index -eq (($rule.ConditionsMatched.SensitiveInformation).Count -1))
-                {
+                if ($index -eq (($rule.ConditionsMatched.SensitiveInformation).Count - 1)) {
                     $rule.ConditionsMatched.PSObject.Properties.Remove('SensitiveInformation')
                 }
             }
@@ -130,44 +123,34 @@ function Set-DetectedValues {
 }
 
 function Set-DetectedValuesEndpoint {
-    param($Data, $Method)
+    param($Data, $Method = 'Hash')
     $Data.EndpointMetaData | Add-Member @{
         SensitiveInfoTypeTotalCount = [int] ($Data.EndpointMetaData.SensitiveInfoTypeData | Measure-Object -Property Count -Sum).Sum
     } -PassThru | Out-Null
     foreach ($sit in $Data.EndpointMetaData.SensitiveInfoTypeData) {
         $sitId = (New-Guid).Guid
-        $sit | Add-Member -Force -NotePropertyMembers @{
+        $sit | Add-Member -NotePropertyMembers @{
             Identifier                   = $Data.Id
             SITCount                     = $sit.Count
-            SensitiveInfoTypeId          = $sit.SensitiveInfoTypeId
+            SensitiveType                = $sit.SensitiveInfoTypeId
             SensitiveInformationTypeName = $sit.SensitiveInfoTypeName
             ClassificationAttributes     = $sit.SensitiveInformationDetailedClassificationAttributes
             SensitiveInfoId              = $sitId
         } -PassThru | Out-Null
         $sit.PSObject.Properties.Remove('Count')
         $sit.PSObject.Properties.Remove('SensitiveInformationDetailedClassificationAttributes')
+        $sit.PSObject.Properties.Remove('SensitiveInfoTypeId')
         $sits.Add($sit) | Out-Null
         foreach ($detection in $sit.SensitiveInformationDetectionsInfo) {
-            if ($Method -ne 'Keep') {
-                foreach ($value in $detection.DetectedValues) {
-                    if ($Method -eq 'Hash') {
-                        $hasher = [System.Security.Cryptography.HashAlgorithm]::Create('sha256')
-                        $nameHash = $hasher.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($value.Name))
-                        $nameHashString = [System.BitConverter]::ToString($nameHash)
-                        $nameHash = $nameHashString.Replace('-', '')
-                        $valueHash = $hasher.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($value.Value))
-                        $valueHashString = [System.BitConverter]::ToString($valueHash)
-                        $valueHash = $valueHashString.Replace('-', '')
-                        $value.Name = $nameHash.toLower()
-                        $value.Value = $valueHash.toLower()
-                    }
-                    elseif ($Method -eq 'Remove') {
-                        $value.Name = 'Removed'
-                        $value.Value = 'Removed'
-                    }
-                    $value | Add-Member -Force -NotePropertyMembers @{
+            foreach ($value in $detection.DetectedValues) {
+                if ($Method -eq 'Hash') {
+                    $value.Name = Get-Hash -Value $value.Name
+                    $value.Value = Get-Hash -Value $value.Value
+                }
+                if ($Method -ne 'Remove') {
+                    $value | Add-Member -NotePropertyMembers @{
                         Identifier      = $Data.Id
-                        SensitiveInfoId = $sitId              
+                        SensitiveInfoId = $sitId            
                     } -PassThru | Out-Null
                     $detections.Add($value) | Out-Null
                 }
@@ -370,7 +353,6 @@ if ($workspace) {
             #Send received data to Azure Monitor.
             Send-DataToAzureMonitorBatched -Data $uploadWS.$activeWS -BatchSize 50 -TableName ("Custom-$LogType" + "_CL") -JsonDepth 100 -UamiClientId $uamiClientId -DceURI $dceUri -DcrImmutableId $dcrImmutableId -SortBySize $true -EventIdPropertyName 'Identifier'
         }
-
     }
 }
 
