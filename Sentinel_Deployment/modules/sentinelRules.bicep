@@ -1,19 +1,19 @@
 param workspace string
 param policySync bool = false
 param guids array = [
-  newGuid()
-  newGuid()
-  newGuid()
-  newGuid()
-  newGuid()
-  newGuid()
+  guid(resourceGroup().id, '0')
+  guid(resourceGroup().id, '1')
+  guid(resourceGroup().id, '2')
+  guid(resourceGroup().id, '3')
+  guid(resourceGroup().id, '4')
+  guid(resourceGroup().id, '5')
 ]
 
 var workloads = loadJsonContent('../functionPackage/SyncDLPAnalyticsRules/workloads.json')
 var querySyncVar1 = 'let Workloads = dynamic(WORKLOADSREPLACE);\r\n'
 var querySyncVar2 = 'let WorkloadAlias = "WORKLOADALIASREPLACE";\r\n'
 var querySync = 'let AlertProductName = "Microsoft Data Loss Prevention (Custom)";\r\n\r\nlet PolicyWatchlist = _GetWatchlist("Policy")\r\n    | extend Workload = column_ifexists("Workload", ""), Name = column_ifexists("Name", "")\r\n    | where Workload == WorkloadAlias\r\n    | project SearchKey;\r\n\r\nPurviewDLP(Workloads, true)\r\n| where PolicyName != "" //Do Not Remove\r\n| where not(PolicyName has_any (PolicyWatchlist)) //Do not remove\r\n| extend Product = AlertProductName\r\n| order by TimeGenerated'
-var queryAll = 'let AlertProductName = "Microsoft Data Loss Prevention (Custom)";\r\nlet Workloads = dynamic(["Endpoint", "SharePoint", "OneDrive", "Exchange", "MicrosoftTeams"]);\r\n\r\nPurviewDLP(Workloads)\r\n| extend Product = AlertProductName\r\n| order by TimeGenerated'
+var queryAll = 'let AlertProductName = "Microsoft Data Loss Prevention (Custom)";\r\n\r\nPurviewDLP\r\n| extend Product = AlertProductName\r\n| order by TimeGenerated'
 
 resource sentinelRuleAll 'Microsoft.OperationalInsights/workspaces/providers/alertRules@2022-11-01-preview' = if (policySync == false) {
   name: '${workspace}/Microsoft.SecurityInsights/64621844-3809-45b1-a072-50b93283e095'
