@@ -69,7 +69,7 @@ resource sentinelRuleAll 'Microsoft.OperationalInsights/workspaces/providers/ale
       ]
     }
     customDetails: {
-      CreationTime: 'CreationTime'
+      CreationTime: 'CreationTimeString'
       User: 'UserPrincipalName'
       JobTitle: 'jobTitle'
       Department: 'department'
@@ -224,7 +224,7 @@ resource sentinelRuleSync 'Microsoft.OperationalInsights/workspaces/providers/al
       ]
     }
     customDetails: {
-      CreationTime: 'CreationTime'
+      CreationTime: 'CreationTimeString'
       User: 'UserPrincipalName'
       JobTitle: 'jobTitle'
       Department: 'department'
