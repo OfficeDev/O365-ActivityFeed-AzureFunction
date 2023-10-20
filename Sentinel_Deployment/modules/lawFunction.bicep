@@ -11,7 +11,7 @@ resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2022-10
 }
 
 resource function 'Microsoft.OperationalInsights/workspaces/savedSearches@2020-08-01' = {
-  parent: logAnalyticsWorkspace 
+  parent: logAnalyticsWorkspace
   name: functionName
   properties: {
     category: category 
@@ -19,5 +19,6 @@ resource function 'Microsoft.OperationalInsights/workspaces/savedSearches@2020-0
     query: query
     functionParameters: functionParams
     functionAlias: functionAlias
+    etag: '*'
   }
 }

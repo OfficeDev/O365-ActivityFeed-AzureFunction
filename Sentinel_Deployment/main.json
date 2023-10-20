@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.22.6.54827",
-      "templateHash": "5965066944753564266"
+      "templateHash": "2215911381573736790"
     }
   },
   "parameters": {
@@ -83,76 +83,6 @@
       "defaultValue": "/subscriptions/xxxxxxxx-xxxxxxxx-xxxxxxxx-xxxxxxxx-xxxxxxxx/resourcegroups/xxxxxxxx/providers/microsoft.operationalinsights/workspaces/xxxxxxxx",
       "metadata": {
         "description": "Azure Resource ID (NOT THE WORKSPACE ID) of the existing Log Analytics Workspace where you would like the DLP and optional Function App Application Insights data to reside. The format is: \"/subscriptions/xxxxxxxx-xxxxxxxx-xxxxxxxx-xxxxxxxx-xxxxxxxx/resourcegroups/xxxxxxxx/providers/microsoft.operationalinsights/workspaces/xxxxxxxx\""
-      }
-    },
-    "LogAnalyticsWorkspaceLocation": {
-      "type": "string",
-      "allowedValues": [
-        "asia",
-        "asiapacific",
-        "australia",
-        "australiacentral",
-        "australiacentral2",
-        "australiaeast",
-        "australiasoutheast",
-        "brazil",
-        "brazilsouth",
-        "brazilsoutheast",
-        "canada",
-        "canadacentral",
-        "canadaeast",
-        "centralindia",
-        "centralus",
-        "centraluseuap",
-        "eastasia",
-        "eastus",
-        "eastus2",
-        "eastus2euap",
-        "europe",
-        "france",
-        "francecentral",
-        "francesouth",
-        "germany",
-        "germanynorth",
-        "germanywestcentral",
-        "global",
-        "india",
-        "japan",
-        "japaneast",
-        "japanwest",
-        "korea",
-        "koreacentral",
-        "koreasouth",
-        "northcentralus",
-        "northeurope",
-        "norway",
-        "norwayeast",
-        "norwaywest",
-        "qatarcentral",
-        "southafrica",
-        "southafricanorth",
-        "southafricawest",
-        "southcentralus",
-        "southeastasia",
-        "southindia",
-        "swedencentral",
-        "switzerland",
-        "switzerlandnorth",
-        "switzerlandwest",
-        "uaecentral",
-        "uaenorth",
-        "uksouth",
-        "ukwest",
-        "unitedstates",
-        "westcentralus",
-        "westeurope",
-        "westindia",
-        "westus",
-        "westus2",
-        "westus3"
-      ],
-      "metadata": {
-        "description": "Azure location/region of the Log Analytics Workspace referenced in the LogAnalyticsWorkspaceResourceID parameter."
       }
     },
     "DLPPolicySync": {
@@ -520,7 +450,7 @@
         "mode": "Incremental",
         "parameters": {
           "LogAnalyticsWorkspaceLocation": {
-            "value": "[parameters('LogAnalyticsWorkspaceLocation')]"
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[2], split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[4]), 'Microsoft.OperationalInsights/workspaces', split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[8]), '2022-10-01', 'full').location]"
           },
           "LogAnalyticsWorkspaceResourceId": {
             "value": "[parameters('LogAnalyticsWorkspaceResourceID')]"
@@ -542,7 +472,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.22.6.54827",
-              "templateHash": "6013239158099543889"
+              "templateHash": "11749405798518713589"
             }
           },
           "parameters": {
@@ -568,70 +498,6 @@
             },
             "LogAnalyticsWorkspaceLocation": {
               "type": "string",
-              "allowedValues": [
-                "asia",
-                "asiapacific",
-                "australia",
-                "australiacentral",
-                "australiacentral2",
-                "australiaeast",
-                "australiasoutheast",
-                "brazil",
-                "brazilsouth",
-                "brazilsoutheast",
-                "canada",
-                "canadacentral",
-                "canadaeast",
-                "centralindia",
-                "centralus",
-                "centraluseuap",
-                "eastasia",
-                "eastus",
-                "eastus2",
-                "eastus2euap",
-                "europe",
-                "france",
-                "francecentral",
-                "francesouth",
-                "germany",
-                "germanynorth",
-                "germanywestcentral",
-                "global",
-                "india",
-                "japan",
-                "japaneast",
-                "japanwest",
-                "korea",
-                "koreacentral",
-                "koreasouth",
-                "northcentralus",
-                "northeurope",
-                "norway",
-                "norwayeast",
-                "norwaywest",
-                "qatarcentral",
-                "southafrica",
-                "southafricanorth",
-                "southafricawest",
-                "southcentralus",
-                "southeastasia",
-                "southindia",
-                "swedencentral",
-                "switzerland",
-                "switzerlandnorth",
-                "switzerlandwest",
-                "uaecentral",
-                "uaenorth",
-                "uksouth",
-                "ukwest",
-                "unitedstates",
-                "westcentralus",
-                "westeurope",
-                "westindia",
-                "westus",
-                "westus2",
-                "westus3"
-              ],
               "metadata": {
                 "description": "Azure location/region of the Log Analytics Workspace referenced in the LogAnalyticsWorkspaceResourceId parameter."
               }
@@ -1396,7 +1262,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.22.6.54827",
-              "templateHash": "14663270083665353918"
+              "templateHash": "15060525192022243912"
             }
           },
           "parameters": {
@@ -1433,7 +1299,8 @@
                 "displayName": "[parameters('displayName')]",
                 "query": "[parameters('query')]",
                 "functionParameters": "[parameters('functionParams')]",
-                "functionAlias": "[parameters('functionAlias')]"
+                "functionAlias": "[parameters('functionAlias')]",
+                "etag": "*"
               }
             }
           ]
@@ -1710,8 +1577,8 @@
         },
         "mode": "Incremental",
         "parameters": {
-          "workspace": {
-            "value": "[split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[8]]"
+          "lawId": {
+            "value": "[parameters('LogAnalyticsWorkspaceResourceID')]"
           },
           "policySync": {
             "value": "[parameters('DLPPolicySync')]"
@@ -1724,11 +1591,11 @@
             "_generator": {
               "name": "bicep",
               "version": "0.22.6.54827",
-              "templateHash": "5736685549506839468"
+              "templateHash": "16509969663947251255"
             }
           },
           "parameters": {
-            "workspace": {
+            "lawId": {
               "type": "string"
             },
             "policySync": {
@@ -1738,12 +1605,12 @@
             "guids": {
               "type": "array",
               "defaultValue": [
-                "[guid(resourceGroup().id, '0')]",
-                "[guid(resourceGroup().id, '1')]",
-                "[guid(resourceGroup().id, '2')]",
-                "[guid(resourceGroup().id, '3')]",
-                "[guid(resourceGroup().id, '4')]",
-                "[guid(resourceGroup().id, '5')]"
+                "[guid(parameters('lawId'), 'dlp0')]",
+                "[guid(parameters('lawId'), 'dlp1')]",
+                "[guid(parameters('lawId'), 'dlp2')]",
+                "[guid(parameters('lawId'), 'dlp3')]",
+                "[guid(parameters('lawId'), 'dlp4')]",
+                "[guid(parameters('lawId'), 'dlp5')]"
               ]
             }
           },
@@ -1781,7 +1648,7 @@
               "condition": "[equals(parameters('policySync'), false())]",
               "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
               "apiVersion": "2022-11-01-preview",
-              "name": "[format('{0}/Microsoft.SecurityInsights/64621844-3809-45b1-a072-50b93283e095', parameters('workspace'))]",
+              "name": "[format('{0}/Microsoft.SecurityInsights/64621844-3809-45b1-a072-50b93283e095', split(parameters('lawId'), '/')[8])]",
               "kind": "Scheduled",
               "properties": {
                 "displayName": "Microsoft DLP Incident Creation",
@@ -1942,7 +1809,7 @@
               "condition": "[equals(parameters('policySync'), true())]",
               "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
               "apiVersion": "2022-11-01-preview",
-              "name": "[format('{0}/Microsoft.SecurityInsights/{1}', parameters('workspace'), parameters('guids')[copyIndex()])]",
+              "name": "[format('{0}/Microsoft.SecurityInsights/{1}', split(parameters('lawId'), '/')[8], parameters('guids')[copyIndex()])]",
               "kind": "Scheduled",
               "properties": {
                 "displayName": "[format('Microsoft DLP Incident Creation Template ({0})', variables('workloads')[copyIndex()].Alias)]",
@@ -2048,7 +1915,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.22.6.54827",
-              "templateHash": "5217374912370601889"
+              "templateHash": "6554060111577144037"
             }
           },
           "parameters": {
@@ -2080,15 +1947,15 @@
             },
             "workbookIdIncidentManagement": {
               "type": "string",
-              "defaultValue": "[guid(resourceGroup().id, parameters('workbookDisplayNameIncidentManagement'))]"
+              "defaultValue": "[guid(parameters('workbookSourceId'), parameters('workbookDisplayNameIncidentManagement'))]"
             },
             "workbookIdActivity": {
               "type": "string",
-              "defaultValue": "[guid(resourceGroup().id, parameters('workbookDisplayNameActivity'))]"
+              "defaultValue": "[guid(parameters('workbookSourceId'), parameters('workbookDisplayNameActivity'))]"
             },
             "workbookIdOrganization": {
               "type": "string",
-              "defaultValue": "[guid(resourceGroup().id, parameters('workbookDisplayNameOrganization'))]"
+              "defaultValue": "[guid(parameters('workbookSourceId'), parameters('workbookDisplayNameOrganization'))]"
             }
           },
           "resources": [

@@ -21,74 +21,6 @@ param DataCollectionEndpointName string = 'dce-sentineldlp'
 param DataCollectionRuleName string = 'dcr-sentineldlp'
 @description('Azure Resource ID (NOT THE WORKSPACE ID) of the existing Log Analytics Workspace where you would like the DLP and optional Function App Application Insights data to reside. The format is: "/subscriptions/xxxxxxxx-xxxxxxxx-xxxxxxxx-xxxxxxxx-xxxxxxxx/resourcegroups/xxxxxxxx/providers/microsoft.operationalinsights/workspaces/xxxxxxxx"')
 param LogAnalyticsWorkspaceResourceID string = '/subscriptions/xxxxxxxx-xxxxxxxx-xxxxxxxx-xxxxxxxx-xxxxxxxx/resourcegroups/xxxxxxxx/providers/microsoft.operationalinsights/workspaces/xxxxxxxx'
-@description('Azure location/region of the Log Analytics Workspace referenced in the LogAnalyticsWorkspaceResourceID parameter.')
-@allowed(
-  [
-    'asia'
-    'asiapacific'
-    'australia'
-    'australiacentral'
-    'australiacentral2'
-    'australiaeast'
-    'australiasoutheast'
-    'brazil'
-    'brazilsouth'
-    'brazilsoutheast'
-    'canada'
-    'canadacentral'
-    'canadaeast'
-    'centralindia'
-    'centralus'
-    'centraluseuap'
-    'eastasia'
-    'eastus'
-    'eastus2'
-    'eastus2euap'
-    'europe'
-    'france'
-    'francecentral'
-    'francesouth'
-    'germany'
-    'germanynorth'
-    'germanywestcentral'
-    'global'
-    'india'
-    'japan'
-    'japaneast'
-    'japanwest'
-    'korea'
-    'koreacentral'
-    'koreasouth'
-    'northcentralus'
-    'northeurope'
-    'norway'
-    'norwayeast'
-    'norwaywest'
-    'qatarcentral'
-    'southafrica'
-    'southafricanorth'
-    'southafricawest'
-    'southcentralus'
-    'southeastasia'
-    'southindia'
-    'swedencentral'
-    'switzerland'
-    'switzerlandnorth'
-    'switzerlandwest'
-    'uaecentral'
-    'uaenorth'
-    'uksouth'
-    'ukwest'
-    'unitedstates'
-    'westcentralus'
-    'westeurope'
-    'westindia'
-    'westus'
-    'westus2'
-    'westus3'
-  ]
-)
-param LogAnalyticsWorkspaceLocation string
 @description('Create a Sentinel scheduled query rule for each DLP policy and workload (i.e., Teams, SharePoint, Endpoint, etc.). If "false", a single scheduled query rule will be created to cover all policies and workloads.')
 param DLPPolicySync bool = false
 @description('Deploy Azure workbooks to help visualize the DLP data and manage DLP incidents.')
@@ -112,6 +44,11 @@ var functionAppPackageUri = 'https://raw.githubusercontent.com/anders-alex/O365-
 var deploymentScriptUri = 'https://raw.githubusercontent.com/anders-alex/O365-ActivityFeed-AzureFunction/Sentinel_Deployment3/Sentinel_Deployment/deploymentScript.ps1'
 var endpointSeverityInRuleName = EndpointSeverityInRuleName == true ? 'true' : 'false'
 
+resource law 'Microsoft.OperationalInsights/workspaces@2022-10-01' existing = {
+  name: split(LogAnalyticsWorkspaceResourceID, '/')[8]
+  scope: resourceGroup(split(LogAnalyticsWorkspaceResourceID, '/')[2], split(LogAnalyticsWorkspaceResourceID, '/')[4])
+}
+
 resource userAssignedMi 'Microsoft.ManagedIdentity/userAssignedIdentities@2022-01-31-preview' = {
   name: 'uami-${FunctionAppName}'
   location: location
@@ -120,7 +57,7 @@ resource userAssignedMi 'Microsoft.ManagedIdentity/userAssignedIdentities@2022-0
 module createCustomTables 'modules/customDcrTables.bicep' = {
   name: 'createCustomTables'
   params: {
-    LogAnalyticsWorkspaceLocation: LogAnalyticsWorkspaceLocation 
+    LogAnalyticsWorkspaceLocation: law.location
     LogAnalyticsWorkspaceResourceId: LogAnalyticsWorkspaceResourceID
     DataCollectionEndpointName: DataCollectionEndpointName
     DataCollectionRuleName: DataCollectionRuleName
@@ -415,8 +352,8 @@ module sentinelRules 'modules/sentinelRules.bicep' = {
     purviewDLPFunction
   ]
   params: {
-    workspace: split(LogAnalyticsWorkspaceResourceID, '/')[8]
-    policySync: DLPPolicySync 
+    lawId: LogAnalyticsWorkspaceResourceID
+    policySync: DLPPolicySync
   }
 }
 

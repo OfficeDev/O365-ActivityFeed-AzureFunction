@@ -97,8 +97,8 @@ function Set-DetectedValues {
                 $sitAdd = $sit.PsObject.Copy()
                 $sitAdd.PSObject.Properties.Remove('SensitiveInformationDetections')
                 $sits.Add($sitAdd) | Out-Null
-                foreach ($detection in $sit.SensitiveInformationDetections) {
-                    if ($Method -ne 'Remove') {
+                if ($Method -ne 'Remove') {
+                    foreach ($detection in $sit.SensitiveInformationDetections) {
                         foreach ($value in $detection.DetectedValues) {
                             foreach ($detection in $sit.SensitiveInformationDetections) {
                                 if ($Method -eq 'Hash') {
@@ -141,21 +141,21 @@ function Set-DetectedValuesEndpoint {
         $sit.PSObject.Properties.Remove('SensitiveInformationDetailedClassificationAttributes')
         $sit.PSObject.Properties.Remove('SensitiveInfoTypeId')
         $sits.Add($sit) | Out-Null
-        foreach ($detection in $sit.SensitiveInformationDetectionsInfo) {
-            foreach ($value in $detection.DetectedValues) {
-                if ($Method -eq 'Hash') {
-                    $value.Name = Get-Hash -Value $value.Name
-                    $value.Value = Get-Hash -Value $value.Value
-                }
-                if ($Method -ne 'Remove') {
+        if ($Method -ne 'Remove') {
+            foreach ($detection in $sit.SensitiveInformationDetectionsInfo) {
+                foreach ($value in $detection.DetectedValues) {
+                    if ($Method -eq 'Hash') {
+                        $value.Name = Get-Hash -Value $value.Name
+                        $value.Value = Get-Hash -Value $value.Value
+                    }
                     $value | Add-Member -NotePropertyMembers @{
                         Identifier      = $Data.Id
                         SensitiveInfoId = $sitId            
                     } -PassThru | Out-Null
                     $detections.Add($value) | Out-Null
                 }
-            }
-        }     
+            }    
+        } 
     }
     $Data.EndpointMetaData.PSObject.Properties.Remove('SensitiveInfoTypeData')
 }
@@ -171,7 +171,7 @@ $body = @{grant_type = "client_credentials"; resource = $resource; client_id = $
 
 #oauthtoken in the header
 $oauth = Invoke-RestMethod -Method Post -Uri $loginURL/$tenantGUID/oauth2/token?api-version=1.0 -Body $body 
-$headerParams = @{'Authorization' = "$($oauth.token_type) $($oauth.access_token)" }
+$token = $oauth.access_token | ConvertTo-SecureString -AsPlainText
 
 #$message = $queueitem | convertfrom-json
 $content = $queueitem
@@ -181,7 +181,7 @@ if ($queueitem.count -eq 1) { $content = $queueitem | convertfrom-json }
 foreach ( $url in $content) {
     $uri = $url + "?PublisherIdentifier=" + $TenantGUID
     $record = Test-Command {  
-        Invoke-RestMethod -UseBasicParsing -Headers $headerParams -Uri $uri
+        Invoke-RestMethod -UseBasicParsing -Authentication Bearer -Token $token -Uri $uri
     } -Delay 10000
     $records += $record
 }
@@ -194,7 +194,7 @@ $records.count
 $resourceG = "https://graph.microsoft.com"
 $bodyG = @{grant_type = "client_credentials"; resource = $resourceG; client_id = $ClientID; client_secret = $ClientSecret }
 $oauthG = Invoke-RestMethod -Method Post -Uri $loginURL/$tenantGUID/oauth2/token?api-version=1.0 -Body $bodyG 
-$headerParamsG = @{'Authorization' = "$($oauthG.token_type) $($oauthG.access_token)" }
+$tokenG = $oauthG.access_token | ConvertTo-SecureString -AsPlainText
 
 #Initialize arrays to hold sensitive info type and detected values data.
 $sits = New-Object System.Collections.ArrayList
@@ -223,7 +223,7 @@ Foreach ($user in $records) {
             #Add the additional attributes needed to enrich the event stored in Log Analytics for Exchange
             # $queryString = "https://graph.microsoft.com/v1.0/users/" + $exuser + "?" + "$" + "select=usageLocation,Manager,department,state" 
             $queryString = "https://graph.microsoft.com/v1.0/users?" + '$select=department,usageLocation,UserPrincipalName,jobTitle&$filter' + "=proxyAddresses/any(x:startswith(x,'SMTP:$exuser'))"       
-            if ($exuser) { $info = Invoke-RestMethod -Headers $headerParamsG -Uri $queryString -Method GET -SkipHttpErrorCheck }
+            if ($exuser) { $info = Invoke-RestMethod -Authentication Bearer -Token $tokenG -Uri $queryString -Method GET -SkipHttpErrorCheck }
             $info = $info.value
 
             #Add usage location from GRAPH Call
@@ -235,7 +235,7 @@ Foreach ($user in $records) {
 
             #$querymanager = "https://graph.microsoft.com/v1.0/users/" + $exuser + "/manager"
             $querymanager = "https://graph.microsoft.com/v1.0/users/" + $info.userPrincipalName + "/manager"
-            $manager = Invoke-RestMethod -Headers $headerParamsG -Uri $querymanager -SkipHttpErrorCheck
+            $manager = Invoke-RestMethod -Authentication Bearer -Token $tokenG -Uri $querymanager -SkipHttpErrorCheck
             if ($manager) { $user | Add-Member -MemberType NoteProperty -Name "manager" -Value $manager.mail }
           
             Clear-Variable -name info                                                                                                         
@@ -251,7 +251,7 @@ Foreach ($user in $records) {
 
         #Add the additional attributes needed to enrich the event stored in Log Analytics for SharePoint
         $queryString = $user.SharePointMetaData.From + "?$" + "select=usageLocation,Manager,department,state,jobTitle"
-        $info = Invoke-RestMethod -Headers $headerParamsG -Uri "https://graph.microsoft.com/v1.0/users/$queryString" -Method GET -SkipHttpErrorCheck
+        $info = Invoke-RestMethod -Authentication Bearer -Token $tokenG -Uri "https://graph.microsoft.com/v1.0/users/$queryString" -Method GET -SkipHttpErrorCheck
         $user | Add-Member -MemberType NoteProperty -Name "usageLocation" -Value $info.usageLocation
         if ($info) { 
             $user | Add-Member -MemberType NoteProperty -Name "department" -Value $info.department
@@ -259,7 +259,7 @@ Foreach ($user in $records) {
         }
 
         $querymanager = "https://graph.microsoft.com/v1.0/users/" + $user.SharePointMetaData.From + "/manager" 
-        $manager = Invoke-RestMethod -Headers $headerParamsG -Uri $querymanager -SkipHttpErrorCheck
+        $manager = Invoke-RestMethod -Authentication Bearer -Token $tokenG -Uri $querymanager -SkipHttpErrorCheck
         if ($manager) { $user | Add-Member -MemberType NoteProperty -Name "manager" -Value $manager.mail }
 
         $spoupload += $user
@@ -273,7 +273,7 @@ Foreach ($user in $records) {
         
         #Add the additional attributes needed to enrich the event stored
         $queryString = $user.UserKey + "?$" + "select=usageLocation,Manager,department,state,jobTitle"
-        $info = Invoke-RestMethod -Headers $headerParamsG -Uri "https://graph.microsoft.com/v1.0/users/$queryString" -Method GET -SkipHttpErrorCheck
+        $info = Invoke-RestMethod -Authentication Bearer -Token $tokenG -Uri "https://graph.microsoft.com/v1.0/users/$queryString" -Method GET -SkipHttpErrorCheck
         $user | Add-Member -MemberType NoteProperty -Name "usageLocation" -Value $info.usageLocation
         if ($info) { 
             $user | Add-Member -MemberType NoteProperty -Name "department" -Value $info.department
@@ -281,7 +281,7 @@ Foreach ($user in $records) {
         }
 
         $querymanager = "https://graph.microsoft.com/v1.0/users/" + $user.UserKey + "/manager" 
-        $manager = Invoke-RestMethod -Headers $headerParamsG -Uri $querymanager -SkipHttpErrorCheck
+        $manager = Invoke-RestMethod -Authentication Bearer -Token $tokenG -Uri $querymanager -SkipHttpErrorCheck
         if ($manager) { $user | Add-Member -MemberType NoteProperty -Name "manager" -Value $manager.mail }
 
         if ($user.objectId) {
@@ -300,7 +300,7 @@ Foreach ($user in $records) {
 
         #Add the additional attributes needed to enrich the event stored
         $queryString = $user.UserId + "?$" + "select=usageLocation,Manager,department,state,jobTitle"
-        $info = Invoke-RestMethod -Headers $headerParamsG -Uri "https://graph.microsoft.com/v1.0/users/$queryString" -Method GET -SkipHttpErrorCheck
+        $info = Invoke-RestMethod -Authentication Bearer -Token $tokenG -Uri "https://graph.microsoft.com/v1.0/users/$queryString" -Method GET -SkipHttpErrorCheck
         $user | Add-Member -MemberType NoteProperty -Name "usageLocation" -Value $info.usageLocation
         if ($info) { 
             $user | Add-Member -MemberType NoteProperty -Name "department" -Value $info.department
@@ -308,7 +308,7 @@ Foreach ($user in $records) {
         }
 
         $querymanager = "https://graph.microsoft.com/v1.0/users/" + $user.UserId + "/manager" 
-        $manager = Invoke-RestMethod -Headers $headerParamsG -Uri $querymanager -SkipHttpErrorCheck
+        $manager = Invoke-RestMethod -Authentication Bearer -Token $tokenG -Uri $querymanager -SkipHttpErrorCheck
         if ($manager) { $user | Add-Member -MemberType NoteProperty -Name "manager" -Value $manager.mail }
 
         if ($user.objectId) {

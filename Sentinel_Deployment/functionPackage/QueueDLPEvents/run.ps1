@@ -58,10 +58,12 @@ Foreach ($workload in $workloads) {
 
     #oauthtoken in the header
     $oauth = Invoke-RestMethod -Method Post -Uri $loginURL/$tenantGUID/oauth2/token?api-version=1.0 -Body $body 
-    $headerParams = @{'Authorization' = "$($oauth.token_type) $($oauth.access_token)" }
+    $token = $oauth.access_token | ConvertTo-SecureString -AsPlainText
 
     #Make the request
-    $rawRef = Invoke-WebRequest -Headers $headerParams -Uri "https://manage.office.com/api/v1.0/$tenantGUID/activity/feed/subscriptions/content?contenttype=$workload&startTime=$Storedtime&endTime=$endTime&PublisherIdentifier=$TenantGUID" -UseBasicParsing
+    $rawRef = Invoke-WebRequest -Authentication Bearer -Token $token -Uri "https://manage.office.com/api/v1.0/$tenantGUID/activity/feed/subscriptions/content?contenttype=$workload&startTime=$Storedtime&endTime=$endTime&PublisherIdentifier=$TenantGUID" -UseBasicParsing
+    
+    
     if (-not ($rawRef)) { throw 'Failed to retrieve the content Blob Url' }
     
     #If more than one page is returned capture and return in pageArray
@@ -72,7 +74,7 @@ Foreach ($workload in $workloads) {
         while ($pageTracker -ne $false) {   
             $pageuri = "$pagedReq&PublisherIdentifier=$TenantGUID"
     
-            $CurrentPage = Invoke-WebRequest -Headers $headerParams -Uri $pageuri -UseBasicParsing
+            $CurrentPage = Invoke-WebRequest -Authentication Bearer -Token $token -Uri $pageuri -UseBasicParsing
             $pageArray += $CurrentPage
 
             if ($CurrentPage.Headers.NextPageUri) {

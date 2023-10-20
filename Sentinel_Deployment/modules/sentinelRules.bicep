@@ -1,12 +1,12 @@
-param workspace string
+param lawId string
 param policySync bool = false
 param guids array = [
-  guid(resourceGroup().id, '0')
-  guid(resourceGroup().id, '1')
-  guid(resourceGroup().id, '2')
-  guid(resourceGroup().id, '3')
-  guid(resourceGroup().id, '4')
-  guid(resourceGroup().id, '5')
+  guid(lawId, 'dlp0')
+  guid(lawId, 'dlp1')
+  guid(lawId, 'dlp2')
+  guid(lawId, 'dlp3')
+  guid(lawId, 'dlp4')
+  guid(lawId, 'dlp5')
 ]
 
 var workloads = loadJsonContent('../functionPackage/SyncDLPAnalyticsRules/workloads.json')
@@ -16,7 +16,7 @@ var querySync = 'let AlertProductName = "Microsoft Data Loss Prevention (Custom)
 var queryAll = 'let AlertProductName = "Microsoft Data Loss Prevention (Custom)";\r\n\r\nPurviewDLP\r\n| extend Product = AlertProductName\r\n| order by TimeGenerated'
 
 resource sentinelRuleAll 'Microsoft.OperationalInsights/workspaces/providers/alertRules@2022-11-01-preview' = if (policySync == false) {
-  name: '${workspace}/Microsoft.SecurityInsights/64621844-3809-45b1-a072-50b93283e095'
+  name: '${split(lawId, '/')[8]}/Microsoft.SecurityInsights/64621844-3809-45b1-a072-50b93283e095'
   kind: 'Scheduled'
   properties: {
     displayName: 'Microsoft DLP Incident Creation'
@@ -171,7 +171,7 @@ resource sentinelRuleAll 'Microsoft.OperationalInsights/workspaces/providers/ale
 }
 
 resource sentinelRuleSync 'Microsoft.OperationalInsights/workspaces/providers/alertRules@2022-11-01-preview' = [for (workload, i) in workloads: if (policySync == true) {
-  name: '${workspace}/Microsoft.SecurityInsights/${guids[i]}'
+  name: '${split(lawId, '/')[8]}/Microsoft.SecurityInsights/${guids[i]}'
   kind: 'Scheduled'
   properties: {
     displayName: 'Microsoft DLP Incident Creation Template (${workload.Alias})'

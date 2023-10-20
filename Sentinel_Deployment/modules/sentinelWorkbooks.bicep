@@ -8,9 +8,9 @@ param location string = resourceGroup().location
 @description('The id of resource instance to which the workbook will be associated')
 param workbookSourceId string
 
-param workbookIdIncidentManagement string = guid(resourceGroup().id, workbookDisplayNameIncidentManagement)
-param workbookIdActivity string = guid(resourceGroup().id, workbookDisplayNameActivity)
-param workbookIdOrganization string = guid(resourceGroup().id, workbookDisplayNameOrganization)
+param workbookIdIncidentManagement string = guid(workbookSourceId, workbookDisplayNameIncidentManagement)
+param workbookIdActivity string = guid(workbookSourceId, workbookDisplayNameActivity)
+param workbookIdOrganization string = guid(workbookSourceId, workbookDisplayNameOrganization)
 
 resource workbookIncidentManagement 'microsoft.insights/workbooks@2022-04-01' = {
   name: workbookIdIncidentManagement
