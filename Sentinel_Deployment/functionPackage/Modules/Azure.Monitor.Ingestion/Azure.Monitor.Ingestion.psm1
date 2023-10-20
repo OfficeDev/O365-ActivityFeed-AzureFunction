@@ -105,7 +105,7 @@ function Send-DataToAzureMonitorBatched {
             }
             if ($errorCount -ge $MaxRetries) { Write-Error "Max number of retries reached, aborting." -ErrorAction Continue}
         }
-    } until ($errorCount -ge $MaxRetries -or (Get-Date) -ge $time.AddSeconds($Timeout))
+    } until ($errorCount -ge $MaxRetries)
 }
 
 <#
