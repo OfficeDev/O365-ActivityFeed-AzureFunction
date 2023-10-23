@@ -40,8 +40,8 @@ param SensitiveDataHandling string = 'Hash'
 param EndpointSeverityInRuleName bool = true
 
 var location = resourceGroup().location
-var functionAppPackageUri = 'https://raw.githubusercontent.com/anders-alex/O365-ActivityFeed-AzureFunction/Sentinel_Deployment3/Sentinel_Deployment/functionPackage.zip'
-var deploymentScriptUri = 'https://raw.githubusercontent.com/anders-alex/O365-ActivityFeed-AzureFunction/Sentinel_Deployment3/Sentinel_Deployment/deploymentScript.ps1'
+var functionAppPackageUri = 'https://raw.githubusercontent.com/anders-alex/O365-ActivityFeed-AzureFunction/Sentinel_Deployment4/Sentinel_Deployment/functionPackage.zip'
+var deploymentScriptUri = 'https://raw.githubusercontent.com/anders-alex/O365-ActivityFeed-AzureFunction/Sentinel_Deployment4/Sentinel_Deployment/deploymentScript.ps1'
 var endpointSeverityInRuleName = EndpointSeverityInRuleName == true ? 'true' : 'false'
 
 resource law 'Microsoft.OperationalInsights/workspaces@2022-10-01' existing = {
@@ -231,7 +231,7 @@ resource functionApp 'Microsoft.Web/sites@2022-03-01' = {
         }
         {
           name: 'WEBSITE_RUN_FROM_PACKAGE'
-          value: '0'
+          value: '1'
         }
         {
           name: 'AzureWebJobs.SyncDLPAnalyticsRules.Disabled'

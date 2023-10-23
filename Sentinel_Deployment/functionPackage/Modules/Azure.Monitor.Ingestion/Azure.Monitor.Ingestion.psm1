@@ -59,7 +59,6 @@ function Send-DataToAzureMonitorBatched {
     )
     $skip = 0
     $errorCount = 0
-    $time = Get-Date
     if ($BatchSize -eq 0) { $BatchSize = $Data.Count }
     #Sort data by size, smallest to largest to get optimal batching.
     if ($SortBySize -eq $true) { 
@@ -90,7 +89,7 @@ function Send-DataToAzureMonitorBatched {
                         $skip++
                     } 
                     else {
-                        $errorCount = $MaxRetries
+                        $errorCount = $MaxRetries + 1
                     }
                 }
                 else {
@@ -102,10 +101,10 @@ function Send-DataToAzureMonitorBatched {
             else { 
                 Write-Error $_ -ErrorAction Continue
                 $errorCount++
+                if ($errorCount -gt $MaxRetries) { Write-Error "Max number of retries reached, aborting." -ErrorAction Continue}
             }
-            if ($errorCount -ge $MaxRetries) { Write-Error "Max number of retries reached, aborting." -ErrorAction Continue}
         }
-    } until ($errorCount -ge $MaxRetries)
+    } until ($errorCount -gt $MaxRetries)
 }
 
 <#

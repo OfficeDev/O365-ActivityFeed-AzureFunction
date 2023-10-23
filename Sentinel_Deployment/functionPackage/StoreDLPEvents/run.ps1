@@ -8,19 +8,7 @@ $spoupload = @()
 $endpointupload = @()
 $powerbiupload = @()
 $allWS = @()
-
 $tolocal = @()
-
-#Workspaces, mapping of country code to workspace, update county code, key and ID reference for multiple workspaces
-#$maineu = @{"Countries" = "US,ES,IT";"Workspacekey" = $env:workspaceKey; "Workspace" = $env:workspaceId}
-#$Germany = @{"Countries" = "DE,GB,SE";"Workspacekey" = $env:workspaceKeyEU; "Workspace" = $env:workspaceIdEU}
-#$LT = @{"Countries" = "LT";"Workspacekey" = $env:workspaceKeyEU; "Workspace" = $env:workspaceIdEU}
-
-#List of Workspaces, update based on workspaces added
-#$workspaces = @{"MainEU" = $maineu; "Germany" = $Germany; "LT" = $LT}
-
-#All Content Workspace, used for the central team
-$AllContent = @{"Countries" = "ALLContent"; "Workspacekey" = $env:workspaceKey; "Workspace" = $env:workspaceId }
 
 # Specify the name of the record type that you'll be creating
 $LogType = $env:customLogName
@@ -321,41 +309,6 @@ Foreach ($user in $records) {
     }
 }
 
-#Determine which Sentinel Workspace to route the information,
-$uploadWS = @{}
-
-if ($workspace) {
-    foreach ($workspace in $workspaces.GetEnumerator()) {
-        $uploadWS[$workspace.name] = @()
-
-        #Exchange and Teams
-        $uploadWS[$workspace.name] += $exupload | where-object { $workspace.Value.Countries.split(",") -Contains $_.usageLocation }                                                          
-
-        #SharePoint and OneDrive
-        $uploadWS[$workspace.name] += $spoupload | where-object { $workspace.Value.Countries.split(",") -Contains $_.usageLocation }       
-                                
-        #EndPoint
-        $uploadWS[$workspace.name] += $endpointupload | where-object { $workspace.Value.Countries.split(",") -Contains $_.usageLocation }
-        
-        #PowerBi
-        $uploadWS[$workspace.name] += $powerbiupload | where-object { $workspace.Value.Countries.split(",") -Contains $_.usageLocation } 
-    }                  
-
-    #Upload to Workspaces
-
-    foreach ($workspace in $workspaces.GetEnumerator()) {
-        $activeWS = $workspace.name
-        if ($uploadWS.$activeWS) {
-            #Add required TimeGenerated field and create alias for Id field since that name is not allowed by Azure Monitor.
-            $allWS | Add-Member -NotePropertyName 'TimeGenerated' -NotePropertyValue (Get-Date -Format 'yyyy-MM-ddTHH:mm:ssZ' -AsUTC)
-            $uploadWS.$activeWS | Add-Member -MemberType AliasProperty -Name Identifier -Value Id
-
-            #Send received data to Azure Monitor.
-            Send-DataToAzureMonitorBatched -Data $uploadWS.$activeWS -BatchSize 50 -TableName ("Custom-$LogType" + "_CL") -JsonDepth 100 -UamiClientId $uamiClientId -DceURI $dceUri -DcrImmutableId $dcrImmutableId -SortBySize $true -EventIdPropertyName 'Identifier'
-        }
-    }
-}
-
 #Uploading everything to a unified Workspace
 $allWS += $exupload
 $allWS += $spoupload
@@ -370,7 +323,14 @@ if ($allWS) {
     $detections | Add-Member -NotePropertyName 'TimeGenerated' -NotePropertyValue $timeGenerated
 
     #Send received data to Azure Monitor.
-    Send-DataToAzureMonitorBatched -Data $allWS -BatchSize 10000 -TableName ("Custom-$LogType" + "_CL") -JsonDepth 100 -UamiClientId $uamiClientId -DceURI $dceUri -DcrImmutableId $dcrImmutableId -SortBySize $true -EventIdPropertyName 'Identifier'
+    if ($detections.Count -gt 0) {
+        Write-Host "Sending detection info:"
+        Send-DataToAzureMonitorBatched -Data $detections -BatchSize 10000 -TableName ("Custom-$LogType" + "Detections_CL") -JsonDepth 100 -UamiClientId $uamiClientId -DceURI $dceUri -DcrImmutableId $dcrImmutableId -SortBySize $true -EventIdPropertyName 'Identifier'
+    }
+    
+    Write-Host "Sending SIT info:"
     Send-DataToAzureMonitorBatched -Data $sits -BatchSize 10000 -TableName ("Custom-$LogType" + "SIT_CL") -JsonDepth 100 -UamiClientId $uamiClientId -DceURI $dceUri -DcrImmutableId $dcrImmutableId -SortBySize $true -EventIdPropertyName 'Identifier'
-    Send-DataToAzureMonitorBatched -Data $detections -BatchSize 10000 -TableName ("Custom-$LogType" + "Detections_CL") -JsonDepth 100 -UamiClientId $uamiClientId -DceURI $dceUri -DcrImmutableId $dcrImmutableId -SortBySize $true -EventIdPropertyName 'Identifier'
+    
+    Write-Host "Sending core event info:"
+    Send-DataToAzureMonitorBatched -Data $allWS -BatchSize 10000 -TableName ("Custom-$LogType" + "_CL") -JsonDepth 100 -UamiClientId $uamiClientId -DceURI $dceUri -DcrImmutableId $dcrImmutableId -SortBySize $true -EventIdPropertyName 'Identifier'
 }

@@ -1,5 +1,5 @@
 #Download latest Function App package.
-Invoke-WebRequest -Uri "https://github.com/anders-alex/O365-ActivityFeed-AzureFunction/raw/Sentinel_Deployment3/Sentinel_Deployment/functionPackage.zip" -OutFile "functionPackage.zip"
+Invoke-WebRequest -Uri "https://github.com/anders-alex/O365-ActivityFeed-AzureFunction/raw/Sentinel_Deployment4/Sentinel_Deployment/functionPackage.zip" -OutFile "functionPackage.zip"
 
 #Select the subscription that contains the Function App to be updated.
 Set-AzContext -Subscription '[Subscription name]'
