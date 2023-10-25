@@ -32,7 +32,7 @@ $watchlist = Invoke-AzOperationalInsightsQuery -WorkspaceId $WorkspaceID -Query 
 
 #Fetch the labels and prepare for export
 try { $labels = Invoke-RestMethod -Authentication Bearer -Token $tokenG -Uri "https://graph.microsoft.com/beta/security/informationProtection/sensitivityLabels" -Method Get -ContentType "application/json" -MaximumRetryCount 5 -RetryIntervalSec 2 }
-catch { throw ("Error calling Azure Management API. " + (($_.Exception).ToString() + ($_.ErrorDetails).ToString())) }
+catch { throw ("Error calling Graph API. " + $_.Exception) }
 
 $sLabels = $labels.value | select id, name, @{N = 'parent'; E = { $_.parent.name } }  
 
@@ -52,6 +52,6 @@ foreach ($item in $csv) {
         $urlupdate = "https://management.azure.com$path/providers/Microsoft.SecurityInsights/watchlists/SensitivityLabels/watchlistitems/$($etag)?api-version=2023-04-01-preview"
         
         try { Invoke-RestMethod -Method "Put" -Uri $urlupdate -Headers $headers -Authentication Bearer -Token $token -Body $update -MaximumRetryCount 5 -RetryIntervalSec 2 }
-        catch { throw ("Error calling Azure Management API. " + (($_.Exception).ToString() + ($_.ErrorDetails).ToString())) }
+        catch { throw ("Error calling Azure Management API. " + $_.Exception) }
     }
 }

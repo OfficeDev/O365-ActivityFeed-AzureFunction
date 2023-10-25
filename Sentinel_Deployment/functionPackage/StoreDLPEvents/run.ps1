@@ -43,10 +43,16 @@ function Test-Command {
                 return
             }
             catch {
-                $fault = $_.Exception.InnerException.Message | convertfrom-json
-                Write-Error $_.Exception.InnerException.Message -ErrorAction Continue
-                if ($fault.error.code -eq "AF429") { Start-Sleep -Milliseconds $Delay }
-                else { $cnt = $Maximum }
+                try {
+                    $fault = $_.Exception.InnerException.Message | ConvertFrom-Json
+                    Write-Error $_.Exception.InnerException.Message -ErrorAction Continue
+                    if ($fault.error.code -eq "AF429") { Start-Sleep -Milliseconds $Delay }
+                    else { $cnt = $Maximum }
+                }
+                catch {
+                    Write-Error ("Error calling Office 365 Management API.") -ErrorAction Continue
+                    $cnt = $Maximum
+                }
             }
         } while ($cnt -lt $Maximum)
         throw 'Execution failed.'
@@ -168,9 +174,8 @@ if ($queueitem.count -eq 1) { $content = $queueitem | convertfrom-json }
 
 foreach ( $url in $content) {
     $uri = $url + "?PublisherIdentifier=" + $TenantGUID
-    $record = Test-Command {  
-        Invoke-RestMethod -UseBasicParsing -Authentication Bearer -Token $token -Uri $uri
-    } -Delay 10000
+    try { $record = Test-Command { Invoke-RestMethod -UseBasicParsing -Authentication Bearer -Token $token -Uri $uri } -Delay 10000 }
+    catch { throw ("Error calling Office 365 Management API. " + $_.Exception) }
     $records += $record
 }
 
@@ -325,12 +330,12 @@ if ($allWS) {
     #Send received data to Azure Monitor.
     if ($detections.Count -gt 0) {
         Write-Host "Sending detection info:"
-        Send-DataToAzureMonitorBatched -Data $detections -BatchSize 10000 -TableName ("Custom-$LogType" + "Detections_CL") -JsonDepth 100 -UamiClientId $uamiClientId -DceURI $dceUri -DcrImmutableId $dcrImmutableId -SortBySize $true -EventIdPropertyName 'Identifier'
+        Send-DataToAzureMonitorBatched -Data $detections -BatchSize 10000 -TableName ("Custom-$LogType" + "Detections_CL") -JsonDepth 100 -UamiClientId $uamiClientId -DceURI $dceUri -DcrImmutableId $dcrImmutableId -SortBySize $false -EventIdPropertyName 'Identifier'
     }
     
     Write-Host "Sending SIT info:"
-    Send-DataToAzureMonitorBatched -Data $sits -BatchSize 10000 -TableName ("Custom-$LogType" + "SIT_CL") -JsonDepth 100 -UamiClientId $uamiClientId -DceURI $dceUri -DcrImmutableId $dcrImmutableId -SortBySize $true -EventIdPropertyName 'Identifier'
-    
+    Send-DataToAzureMonitorBatched -Data $sits -BatchSize 10000 -TableName ("Custom-$LogType" + "SIT_CL") -JsonDepth 100 -UamiClientId $uamiClientId -DceURI $dceUri -DcrImmutableId $dcrImmutableId -SortBySize $false -EventIdPropertyName 'Identifier'
+
     Write-Host "Sending core event info:"
-    Send-DataToAzureMonitorBatched -Data $allWS -BatchSize 10000 -TableName ("Custom-$LogType" + "_CL") -JsonDepth 100 -UamiClientId $uamiClientId -DceURI $dceUri -DcrImmutableId $dcrImmutableId -SortBySize $true -EventIdPropertyName 'Identifier'
+    Send-DataToAzureMonitorBatched -Data $allWS -BatchSize 10000 -TableName ("Custom-$LogType" + "_CL") -JsonDepth 100 -UamiClientId $uamiClientId -DceURI $dceUri -DcrImmutableId $dcrImmutableId -SortBySize $false -EventIdPropertyName 'Identifier'
 }

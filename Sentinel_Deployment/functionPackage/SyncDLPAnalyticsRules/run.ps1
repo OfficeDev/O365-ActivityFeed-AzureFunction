@@ -63,7 +63,7 @@ foreach ($workload in $workloads) {
     $path = $instance.ResourceId
     $urllist = "https://management.azure.com$($path)/providers/Microsoft.SecurityInsights/alertRules?api-version=2023-04-01-preview"
     try { $rules = Invoke-RestMethod -Method "Get" -Uri $urllist -Headers $headers -Authentication Bearer -Token $token -MaximumRetryCount 5 -RetryIntervalSec 2 }
-    catch { throw ("Error calling Azure Management API. " + (($_.Exception).ToString() + ($_.ErrorDetails).ToString())) }
+    catch { throw ("Error calling Azure Management API. " + $_.Exception) }
     
       
     #Fetch Template
@@ -100,7 +100,7 @@ foreach ($workload in $workloads) {
           $updateRule = $matchexisting.name
           $urlupdate = "https://management.azure.com$path/providers/Microsoft.SecurityInsights/alertRules/$updateRule" + '?api-version=2023-04-01-preview'
           try { $rule = Invoke-RestMethod -Method "Put" -Uri $urlupdate -Headers $headers -Authentication Bearer -Token $token -Body $update -MaximumRetryCount 5 -RetryIntervalSec 2 }
-          catch { throw ("Error calling Azure Management API. " + (($_.Exception).ToString() + ($_.ErrorDetails).ToString())) }
+          catch { throw ("Error calling Azure Management API. " + $_.Exception) }
         }
       
         if (-not $matchexisting) {
@@ -119,7 +119,7 @@ foreach ($workload in $workloads) {
           $update = $update -replace '"id": "",', ""   
           $urlupdate = "https://management.azure.com$path/providers/Microsoft.SecurityInsights/alertRules/$($etag.guid)" + '?api-version=2023-04-01-preview'
           try { $rule = Invoke-RestMethod -Method "Put" -Uri $urlupdate -Headers $headers -Authentication Bearer -Token $token -Body $update -MaximumRetryCount 5 -RetryIntervalSec 2 }
-          catch { throw ("Error calling Azure Management API. " + (($_.Exception).ToString() + ($_.ErrorDetails).ToString())) }
+          catch { throw ("Error calling Azure Management API. " + $_.Exception) }
         }
                   
         #Keep track of already processed rules by placing in array for if sentence
@@ -152,8 +152,7 @@ foreach ($workload in $workloads) {
         $update = $a | convertto-json    
         $urlupdate = "https://management.azure.com$path/providers/Microsoft.SecurityInsights/watchlists/Policy/watchlistitems/$($etag)?api-version=2023-04-01-preview"
         try { Invoke-RestMethod -Method "Put" -Uri $urlupdate -Headers $headers -Authentication Bearer -Token $token -Body $update -MaximumRetryCount 5 -RetryIntervalSec 2 }
-        catch { throw ("Error calling Office 365 Management API. " + (($_.Exception).ToString() + ($_.ErrorDetails).ToString())) }
-        
+        catch { throw ("Error calling Azure Management API. " + $_.Exception) } 
       }
     }
   }
