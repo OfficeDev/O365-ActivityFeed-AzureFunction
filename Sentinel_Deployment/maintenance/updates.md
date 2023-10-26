@@ -1,1 +1,0 @@
-[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fanders-alex%2FO365-ActivityFeed-AzureFunction%2FSentinel_Deployment4%2FSentinel_Deployment%2Fmaintenance%2Fupdates.json)
