@@ -1,22 +1,22 @@
-param workspace string
+param lawId string
 param policySync bool = false
 param guids array = [
-  newGuid()
-  newGuid()
-  newGuid()
-  newGuid()
-  newGuid()
-  newGuid()
+  guid(lawId, 'dlp0')
+  guid(lawId, 'dlp1')
+  guid(lawId, 'dlp2')
+  guid(lawId, 'dlp3')
+  guid(lawId, 'dlp4')
+  guid(lawId, 'dlp5')
 ]
 
 var workloads = loadJsonContent('../functionPackage/SyncDLPAnalyticsRules/workloads.json')
 var querySyncVar1 = 'let Workloads = dynamic(WORKLOADSREPLACE);\r\n'
 var querySyncVar2 = 'let WorkloadAlias = "WORKLOADALIASREPLACE";\r\n'
 var querySync = 'let AlertProductName = "Microsoft Data Loss Prevention (Custom)";\r\n\r\nlet PolicyWatchlist = _GetWatchlist("Policy")\r\n    | extend Workload = column_ifexists("Workload", ""), Name = column_ifexists("Name", "")\r\n    | where Workload == WorkloadAlias\r\n    | project SearchKey;\r\n\r\nPurviewDLP(Workloads, true)\r\n| where PolicyName != "" //Do Not Remove\r\n| where not(PolicyName has_any (PolicyWatchlist)) //Do not remove\r\n| extend Product = AlertProductName\r\n| order by TimeGenerated'
-var queryAll = 'let AlertProductName = "Microsoft Data Loss Prevention (Custom)";\r\nlet Workloads = dynamic(["Endpoint", "SharePoint", "OneDrive", "Exchange", "MicrosoftTeams"]);\r\n\r\nPurviewDLP(Workloads,true)\r\n| extend Product = AlertProductName\r\n| order by TimeGenerated'
+var queryAll = 'let AlertProductName = "Microsoft Data Loss Prevention (Custom)";\r\n\r\nPurviewDLP\r\n| extend Product = AlertProductName\r\n| order by TimeGenerated'
 
 resource sentinelRuleAll 'Microsoft.OperationalInsights/workspaces/providers/alertRules@2022-11-01-preview' = if (policySync == false) {
-  name: '${workspace}/Microsoft.SecurityInsights/64621844-3809-45b1-a072-50b93283e095'
+  name: '${split(lawId, '/')[8]}/Microsoft.SecurityInsights/64621844-3809-45b1-a072-50b93283e095'
   kind: 'Scheduled'
   properties: {
     displayName: 'Microsoft DLP Incident Creation'
@@ -69,6 +69,7 @@ resource sentinelRuleAll 'Microsoft.OperationalInsights/workspaces/providers/ale
       ]
     }
     customDetails: {
+      CreationTime: 'CreationTimeString'
       User: 'UserPrincipalName'
       JobTitle: 'jobTitle'
       Department: 'department'
@@ -84,7 +85,6 @@ resource sentinelRuleAll 'Microsoft.OperationalInsights/workspaces/providers/ale
       Subject: 'EmailSubject'
       Operation: 'EndpointOperation'
       Application: 'EndpointApplication'
-      CreationTime: 'CreationTime'
     }
     entityMappings: [
       {
@@ -171,7 +171,7 @@ resource sentinelRuleAll 'Microsoft.OperationalInsights/workspaces/providers/ale
 }
 
 resource sentinelRuleSync 'Microsoft.OperationalInsights/workspaces/providers/alertRules@2022-11-01-preview' = [for (workload, i) in workloads: if (policySync == true) {
-  name: '${workspace}/Microsoft.SecurityInsights/${guids[i]}'
+  name: '${split(lawId, '/')[8]}/Microsoft.SecurityInsights/${guids[i]}'
   kind: 'Scheduled'
   properties: {
     displayName: 'Microsoft DLP Incident Creation Template (${workload.Alias})'
@@ -224,6 +224,7 @@ resource sentinelRuleSync 'Microsoft.OperationalInsights/workspaces/providers/al
       ]
     }
     customDetails: {
+      CreationTime: 'CreationTimeString'
       User: 'UserPrincipalName'
       JobTitle: 'jobTitle'
       Department: 'department'
@@ -239,7 +240,6 @@ resource sentinelRuleSync 'Microsoft.OperationalInsights/workspaces/providers/al
       Subject: 'EmailSubject'
       Operation: 'EndpointOperation'
       Application: 'EndpointApplication'
-      CreationTime: 'CreationTime'
     }
     entityMappings: workload.Alias == 'EXOT' ? [
       {

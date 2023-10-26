@@ -17,7 +17,6 @@ $workloads = $env:contentTypes.split(",")
 $endTime = Get-date -format "yyyy-MM-ddTHH:mm:ss.fffZ"
 
 Foreach ($workload in $workloads) {
-
     #Storage Account Settings
     if ($workload -eq "dlp.all") { $storageQueue = "$env:storageQueue" }
 
@@ -38,8 +37,6 @@ Foreach ($workload in $workloads) {
         $storedTime = Get-content $Tracker
     }
 
-    #$StoredTime = "2020-01-27T20:00:35.464Z"
-
     try {
         $adjustTime = New-TimeSpan -start $storedTime -End $endTime    
     }
@@ -58,33 +55,31 @@ Foreach ($workload in $workloads) {
 
     #oauthtoken in the header
     $oauth = Invoke-RestMethod -Method Post -Uri $loginURL/$tenantGUID/oauth2/token?api-version=1.0 -Body $body 
-    $headerParams = @{'Authorization' = "$($oauth.token_type) $($oauth.access_token)" }
+    $token = $oauth.access_token | ConvertTo-SecureString -AsPlainText
 
     #Make the request
-    $rawRef = Invoke-WebRequest -Headers $headerParams -Uri "https://manage.office.com/api/v1.0/$tenantGUID/activity/feed/subscriptions/content?contenttype=$workload&startTime=$Storedtime&endTime=$endTime&PublisherIdentifier=$TenantGUID" -UseBasicParsing
+    try { $rawRef = Invoke-WebRequest -Authentication Bearer -Token $token -Uri "https://manage.office.com/api/v1.0/$tenantGUID/activity/feed/subscriptions/content?contenttype=$workload&startTime=$Storedtime&endTime=$endTime&PublisherIdentifier=$TenantGUID" -UseBasicParsing -RetryIntervalSec 2 -MaximumRetryCount 5 }
+    catch { throw ("Error calling Office 365 Management API. " + $_.Exception) }
+    
     if (-not ($rawRef)) { throw 'Failed to retrieve the content Blob Url' }
     
     #If more than one page is returned capture and return in pageArray
     if ($rawRef.Headers.NextPageUri) {
-
         $pageTracker = $true
         $pagedReq = $rawRef.Headers.NextPageUri
         while ($pageTracker -ne $false) {   
             $pageuri = "$pagedReq&PublisherIdentifier=$TenantGUID"
-    
-            $CurrentPage = Invoke-WebRequest -Headers $headerParams -Uri $pageuri -UseBasicParsing
+            try { $CurrentPage = Invoke-WebRequest -Authentication Bearer -Token $token -Uri $pageuri -UseBasicParsing -RetryIntervalSec 2 -MaximumRetryCount 5 }
+            catch { throw ("Error calling Office 365 Management API. " + $_.Exception) }
             $pageArray += $CurrentPage
-
             if ($CurrentPage.Headers.NextPageUri) {
                 $pageTracker = $true    
             }
             Else {
                 $pageTracker = $false
             }
-
             $pagedReq = $CurrentPage.Headers.NextPageUri
         }
-
     } 
 
     $pageArray += $rawref
@@ -92,7 +87,6 @@ Foreach ($workload in $workloads) {
     if ($pagearray.RawContentLength -gt 3) {
         foreach ($page in $pageArray) {
             $request = $page.content | convertfrom-json
-
             $request
             # Setting up the paging of the Message queue adding +1 to avoid misconfiguration
             $runs = $request.Count / ($messageSize + 1)
@@ -118,8 +112,7 @@ Foreach ($workload in $workloads) {
                 Clear-Variable msgarray
                 Clear-Variable message
                 Clear-Variable rawMessage
-            }   
-                                                           
+            }                                          
         }
         #Updating timers on success, registering the date from the latest entry returned from the API and adding 1 millisecond to avoid overlap
         $time = $pagearray[0].Content | convertfrom-json
@@ -138,5 +131,4 @@ Foreach ($workload in $workloads) {
     Clear-Variable pagearray
     Clear-Variable rawref -ErrorAction Ignore
     Clear-Variable page -ErrorAction Ignore
-
 }
