@@ -21,74 +21,6 @@ param DataCollectionEndpointName string = 'dce-sentineldlp'
 param DataCollectionRuleName string = 'dcr-sentineldlp'
 @description('Azure Resource ID (NOT THE WORKSPACE ID) of the existing Log Analytics Workspace where you would like the DLP and optional Function App Application Insights data to reside. The format is: "/subscriptions/xxxxxxxx-xxxxxxxx-xxxxxxxx-xxxxxxxx-xxxxxxxx/resourcegroups/xxxxxxxx/providers/microsoft.operationalinsights/workspaces/xxxxxxxx"')
 param LogAnalyticsWorkspaceResourceID string = '/subscriptions/xxxxxxxx-xxxxxxxx-xxxxxxxx-xxxxxxxx-xxxxxxxx/resourcegroups/xxxxxxxx/providers/microsoft.operationalinsights/workspaces/xxxxxxxx'
-@description('Azure location/region of the Log Analytics Workspace referenced in the LogAnalyticsWorkspaceResourceID parameter.')
-@allowed(
-  [
-    'asia'
-    'asiapacific'
-    'australia'
-    'australiacentral'
-    'australiacentral2'
-    'australiaeast'
-    'australiasoutheast'
-    'brazil'
-    'brazilsouth'
-    'brazilsoutheast'
-    'canada'
-    'canadacentral'
-    'canadaeast'
-    'centralindia'
-    'centralus'
-    'centraluseuap'
-    'eastasia'
-    'eastus'
-    'eastus2'
-    'eastus2euap'
-    'europe'
-    'france'
-    'francecentral'
-    'francesouth'
-    'germany'
-    'germanynorth'
-    'germanywestcentral'
-    'global'
-    'india'
-    'japan'
-    'japaneast'
-    'japanwest'
-    'korea'
-    'koreacentral'
-    'koreasouth'
-    'northcentralus'
-    'northeurope'
-    'norway'
-    'norwayeast'
-    'norwaywest'
-    'qatarcentral'
-    'southafrica'
-    'southafricanorth'
-    'southafricawest'
-    'southcentralus'
-    'southeastasia'
-    'southindia'
-    'swedencentral'
-    'switzerland'
-    'switzerlandnorth'
-    'switzerlandwest'
-    'uaecentral'
-    'uaenorth'
-    'uksouth'
-    'ukwest'
-    'unitedstates'
-    'westcentralus'
-    'westeurope'
-    'westindia'
-    'westus'
-    'westus2'
-    'westus3'
-  ]
-)
-param LogAnalyticsWorkspaceLocation string
 @description('Create a Sentinel scheduled query rule for each DLP policy and workload (i.e., Teams, SharePoint, Endpoint, etc.). If "false", a single scheduled query rule will be created to cover all policies and workloads.')
 param DLPPolicySync bool = false
 @description('Deploy Azure workbooks to help visualize the DLP data and manage DLP incidents.')
@@ -104,10 +36,18 @@ param DeployFunctionCode bool = true
   ]
 )
 param SensitiveDataHandling string = 'Hash'
+@description('Because the API does not currently supply the alert severity value for Endpoint events, you can choose to have Sentinel derive the severity from the DLP policy rule name. The rule name must have a "Low", "Medium", or "High" suffix value with a space as the delimiter. For example, "DLP rule name Medium" or "DLP rule name High". If set to false, the severity will default to Medium for all alerts unless the sensitive info detection count is above 50. This threshold can be modified via the "EndpointHighSeverityMatchCountTrigger" PurviewDLP Log Analytics function.')
+param EndpointSeverityInRuleName bool = true
 
 var location = resourceGroup().location
 var functionAppPackageUri = 'https://raw.githubusercontent.com/OfficeDev/O365-ActivityFeed-AzureFunction/Sentinel_Deployment/Sentinel_Deployment/functionPackage.zip'
 var deploymentScriptUri = 'https://raw.githubusercontent.com/OfficeDev/O365-ActivityFeed-AzureFunction/Sentinel_Deployment/Sentinel_Deployment/deploymentScript.ps1'
+var endpointSeverityInRuleName = EndpointSeverityInRuleName == true ? 'true' : 'false'
+
+resource law 'Microsoft.OperationalInsights/workspaces@2022-10-01' existing = {
+  name: split(LogAnalyticsWorkspaceResourceID, '/')[8]
+  scope: resourceGroup(split(LogAnalyticsWorkspaceResourceID, '/')[2], split(LogAnalyticsWorkspaceResourceID, '/')[4])
+}
 
 resource userAssignedMi 'Microsoft.ManagedIdentity/userAssignedIdentities@2022-01-31-preview' = {
   name: 'uami-${FunctionAppName}'
@@ -117,7 +57,7 @@ resource userAssignedMi 'Microsoft.ManagedIdentity/userAssignedIdentities@2022-0
 module createCustomTables 'modules/customDcrTables.bicep' = {
   name: 'createCustomTables'
   params: {
-    LogAnalyticsWorkspaceLocation: LogAnalyticsWorkspaceLocation 
+    LogAnalyticsWorkspaceLocation: law.location
     LogAnalyticsWorkspaceResourceId: LogAnalyticsWorkspaceResourceID
     DataCollectionEndpointName: DataCollectionEndpointName
     DataCollectionRuleName: DataCollectionRuleName
@@ -137,8 +77,8 @@ module purviewDLPFunction 'modules/lawFunction.bicep' = {
     functionName: 'PurviewDLP' 
     lawName: split(LogAnalyticsWorkspaceResourceID, '/')[8]
     functionAlias: 'PurviewDLP' 
-    functionParams: 'WorkloadNames:dynamic = dynamic([\'Exchange\', \'MicrosoftTeams\', \'SharePoint\', \'OneDrive\', \'Endpoint\']), EndpointSeverityInRuleName:bool = false, EndpointHighSeverityMatchCountTrigger:int = 99999'
-    query: '//Get DLP data elements that are shared across all workloads.\r\nlet DLPCommon = PurviewDLP_CL\r\n| where Workload in (WorkloadNames) and Operation =~ \'DLPRuleMatch\'\r\n| extend IngestionTime = ingestion_time()\r\n| mv-expand PolicyDetails\r\n| where PolicyDetails.PolicyName != \'\'\r\n| mv-expand Rules = PolicyDetails.Rules\r\n| mv-expand ActionsTaken = Rules.Actions\r\n| mv-expand SensitiveInfo = Rules.ConditionsMatched.SensitiveInformation\r\n| mv-expand Detections = SensitiveInfo.SensitiveInformationDetections.DetectedValues\r\n| extend Detections = strcat(Detections.Name, \' (\', Detections.Value, \')\')\r\n| extend RulesString = tostring(Rules), SensitiveInfoString = tostring(SensitiveInfo)\r\n| summarize ActionsTaken = make_set(ActionsTaken), Detections = make_list(Detections), arg_max(TimeGenerated, *) by TimeGenerated, IngestionTime, CreationTime, Identifier, RulesString, SensitiveInfoString\r\n| extend SensitiveInfoType = bag_pack(\'Name\', SensitiveInfo.SensitiveInformationTypeName, \'Count\', toint(SensitiveInfo.Count), \'Confidence\', toint(SensitiveInfo.Confidence), \'DetectedValues\', Detections)\r\n| extend\r\n    ActionsTaken = strcat_array(ActionsTaken, \', \'),\r\n    SensitiveInfoTypeString = iff(SensitiveInfoType.Count > 0, strcat(SensitiveInfoType.Name, \' (\', SensitiveInfoType.Count, \', \', SensitiveInfoType.Confidence, \'%)\'), \'\'),\r\n    PolicyName = tostring(PolicyDetails.PolicyName),\r\n    RuleName = tostring(Rules.RuleName),\r\n    RuleSeverity = tostring(Rules.Severity),\r\n    UserPrincipalName = tolower(UserId),\r\n    UserObjectId = UserKey,\r\n    Deeplink = strcat(\'https://compliance.microsoft.com/datalossprevention/alerts/eventdeeplink?eventid=\', Identifier, \'&creationtime=\', CreationTime);\r\n\r\n//Get Sharepoint and OneDrive specific data elements from common datatable defined above.\r\nlet DLPSPOD = DLPCommon\r\n| where Workload in (\'SharePoint\', \'OneDrive\')\r\n| mv-expand SensitivityLablelId = SharePointMetaData.SensitivityLablelIds\r\n| extend SensitivityLabelId = tostring(SharePointMetaData.SensitivityLablelId)\r\n| join kind = leftouter (_GetWatchlist(\'SensitivityLabels\')\r\n    | extend SensitivityLabelId = tostring(column_ifexists(\'id\', \'\')),\r\n        SensitivityLabelName = tostring(column_ifexists(\'name\', \'\'))) on SensitivityLabelId\r\n| extend OfficeObjectId = url_decode(tostring(SharePointMetaData.FilePathUrl))\r\n| join kind = leftouter (OfficeActivity\r\n    | where ingestion_time() > ago(24h)\r\n    | where Operation == "AddedToSecureLink" or Operation == "SecureLinkUsed"\r\n    | extend UserId = tolower(UserId),\r\n        TargetUserOrGroupName = tolower(iff(isempty(TargetUserOrGroupName), split(UserId, "#")[1], TargetUserOrGroupName))\r\n    ) on $left.UserPrincipalName == $right.UserId, OfficeObjectId\r\n| extend Filename = tostring(SharePointMetaData.FileName),\r\n    FilePath = tostring(SharePointMetaData.FilePathUrl),\r\n    SiteUrl = tostring(SharePointMetaData.SiteCollectionUrl),\r\n    ExceptionReason = tostring(SharePointMetaData.ExceptionInfo.Reason)\r\n| summarize SensitiveInfoTypesArray = make_list(SensitiveInfoType), SensitiveInfoTypes = make_set(SensitiveInfoTypeString), TotalMatchCount = sum(toint(SensitiveInfoType.Count)), SensitivityLabels = make_list(SensitivityLabelName) by TimeGenerated, IngestionTime, CreationTime, Identifier, Workload, Deeplink, usageLocation, UserPrincipalName, UserObjectId, department, manager, jobTitle, PolicyName, RuleName, RuleSeverity, ActionsTaken, FilePath, Filename, SiteUrl, TargetUserOrGroupName, ExceptionReason, Operation;\r\n\r\n//Get Exchange and Teams specific data elements from common datatable defined above.\r\nlet DLPEXOT = DLPCommon\r\n| where Workload in (\'Exchange\', \'MicrosoftTeams\')\r\n| extend Recipients = iff(Workload == \'Exchange\', tostring(strcat(array_strcat(ExchangeMetaData.To, \', \'), iff(array_length(ExchangeMetaData.CC) == 0, \'\', ", "), array_strcat(ExchangeMetaData.CC, \', \'), iff(array_length(ExchangeMetaData.BCC) == 0, \'\', ", "))), tostring(strcat_array(ExchangeMetaData.To, \', \'))),\r\n    InternetMessageId = replace_string(replace_string(tostring(ExchangeMetaData.MessageID), \'<\', \'\'), \'>\',\'\'),\r\n    EmailSubject = tostring(ExchangeMetaData.Subject),\r\n    Sender = UserPrincipalName,\r\n    ExceptionReason = tostring(ExchangeMetaData.ExceptionInfo.Reason),\r\n    ExceptionJustification = tostring(ExchangeMetaData.ExceptionInfo.Justification)\r\n| summarize SensitiveInfoTypesArray = make_list(SensitiveInfoType), SensitiveInfoTypes = make_set(SensitiveInfoTypeString), TotalMatchCount = sum(toint(SensitiveInfoType.Count)), DetectedLocations = make_set(SensitiveInfo.Location) by TimeGenerated, IngestionTime, CreationTime, Identifier, Workload, Deeplink, usageLocation, UserPrincipalName, UserObjectId, department, manager, jobTitle, PolicyName, RuleName, RuleSeverity, ActionsTaken, Recipients, InternetMessageId, EmailSubject, Sender, ExceptionReason, ExceptionJustification, Operation;\r\n\r\n//Define datatable so we can lookup Endpoint DLP action names from their Id.\r\nlet EndpointAction = datatable(ActionName: string, ActionId: int) [\r\n    "None", "0",\r\n    "Audit", "1",\r\n    "Warn", "2",\r\n    "WarnAndBypass", "3",\r\n    "Block", "4",\r\n    "Allow", "5"\r\n];\r\n//Array to match severity as the last word in rule name if present.\r\nlet EndpointSeverities = dynamic([\'Low\', \'Medium\', \'High\']);\r\n\r\n//Get Endpoint specific data elements from common datatable defined above.\r\nlet DLPEndpoint = DLPCommon\r\n| where Workload in (\'Endpoint\')\r\n| mv-expand SensitiveInfo = EndpointMetaData.SensitiveInfoTypeData\r\n| extend SensitiveInfoType = bag_pack(\'Name\', SensitiveInfo.SensitiveInfoTypeName, \'Count\', toint(SensitiveInfo.Count), \'Confidence\', toint(SensitiveInfo.Confidence)),\r\n    DeviceFullName = tostring(EndpointMetaData.DeviceName)\r\n| extend RuleSplit = split(tostring(RuleName), \' \')\r\n| extend RuleLength = array_length(RuleSplit)\r\n| extend RuleSeverity = iff(RuleSplit[RuleLength - 1] in (EndpointSeverities) and EndpointSeverityInRuleName == true, RuleSplit[RuleLength - 1], \'\')\r\n| extend Exception = tostring(EndpointMetaData.Justification)\r\n| extend ExceptionReason = substring(Exception, indexof(Exception, \'_\') + 1)\r\n| extend ExceptionReason = substring(ExceptionReason, 0, indexof(ExceptionReason, \':\'))\r\n| extend ExceptionJustification = substring(Exception, indexof(Exception, \':\') + 1)\r\n| extend SensitiveInfoTypeString = iff(SensitiveInfoType.Count > 0, strcat(SensitiveInfoType.Name, \' (\', SensitiveInfoType.Count, \', \', SensitiveInfoType.Confidence, \'%)\'), \'\'),\r\n    ActionId = toint(EndpointMetaData.EnforcementMode),\r\n    ClientIP = tostring(EndpointMetaData.ClientIP),\r\n    DeviceHostName = tostring(split(DeviceFullName, \'.\')[0]), \r\n    DeviceDNSName = tostring(substring(DeviceFullName, indexof(DeviceFullName, \'.\')+1)),\r\n    Filename = DocumentName,\r\n    FilePath = ObjectId,\r\n    FileHash = tostring(EndpointMetaData.Sha256),\r\n    FileHashAlgorithm = \'SHA256\',\r\n    RMSEncrypted = tostring(EndpointMetaData.RMSEncrypted),\r\n    EvidenceFileUrl = tostring(EvidenceFile.FullUrl),\r\n    SourceLocationType = tostring(EndpointMetaData.SourceLocationType), \r\n    EndpointOperation = tostring(EndpointMetaData.EndpointOperation),\r\n    EndpointApplication = tostring(EndpointMetaData.Application),\r\n    EndpointClientIp = tostring(EndpointMetaData.ClientIP)\r\n| join kind = inner(EndpointAction) on ActionId\r\n| extend ActionsTaken = ActionName\r\n| summarize SensitiveInfoTypesArray = make_list(SensitiveInfoType), SensitiveInfoTypes = make_list(SensitiveInfoTypeString), TotalMatchCount = sum(toint(SensitiveInfo.Count)) by TimeGenerated, IngestionTime, CreationTime, Identifier, Workload, Deeplink, usageLocation, UserPrincipalName, UserObjectId, department, manager, jobTitle, PolicyName, RuleName, RuleSeverity, ActionsTaken, DeviceFullName, DeviceHostName, DeviceDNSName, Filename, FilePath, FileHash, FileHashAlgorithm, RMSEncrypted, EvidenceFileUrl, SourceLocationType, EndpointOperation, EndpointApplication, EndpointClientIp, ExceptionReason, ExceptionJustification, Operation;\r\n\r\n//Merge all the SharePoint/OneDrive, Exchange/Teams, and Endpoints results together.\r\nunion DLPSPOD, DLPEXOT, DLPEndpoint\r\n| extend FileDirectory = parse_path(FilePath).DirectoryPath\r\n| project \r\n//Common attributes\r\nTimeGenerated, IngestionTime, CreationTime, Identifier, Workload, Deeplink, usageLocation, UserPrincipalName, UserObjectId, department, manager, jobTitle, PolicyName, RuleName, ActionsTaken, SensitiveInfoTypesArray, TotalMatchCount, \r\nUsername = split(UserPrincipalName, \'@\')[0], UPNSuffix =split(UserPrincipalName, \'@\')[1],\r\nRuleSeverity = iff(TotalMatchCount >= EndpointHighSeverityMatchCountTrigger and Workload == \'Endpoint\' and EndpointSeverityInRuleName == false, \'High\', RuleSeverity),\r\nSensitiveInfoTypes = iff(array_length(SensitiveInfoTypes) > 1, strcat(SensitiveInfoTypes[0], \' +\', array_length(SensitiveInfoTypes) - 1, \' more\'), strcat_array(SensitiveInfoTypes, \', \')),\r\n//Endpoint specific attributes\r\nDeviceFullName, DeviceHostName, DeviceDNSName, Filename, FilePath, FileDirectory, FileHash, FileHashAlgorithm, RMSEncrypted, EvidenceFileUrl, SourceLocationType, EndpointOperation, EndpointApplication, EndpointClientIp, Operation,\r\n//Exchange and Teams specific attributes\r\nRecipients, InternetMessageId, EmailSubject, Sender, ExceptionReason, ExceptionJustification,\r\n//SharePoint and OneDrive specific attributes\r\nSiteUrl, TargetUserOrGroupName,\r\nDetectedLocations = strcat_array(DetectedLocations, \', \'), SensitivityLabels = strcat_array(SensitivityLabels, \', \')\r\n| summarize arg_max(TimeGenerated, *) by Identifier'
+    functionParams: 'WorkloadNames:dynamic = dynamic([\'Exchange\', \'MicrosoftTeams\', \'SharePoint\', \'OneDrive\', \'Endpoint\']), EndpointSeverityInRuleName:bool = ${endpointSeverityInRuleName}, EndpointHighSeverityMatchCountTrigger:int = 50, EndpointSeverityDelimiter:string = \' \''
+    query: 'let _DetectionsMax = 5;\nlet _SITMax = 30;\nlet _EndpointSeverityInRuleName = EndpointSeverityInRuleName;\nlet _EndpointHighSeverityMatchCountTrigger = EndpointHighSeverityMatchCountTrigger;\nlet _EndpointSeverityDelimiter = EndpointSeverityDelimiter;\nlet _WorkloadNames = WorkloadNames;\n\n//Get DLP data elements that are shared across all workloads.\nlet DLPCommon = PurviewDLP_CL\n| where Workload in (_WorkloadNames) and Workload != \'Endpoint\' and Operation =~ \'DLPRuleMatch\'\n| summarize arg_max(TimeGenerated, *) by Identifier\n| mv-expand PolicyDetails\n| where PolicyDetails.PolicyName != \'\'\n| mv-expand Rules = PolicyDetails.Rules\n| summarize TotalMatchCount = toint(sum(toint(Rules.ConditionsMatched.TotalCount))), arg_max(TimeGenerated, *) by Identifier\n| join kind=leftouter (PurviewDLPSIT_CL\n    | summarize arg_max(TimeGenerated, *) by Identifier, SensitiveInformationTypeName\n    | join kind=leftouter (PurviewDLPDetections_CL\n        | summarize arg_max(TimeGenerated, *) by Identifier, Name, Value, SensitiveInfoId\n        | extend Detections = bag_pack(\'Name\', Name, \'Value\', Value)\n        | summarize Detections = make_list(Detections, _DetectionsMax), arg_max(TimeGenerated, *) by SensitiveInfoId\n        ) on SensitiveInfoId\n    ) on Identifier\n| extend SensitiveInfoType = bag_pack(\'Name\', SensitiveInformationTypeName, \'Count\', toint(SITCount), \'Confidence\', toint(Confidence), \'Location\', Location, \'Detections\', Detections)\n| extend ActionsTaken = strcat_array(Rules.Actions, \', \')\n| extend SensitiveInfoTypeString = iff(SensitiveInfoType.Count > 0, strcat(SensitiveInfoType.Name, \' (\', SensitiveInfoType.Count, \', \', SensitiveInfoType.Confidence, \'%)\'), \'\')\n| summarize SensitiveInfoTypesArray = make_list(SensitiveInfoType, _SITMax), SensitiveInfoTypes = make_list(SensitiveInfoTypeString), arg_max(TimeGenerated, *) by Identifier\n| extend\n    PolicyName = tostring(PolicyDetails.PolicyName),\n    RuleName = tostring(Rules.RuleName),\n    RuleSeverity = tostring(Rules.Severity),\n    UserPrincipalName = tolower(UserId),\n    UserObjectId = UserKey,\n    Deeplink = strcat(\'https://compliance.microsoft.com/datalossprevention/alerts/eventdeeplink?eventid=\', Identifier, \'&creationtime=\', CreationTime);\n\n//Get Sharepoint and OneDrive specific data elements from common datatable defined above.\nlet DLPSPOD = DLPCommon\n| where Workload in (\'SharePoint\', \'OneDrive\')\n| extend SensitivityLabelIds = todynamic(iff(array_length(SharePointMetaData.SensitivityLabelIds) == 0, \'\', SharePointMetaData.SensitivityLabelIds))\n| mv-expand SensitivityLabelId = SensitivityLabelIds\n| extend SensitivityLabelId = tostring(SensitivityLabelId)\n| join kind = leftouter (_GetWatchlist(\'SensitivityLabels\')\n    | extend SensitivityLabelId = tostring(column_ifexists(\'id\', \'\')),\n        SensitivityLabelName = tostring(column_ifexists(\'name\', \'\'))) on SensitivityLabelId\n| extend OfficeObjectId = url_decode(tostring(SharePointMetaData.FilePathUrl))\n| join kind = leftouter (OfficeActivity\n    | where TimeGenerated > ago(30m)\n    | where Operation == "AddedToSecureLink" or Operation == "SecureLinkUsed"\n    | extend UserId = tolower(UserId),\n        TargetUserOrGroupName = tolower(iff(isempty(TargetUserOrGroupName), split(UserId, "#")[1], TargetUserOrGroupName))\n    ) on $left.UserPrincipalName == $right.UserId, OfficeObjectId\n| extend Filename = tostring(SharePointMetaData.FileName),\n    FilePath = tostring(SharePointMetaData.FilePathUrl),\n    SiteUrl = tostring(SharePointMetaData.SiteCollectionUrl),\n    ExceptionReason = tostring(SharePointMetaData.ExceptionInfo.Reason)\n| summarize SensitivityLabels = make_list(SensitivityLabelName), arg_max(TimeGenerated, *) by Identifier;\n\n//Get Exchange and Teams specific data elements from common datatable defined above.\nlet DLPEXOT = DLPCommon\n| where Workload in (\'Exchange\', \'MicrosoftTeams\')\n| extend Recipients = iff(Workload == \'Exchange\', tostring(strcat(array_strcat(ExchangeMetaData.To, \', \'), iff(array_length(ExchangeMetaData.CC) == 0, \'\', ", "), array_strcat(ExchangeMetaData.CC, \', \'), iff(array_length(ExchangeMetaData.BCC) == 0, \'\', ", "))), tostring(strcat_array(ExchangeMetaData.To, \', \'))),\n    InternetMessageId = replace_string(replace_string(tostring(ExchangeMetaData.MessageID), \'<\', \'\'), \'>\',\'\'),\n    EmailSubject = tostring(ExchangeMetaData.Subject),\n    Sender = UserPrincipalName,\n    ExceptionReason = tostring(ExchangeMetaData.ExceptionInfo.Reason),\n    ExceptionJustification = tostring(ExchangeMetaData.ExceptionInfo.Justification)\n| summarize DetectedLocations = make_set(SensitiveInfoType.Location), arg_max(TimeGenerated, *) by Identifier;\n\n//Define datatable so we can lookup Endpoint DLP action names from their Id.\nlet EndpointAction = datatable(ActionName: string, ActionId: int) [\n    "None", "0",\n    "Audit", "1",\n    "Warn", "2",\n    "WarnAndBypass", "3",\n    "Block", "4",\n    "Allow", "5"\n];\n//Array to match severity as the last word in rule name if present.\nlet EndpointSeverities = dynamic([\'Low\', \'Medium\', \'High\']);\n\n//Get Endpoint specific data elements from common datatable defined above.\nlet DLPEndpoint = PurviewDLP_CL\n| where Workload in (\'Endpoint\') and \'Endpoint\' in (_WorkloadNames) and  Operation =~ \'DLPRuleMatch\'\n| summarize arg_max(TimeGenerated, *) by Identifier\n| extend IngestionTime = ingestion_time()\n| mv-expand PolicyDetails\n| where PolicyDetails.PolicyName != \'\'\n| mv-expand Rules = PolicyDetails.Rules\n| join kind=leftouter (PurviewDLPSIT_CL\n    | summarize arg_max(TimeGenerated, *) by Identifier, SensitiveInformationTypeName\n    | join kind=leftouter (PurviewDLPDetections_CL\n        | summarize arg_max(TimeGenerated, *) by Identifier, Name, Value\n        | extend Detections = bag_pack(\'Name\', Name, \'Value\', Value)\n        | summarize Detections = make_list(Detections, _DetectionsMax), arg_max(TimeGenerated, *) by SensitiveInfoId\n        ) on SensitiveInfoId\n    ) on Identifier\n| extend SensitiveInfoType = bag_pack(\'Name\', SensitiveInformationTypeName, \'Count\', toint(SITCount), \'Confidence\', toint(Confidence), \'Location\', Location, \'Detections\', Detections)\n| extend SensitiveInfoType = bag_pack(\'Name\', SensitiveInformationTypeName, \'Count\', toint(SITCount), \'Confidence\', toint(Confidence)),\n    DeviceFullName = tostring(EndpointMetaData.DeviceName)\n| extend TotalMatchCount = toint(EndpointMetaData.SensitiveInfoTypeTotalCount)\n| extend RuleSplit = split(tostring(Rules.RuleName), _EndpointSeverityDelimiter)\n| extend RuleLength = array_length(RuleSplit)\n| extend RuleSeverity = iff(RuleSplit[RuleLength - 1] in (EndpointSeverities) and _EndpointSeverityInRuleName == true, RuleSplit[RuleLength - 1], iff(TotalMatchCount >= _EndpointHighSeverityMatchCountTrigger and _EndpointSeverityInRuleName == false, \'High\', \'Medium\'))\n| extend Exception = tostring(EndpointMetaData.Justification)\n| extend ExceptionReason = substring(Exception, indexof(Exception, \'_\') + 1)\n| extend ExceptionReason = substring(ExceptionReason, 0, indexof(ExceptionReason, \':\'))\n| extend ExceptionJustification = substring(Exception, indexof(Exception, \':\') + 1)\n| extend SensitiveInfoTypeString = iff(SensitiveInfoType.Count > 0, strcat(SensitiveInfoType.Name, \' (\', SensitiveInfoType.Count, \', \', SensitiveInfoType.Confidence, \'%)\'), \'\'),\n    ActionId = toint(EndpointMetaData.EnforcementMode),\n    ClientIP = tostring(EndpointMetaData.ClientIP),\n    DeviceHostName = tostring(split(DeviceFullName, \'.\')[0]), \n    DeviceDNSName = tostring(substring(DeviceFullName, indexof(DeviceFullName, \'.\')+1)),\n    Filename = DocumentName,\n    FilePath = ObjectId,\n    FileHash = tostring(EndpointMetaData.Sha256),\n    FileHashAlgorithm = \'SHA256\',\n    RMSEncrypted = tostring(EndpointMetaData.RMSEncrypted),\n    EvidenceFileUrl = tostring(EvidenceFile.FullUrl),\n    SourceLocationType = tostring(EndpointMetaData.SourceLocationType), \n    EndpointOperation = tostring(EndpointMetaData.EndpointOperation),\n    EndpointApplication = tostring(EndpointMetaData.Application),\n    EndpointClientIp = tostring(EndpointMetaData.ClientIP),\n    PolicyName = tostring(PolicyDetails.PolicyName),\n    RuleName = tostring(Rules.RuleName),\n    UserPrincipalName = tolower(UserId),\n    UserObjectId = UserKey,\n    Deeplink = strcat(\'https://compliance.microsoft.com/datalossprevention/alerts/eventdeeplink?eventid=\', Identifier, \'&creationtime=\', CreationTime)\n| join kind = inner(EndpointAction) on ActionId\n| extend ActionsTaken = ActionName\n| summarize SensitiveInfoTypesArray = make_list(SensitiveInfoType, _SITMax), SensitiveInfoTypes = make_list(SensitiveInfoTypeString), arg_max(TimeGenerated, *) by Identifier;\n\n//Merge all the SharePoint/OneDrive, Exchange/Teams, and Endpoints results together.\nunion DLPSPOD, DLPEXOT, DLPEndpoint\n| extend FileDirectory = parse_path(FilePath).DirectoryPath\n| project \n//Common attributes\nTimeGenerated, CreationTime, \nCreationTimeString = strcat(format_datetime(CreationTime,\'M/d/yyyy, H:mm:ss tt\'), \' (UTC)\'),\nIdentifier, Workload, Deeplink, usageLocation, UserPrincipalName, UserObjectId, department, manager, jobTitle, PolicyName, RuleName, ActionsTaken, SensitiveInfoTypesArray, TotalMatchCount, \nUsername = split(UserPrincipalName, \'@\')[0], UPNSuffix =split(UserPrincipalName, \'@\')[1],\nRuleSeverity,\nSensitiveInfoTypes = iff(array_length(SensitiveInfoTypes) > 1, strcat(SensitiveInfoTypes[0], \' +\', array_length(SensitiveInfoTypes) - 1, \' more\'), strcat_array(SensitiveInfoTypes, \', \')),\n//Endpoint specific attributes\nDeviceFullName, DeviceHostName, DeviceDNSName, Filename, FilePath, FileDirectory, FileHash, FileHashAlgorithm, RMSEncrypted, EvidenceFileUrl, SourceLocationType, EndpointOperation, EndpointApplication, EndpointClientIp, Operation,\n//Exchange and Teams specific attributes\nRecipients, InternetMessageId, EmailSubject, Sender, ExceptionReason, ExceptionJustification,\n//SharePoint and OneDrive specific attributes\nSiteUrl, TargetUserOrGroupName,\nDetectedLocations = strcat_array(DetectedLocations, \', \'), SensitivityLabels = strcat_array(SensitivityLabels, \', \')\n| order by CreationTime'
   }
 }
 
@@ -291,7 +231,7 @@ resource functionApp 'Microsoft.Web/sites@2022-03-01' = {
         }
         {
           name: 'WEBSITE_RUN_FROM_PACKAGE'
-          value: '0'
+          value: '1'
         }
         {
           name: 'AzureWebJobs.SyncDLPAnalyticsRules.Disabled'
@@ -412,8 +352,8 @@ module sentinelRules 'modules/sentinelRules.bicep' = {
     purviewDLPFunction
   ]
   params: {
-    workspace: split(LogAnalyticsWorkspaceResourceID, '/')[8]
-    policySync: DLPPolicySync 
+    lawId: LogAnalyticsWorkspaceResourceID
+    policySync: DLPPolicySync
   }
 }
 
