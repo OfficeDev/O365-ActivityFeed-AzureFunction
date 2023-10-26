@@ -9,28 +9,22 @@ $loginURL = "https://login.microsoftonline.com"
 $resource = "https://manage.office.com"
 
 #Get an Oauth 2 access token based on client id, secret and tenant domain
-$body = @{grant_type="client_credentials";resource=$resource;client_id=$clientId;client_secret=$clientSecret}
+$body = @{grant_type = "client_credentials"; resource = $resource; client_id = $clientId; client_secret = $clientSecret }
 $oauth = Invoke-RestMethod -Method Post -Uri $loginURL/$tenantId/oauth2/token?api-version=1.0 -Body $body
-
-#Let's put the oauth token in the header
-$headerParams  = @{'Authorization'="$($oauth.token_type) $($oauth.access_token)"}
+$token = $oauth.access_token | ConvertTo-SecureString -AsPlainText
 
 #Enable auditing subscriptions if needed.
-$subs = Invoke-RestMethod -Headers $headerParams -Uri "https://manage.office.com/api/v1.0/$tenantId/activity/feed/subscriptions/list"
+try { $subs = Invoke-RestMethod -Authentication Bearer -Token $token -Uri "https://manage.office.com/api/v1.0/$tenantId/activity/feed/subscriptions/list" -RetryIntervalSec 2 -MaximumRetryCount 5 }
+catch { throw ("Error calling Office 365 Management API. " + $_.Exception) }
+
 if (($subs | Where-Object contentType -eq DLP.All).status -ne 'enabled') {
-    Invoke-RestMethod -Method Post -Headers $headerParams -Uri "https://manage.office.com/api/v1.0/$tenantId/activity/feed/subscriptions/start?contentType=DLP.All"
+    try { Invoke-RestMethod -Method Post -Authentication Bearer -Token $token -Uri "https://manage.office.com/api/v1.0/$tenantId/activity/feed/subscriptions/start?contentType=DLP.All" -RetryIntervalSec 2 -MaximumRetryCount 5 }
+    catch { throw ("Error calling Office 365 Management API. " + $_.Exception) }
 }
 
 #Download Function App package and publish.
 Invoke-WebRequest -Uri $PackageUri -OutFile functionPackage.zip
 Publish-AzWebapp -ResourceGroupName $ResourceGroupName -Name $FunctionAppName -ArchivePath functionPackage.zip -Force
-
-<#Run Enablement function.
-$functionApp = Get-AzFunctionApp -Name $FunctionAppName -ResourceGroupName $ResourceGroupName
-$hostname = $functionApp.DefaultHostName
-$key = ((Invoke-AzRestMethod -SubscriptionId $SubscriptionId -ResourceGroupName $ResourceGroupName -ResourceProviderName Microsoft.Web -ResourceType sites -Name ("$FunctionAppName/host/default/listkeys") -ApiVersion 2022-03-01 -Method POST).Content | ConvertFrom-Json).masterKey
-Invoke-RestMethod -Method Post -Uri ("https://$hostname/admin/functions/Enablement") -Headers (@{"Content-Type" = "application/json"; "x-functions-key" = $key}) -Body '{}'
-#>
 
 #Add IP restrictions on Function App if specified.
 if ($RestrictedIPs -eq 'None') {
