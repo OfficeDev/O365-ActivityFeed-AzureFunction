@@ -128,8 +128,8 @@
   },
   "variables": {
     "location": "[resourceGroup().location]",
-    "functionAppPackageUri": "https://raw.githubusercontent.com/OfficeDev/O365-ActivityFeed-AzureFunction/Sentinel_Deployment/Sentinel_Deployment/functionPackage.zip",
-    "deploymentScriptUri": "https://raw.githubusercontent.com/OfficeDev/O365-ActivityFeed-AzureFunction/Sentinel_Deployment/Sentinel_Deployment/deploymentScript.ps1",
+    "functionAppPackageUri": "https://raw.githubusercontent.com/OfficeDev/O365-ActivityFeed-AzureFunction/master/Sentinel_Deployment/functionPackage.zip",
+    "deploymentScriptUri": "https://raw.githubusercontent.com/OfficeDev/O365-ActivityFeed-AzureFunction/master/Sentinel_Deployment/deploymentScript.ps1",
     "endpointSeverityInRuleName": "[if(equals(parameters('EndpointSeverityInRuleName'), true()), 'true', 'false')]"
   },
   "resources": [
