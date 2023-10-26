@@ -40,10 +40,8 @@ param SensitiveDataHandling string = 'Hash'
 param EndpointSeverityInRuleName bool = true
 
 var location = resourceGroup().location
-//var functionAppPackageUri = 'https://raw.githubusercontent.com/OfficeDev/O365-ActivityFeed-AzureFunction/master/Sentinel_Deployment/functionPackage.zip'
-//var deploymentScriptUri = 'https://raw.githubusercontent.com/OfficeDev/O365-ActivityFeed-AzureFunction/master/Sentinel_Deployment/deploymentScript.ps1'
-var functionAppPackageUri = 'https://raw.githubusercontent.com/anders-alex/O365-ActivityFeed-AzureFunction/Sentinel_Deployment5/Sentinel_Deployment/functionPackage.zip'
-var deploymentScriptUri = 'https://raw.githubusercontent.com/anders-alex/O365-ActivityFeed-AzureFunction/Sentinel_Deployment5/Sentinel_Deployment/deploymentScript.ps1'
+var functionAppPackageUri = 'https://raw.githubusercontent.com/OfficeDev/O365-ActivityFeed-AzureFunction/master/Sentinel_Deployment/functionPackage.zip'
+var deploymentScriptUri = 'https://raw.githubusercontent.com/OfficeDev/O365-ActivityFeed-AzureFunction/master/Sentinel_Deployment/deploymentScript.ps1'
 var endpointSeverityInRuleName = EndpointSeverityInRuleName == true ? 'true' : 'false'
 
 resource law 'Microsoft.OperationalInsights/workspaces@2022-10-01' existing = {
