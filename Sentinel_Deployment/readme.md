@@ -1,6 +1,8 @@
 # Microsoft Purview DLP Sentinel Solution
 This a fork of the initial [Sentinel DLP Solution](https://techcommunity.microsoft.com/t5/security-compliance-and-identity/advanced-incident-management-for-office-and-endpoint-dlp-using/ba-p/1811497). It has been updated for easy deployment, modernization of components, and to introduce new capabilities. View [Release Notes](releaseNotes.md).
 
+Read [Getting Started](#getting-started) before deploying.
+
 [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3a%2f%2fraw.githubusercontent.com%2fOfficeDev%2fO365-ActivityFeed-AzureFunction%2fmaster%2fSentinel_Deployment%2fmain.json)
 ## New Features
 - Fully packaged into a single ARM/Bicep deployment for easy installation and setup.
@@ -47,4 +49,9 @@ This a fork of the initial [Sentinel DLP Solution](https://techcommunity.microso
         - InformationProtectionPolicy.Read.All
     - **Office 365 Management APIs**
         - ActivityFeed.ReadDlp
-3. Click the **button** below to deploy the solution and its components. After a successful deployment, you should be able to see data in the Azure Monitor tables along with alerts and incidents being created in Sentinel once new DLP events are generated.
+3. **IMPORTANT**: The following artifacts get deployed to the Sentinel/Log Analytics workspace. If artifacts of the same type and name already exist, they will be overwritten:
+    - Log Analytics function named "PurviewDLP"
+    - Watchlists named "Policy" and "SensitivityLabels"
+    - Custom Tables named "PurviewDLP", "PurviewDLPSIT", and "PurviewDLPDetections".
+    - Workbooks named "Microsoft DLP Incident Management", "Microsoft DLP Activity", and "Microsoft DLP Organizational Context"
+3. Click the **Deploy to Azure** button at the top of this page to deploy the solution and its components. After a successful deployment, you should be able to see data in the Azure Monitor tables along with alerts and incidents being created in Sentinel once new DLP events are generated.
