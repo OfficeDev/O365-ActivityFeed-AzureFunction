@@ -17,6 +17,6 @@ resource table 'Microsoft.OperationalInsights/workspaces/tables@2022-10-01' = {
       columns: columns
     }
     plan: plan
-    retentionInDays: retention != -1 ? retention : ''
+    retentionInDays: retention != -1 ? retention : null
   }
 }

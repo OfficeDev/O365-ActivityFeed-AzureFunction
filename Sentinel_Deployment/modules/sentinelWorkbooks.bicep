@@ -3,17 +3,18 @@ param workbookDisplayNameActivity string = 'Microsoft DLP Activity'
 param workbookDisplayNameOrganization string = 'Microsoft DLP Organizational Context'
 
 param workbookType string = 'sentinel'
+param location string = resourceGroup().location
 
 @description('The id of resource instance to which the workbook will be associated')
 param workbookSourceId string
 
-param workbookIdIncidentManagement string = newGuid()
-param workbookIdActivity string = newGuid()
-param workbookIdOrganization string = newGuid()
+param workbookIdIncidentManagement string = guid(workbookSourceId, workbookDisplayNameIncidentManagement)
+param workbookIdActivity string = guid(workbookSourceId, workbookDisplayNameActivity)
+param workbookIdOrganization string = guid(workbookSourceId, workbookDisplayNameOrganization)
 
 resource workbookIncidentManagement 'microsoft.insights/workbooks@2022-04-01' = {
   name: workbookIdIncidentManagement
-  location: resourceGroup().location
+  location: location
   kind: 'shared'
   properties: {
     displayName: workbookDisplayNameIncidentManagement
@@ -27,7 +28,7 @@ resource workbookIncidentManagement 'microsoft.insights/workbooks@2022-04-01' = 
 
 resource workbookActivity 'microsoft.insights/workbooks@2022-04-01' = {
   name: workbookIdActivity
-  location: resourceGroup().location
+  location: location
   kind: 'shared'
   properties: {
     displayName: workbookDisplayNameActivity
@@ -41,7 +42,7 @@ resource workbookActivity 'microsoft.insights/workbooks@2022-04-01' = {
 
 resource workbookOrganization 'microsoft.insights/workbooks@2022-04-01' = {
   name: workbookIdOrganization
-  location: resourceGroup().location
+  location: location
   kind: 'shared'
   properties: {
     displayName: workbookDisplayNameOrganization

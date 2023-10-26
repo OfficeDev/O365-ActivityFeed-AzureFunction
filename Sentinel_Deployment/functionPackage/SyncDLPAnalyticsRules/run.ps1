@@ -28,10 +28,9 @@ foreach ($workload in $workloads) {
     $context = Get-AzContext
     $profileR = [Microsoft.Azure.Commands.Common.Authentication.Abstractions.AzureRmProfileProvider]::Instance.Profile
     $profileClient = New-Object -TypeName Microsoft.Azure.Commands.ResourceManager.Common.RMProfileClient -ArgumentList ($profileR)
-    $token = $profileClient.AcquireAccessToken($context.Subscription.TenantId)
-    $authHeader = @{
+    $token = ($profileClient.AcquireAccessToken($context.Subscription.TenantId)).AccessToken | ConvertTo-SecureString -AsPlainText
+    $headers = @{
       'Content-Type'  = 'application/json'
-      'Authorization' = 'Bearer ' + $token.AccessToken 
     }
     $workspace.value
     Set-AzContext $context.Subscription.name
@@ -63,7 +62,9 @@ foreach ($workload in $workloads) {
     #Retreiving the Sentinel Analytic rules
     $path = $instance.ResourceId
     $urllist = "https://management.azure.com$($path)/providers/Microsoft.SecurityInsights/alertRules?api-version=2023-04-01-preview"
-    $rules = Invoke-RestMethod -Method "Get" -Uri $urllist -Headers $authHeader
+    try { $rules = Invoke-RestMethod -Method "Get" -Uri $urllist -Headers $headers -Authentication Bearer -Token $token -MaximumRetryCount 5 -RetryIntervalSec 2 }
+    catch { throw ("Error calling Azure Management API. " + $_.Exception) }
+    
       
     #Fetch Template
     $template0 = $rules.value | where-object { $_.properties.displayname -eq ("Microsoft DLP Incident Creation Template ($workloadAlias)") } | select-object
@@ -98,7 +99,8 @@ foreach ($workload in $workloads) {
           $update = $update -replace '"id": "",', ""   
           $updateRule = $matchexisting.name
           $urlupdate = "https://management.azure.com$path/providers/Microsoft.SecurityInsights/alertRules/$updateRule" + '?api-version=2023-04-01-preview'
-          $rule = Invoke-RestMethod -Method "Put" -Uri $urlupdate -Headers $authHeader -body $update
+          try { $rule = Invoke-RestMethod -Method "Put" -Uri $urlupdate -Headers $headers -Authentication Bearer -Token $token -Body $update -MaximumRetryCount 5 -RetryIntervalSec 2 }
+          catch { throw ("Error calling Azure Management API. " + $_.Exception) }
         }
       
         if (-not $matchexisting) {
@@ -116,7 +118,8 @@ foreach ($workload in $workloads) {
           $update = $update -replace '"lastModifiedUtc": ""', ''
           $update = $update -replace '"id": "",', ""   
           $urlupdate = "https://management.azure.com$path/providers/Microsoft.SecurityInsights/alertRules/$($etag.guid)" + '?api-version=2023-04-01-preview'
-          $rule = Invoke-RestMethod -Method "Put" -Uri $urlupdate -Headers $authHeader -body $update
+          try { $rule = Invoke-RestMethod -Method "Put" -Uri $urlupdate -Headers $headers -Authentication Bearer -Token $token -Body $update -MaximumRetryCount 5 -RetryIntervalSec 2 }
+          catch { throw ("Error calling Azure Management API. " + $_.Exception) }
         }
                   
         #Keep track of already processed rules by placing in array for if sentence
@@ -148,7 +151,8 @@ foreach ($workload in $workloads) {
         $a.properties.itemsKeyValue = $item  
         $update = $a | convertto-json    
         $urlupdate = "https://management.azure.com$path/providers/Microsoft.SecurityInsights/watchlists/Policy/watchlistitems/$($etag)?api-version=2023-04-01-preview"
-        Invoke-RestMethod -Method "Put" -Uri $urlupdate -Headers $authHeader -body $update
+        try { Invoke-RestMethod -Method "Put" -Uri $urlupdate -Headers $headers -Authentication Bearer -Token $token -Body $update -MaximumRetryCount 5 -RetryIntervalSec 2 }
+        catch { throw ("Error calling Azure Management API. " + $_.Exception) } 
       }
     }
   }
