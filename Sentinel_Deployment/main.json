@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.22.6.54827",
-      "templateHash": "12721726474245725583"
+      "templateHash": "3196796323656614696"
     }
   },
   "parameters": {
@@ -1591,7 +1591,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.22.6.54827",
-              "templateHash": "16509969663947251255"
+              "templateHash": "3778559098681437962"
             }
           },
           "parameters": {
@@ -1605,12 +1605,12 @@
             "guids": {
               "type": "array",
               "defaultValue": [
-                "[guid(parameters('lawId'), 'dlp0')]",
-                "[guid(parameters('lawId'), 'dlp1')]",
-                "[guid(parameters('lawId'), 'dlp2')]",
-                "[guid(parameters('lawId'), 'dlp3')]",
-                "[guid(parameters('lawId'), 'dlp4')]",
-                "[guid(parameters('lawId'), 'dlp5')]"
+                "[guid(parameters('lawId'), '21a0c0e5-7633-4e0f-945d-886d653d658a')]",
+                "[guid(parameters('lawId'), 'c484978b-7cf8-4034-a49c-3ff347234842')]",
+                "[guid(parameters('lawId'), 'adcc3e90-dfda-44e0-b2fa-c34364bb7f70')]",
+                "[guid(parameters('lawId'), 'e2a469c4-9c65-4d82-9b48-f0662971a09e')]",
+                "[guid(parameters('lawId'), '53be747c-c4f7-49d0-9386-62371514a283')]",
+                "[guid(parameters('lawId'), 'f76a9cbd-fe00-42f2-815d-421de9c0cc04')]"
               ]
             }
           },
@@ -1648,7 +1648,7 @@
               "condition": "[equals(parameters('policySync'), false())]",
               "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
               "apiVersion": "2022-11-01-preview",
-              "name": "[format('{0}/Microsoft.SecurityInsights/64621844-3809-45b1-a072-50b93283e095', split(parameters('lawId'), '/')[8])]",
+              "name": "[format('{0}/Microsoft.SecurityInsights/{1}', split(parameters('lawId'), '/')[8], guid(parameters('lawId'), 'e4243705-c479-4e14-8443-7bad89119ba5'))]",
               "kind": "Scheduled",
               "properties": {
                 "displayName": "Microsoft DLP Incident Creation",
@@ -1915,7 +1915,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.22.6.54827",
-              "templateHash": "6554060111577144037"
+              "templateHash": "7771231396383689809"
             }
           },
           "parameters": {
@@ -1947,15 +1947,15 @@
             },
             "workbookIdIncidentManagement": {
               "type": "string",
-              "defaultValue": "[guid(parameters('workbookSourceId'), parameters('workbookDisplayNameIncidentManagement'))]"
+              "defaultValue": "[guid(parameters('workbookSourceId'), '2ef8ee66-f6d1-4b01-9cbf-bbc50ade85e3')]"
             },
             "workbookIdActivity": {
               "type": "string",
-              "defaultValue": "[guid(parameters('workbookSourceId'), parameters('workbookDisplayNameActivity'))]"
+              "defaultValue": "[guid(parameters('workbookSourceId'), 'ab67f23d-c05b-446f-b313-d263d79c161c')]"
             },
             "workbookIdOrganization": {
               "type": "string",
-              "defaultValue": "[guid(parameters('workbookSourceId'), parameters('workbookDisplayNameOrganization'))]"
+              "defaultValue": "[guid(parameters('workbookSourceId'), 'c1072053-ae86-4b00-a7e5-6d5c3d2dd2ad')]"
             }
           },
           "resources": [
