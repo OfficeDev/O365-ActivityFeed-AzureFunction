@@ -16,7 +16,7 @@ resource dce 'Microsoft.Insights/dataCollectionEndpoints@2021-09-01-preview' = {
 }
 
 resource roleAssignmentDcr 'Microsoft.Authorization/roleAssignments@2020-10-01-preview' = if (ServicePrincipalId != '') {
-  name: guid(dcr.id, '/providers/Microsoft.Authorization/roleDefinitions/3913510d-42f4-4e42-8a64-420c390055eb')
+  name: guid(dcr.id, '/providers/Microsoft.Authorization/roleDefinitions/3913510d-42f4-4e42-8a64-420c390055eb', ServicePrincipalId)
   scope: dcr
   properties: {
     roleDefinitionId: '/providers/Microsoft.Authorization/roleDefinitions/3913510d-42f4-4e42-8a64-420c390055eb'

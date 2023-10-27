@@ -14,13 +14,17 @@ $oauth = Invoke-RestMethod -Method Post -Uri $loginURL/$tenantId/oauth2/token?ap
 $token = $oauth.access_token | ConvertTo-SecureString -AsPlainText
 
 #Enable auditing subscriptions if needed.
-try { $subs = Invoke-RestMethod -Authentication Bearer -Token $token -Uri "https://manage.office.com/api/v1.0/$tenantId/activity/feed/subscriptions/list" -RetryIntervalSec 2 -MaximumRetryCount 5 }
-catch { throw ("Error calling Office 365 Management API. " + $_.Exception) }
-
-if (($subs | Where-Object contentType -eq DLP.All).status -ne 'enabled') {
-    try { Invoke-RestMethod -Method Post -Authentication Bearer -Token $token -Uri "https://manage.office.com/api/v1.0/$tenantId/activity/feed/subscriptions/start?contentType=DLP.All" -RetryIntervalSec 2 -MaximumRetryCount 5 }
-    catch { throw ("Error calling Office 365 Management API. " + $_.Exception) }
+try { 
+    $subs = Invoke-RestMethod -Authentication Bearer -Token $token -Uri "https://manage.office.com/api/v1.0/$tenantId/activity/feed/subscriptions/list" -RetryIntervalSec 2 -MaximumRetryCount 5 
+    if (($subs | Where-Object contentType -eq DLP.All).status -ne 'enabled') {
+        Invoke-RestMethod -Method Post -Authentication Bearer -Token $token -Uri "https://manage.office.com/api/v1.0/$tenantId/activity/feed/subscriptions/start?contentType=DLP.All" -RetryIntervalSec 2 -MaximumRetryCount 5
+        Write-Host "Enabled DLP.ALL subscription."
+    }
+    else {
+        Write-Host "DLP.ALL subscription already enabled."
+    }
 }
+catch { Write-Error ("Error calling Office 365 Management API. " + $_.Exception) -ErrorAction Continue }
 
 #Download Function App package and publish.
 Invoke-WebRequest -Uri $PackageUri -OutFile functionPackage.zip

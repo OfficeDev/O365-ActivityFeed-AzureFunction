@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.22.6.54827",
-      "templateHash": "3196796323656614696"
+      "templateHash": "1060446530757627490"
     }
   },
   "parameters": {
@@ -61,7 +61,7 @@
       "type": "string",
       "defaultValue": "youradditionaldomain.com,yourdomain.com,yourtenant.onmicrosoft.com",
       "metadata": {
-        "description": "Internal domain names for your organization to better determine the source of email messages."
+        "description": "Comma seperated list of internal domain names for your organization to better determine the source of email messages."
       }
     },
     "DataCollectionEndpointName": {
@@ -82,7 +82,7 @@
       "type": "string",
       "defaultValue": "/subscriptions/xxxxxxxx-xxxxxxxx-xxxxxxxx-xxxxxxxx-xxxxxxxx/resourcegroups/xxxxxxxx/providers/microsoft.operationalinsights/workspaces/xxxxxxxx",
       "metadata": {
-        "description": "Azure Resource ID (NOT THE WORKSPACE ID) of the existing Log Analytics Workspace where you would like the DLP and optional Function App Application Insights data to reside. The format is: \"/subscriptions/xxxxxxxx-xxxxxxxx-xxxxxxxx-xxxxxxxx-xxxxxxxx/resourcegroups/xxxxxxxx/providers/microsoft.operationalinsights/workspaces/xxxxxxxx\""
+        "description": "Azure Resource ID (NOT THE WORKSPACE ID) of the existing Log Analytics Workspace where you would like the DLP and optional Function App Application Insights data to reside. This can be found by clicking the \"JSON View\" link within the Overview page of the Log Analytics workspace resource. The format is: \"/subscriptions/xxxxxxxx-xxxxxxxx-xxxxxxxx-xxxxxxxx-xxxxxxxx/resourcegroups/xxxxxxxx/providers/microsoft.operationalinsights/workspaces/xxxxxxxx\""
       }
     },
     "DLPPolicySync": {
@@ -115,7 +115,7 @@
         "Remove"
       ],
       "metadata": {
-        "description": "Ingest the sensitive data detected by DLP rules into Log Analytics workpace."
+        "description": "Select how you would like the the sensitive information type detections to be handled when ingesting into the Log Analytics workspace."
       }
     },
     "EndpointSeverityInRuleName": {
@@ -472,7 +472,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.22.6.54827",
-              "templateHash": "11749405798518713589"
+              "templateHash": "5830997741909051014"
             }
           },
           "parameters": {
@@ -523,7 +523,7 @@
               "type": "Microsoft.Authorization/roleAssignments",
               "apiVersion": "2020-10-01-preview",
               "scope": "[format('Microsoft.Insights/dataCollectionRules/{0}', parameters('DataCollectionRuleName'))]",
-              "name": "[guid(resourceId('Microsoft.Insights/dataCollectionRules', parameters('DataCollectionRuleName')), '/providers/Microsoft.Authorization/roleDefinitions/3913510d-42f4-4e42-8a64-420c390055eb')]",
+              "name": "[guid(resourceId('Microsoft.Insights/dataCollectionRules', parameters('DataCollectionRuleName')), '/providers/Microsoft.Authorization/roleDefinitions/3913510d-42f4-4e42-8a64-420c390055eb', parameters('ServicePrincipalId'))]",
               "properties": {
                 "roleDefinitionId": "/providers/Microsoft.Authorization/roleDefinitions/3913510d-42f4-4e42-8a64-420c390055eb",
                 "principalId": "[parameters('ServicePrincipalId')]",
