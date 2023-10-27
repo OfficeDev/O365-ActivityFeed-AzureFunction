@@ -1,10 +1,15 @@
 # Microsoft Purview DLP Sentinel Solution
 This a fork of the initial [Sentinel DLP Solution](https://techcommunity.microsoft.com/t5/security-compliance-and-identity/advanced-incident-management-for-office-and-endpoint-dlp-using/ba-p/1811497). It has been updated for easy deployment, modernization of components, and to introduce new capabilities. 
 
-- View [Release Notes](releaseNotes.md).
-- Read [Getting Started](#getting-started) before deploying.
-
 [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3a%2f%2fraw.githubusercontent.com%2fOfficeDev%2fO365-ActivityFeed-AzureFunction%2fmaster%2fSentinel_Deployment%2fmain.json)
+
+- [Release Notes](releaseNotes.md)
+- [New Features](#new-features)
+- [Solution Components](#solution-components)
+- [Getting Started](#getting-started)
+- [Screenshots](#screenshots)
+- [Contributing](#contributing)
+
 ## New Features
 - Fully packaged into a single ARM/Bicep deployment for easy installation and setup.
 - Leverages new Data Collection Rule (DCR) custom tables to ingest and store DLP data. This provides fine grained security and unlocks new capabilities such as data transformations.
@@ -36,8 +41,9 @@ This a fork of the initial [Sentinel DLP Solution](https://techcommunity.microso
 
 ## Getting Started
 ### Prerequisites
-- Sentinel workspace Azure RESOURCE ID (Not the WORKSPACE ID) that the solution will ingest data into and provision the associated Sentinel artifacts (i.e., analytics rules, workbooks, function, etc.).
-- Owner permissions on the above Sentinel workspace.
+- Sentinel/Log Analytics workspace Azure RESOURCE ID (Not the WORKSPACE ID) that the solution will ingest data into and provision the associated Sentinel artifacts (i.e., analytics rules, workbooks, function, etc.). This can be found by clicking the "JSON View" link within the Overview page of the Log Analytics workspace resource:
+![Log Analytics workspace resource ID](.\images\lawid.png)
+- Owner permissions on the above Sentinel/Log Analytics workspace.
 - Global Admin permissions on the Purview DLP Entra ID tenant to create the App Registration and grant Admin Consent as outlined in step #2 below.
 - Owner permissions on an Azure Resource Group or Subscription to deploy the solution to in step #3. If Owner permissions are not granted on the subscription, the Microsoft.ContainerInstance resource provider must be registered on the subscription before deployment in order for the code to be automatically deployed to the Function App.
 
@@ -55,4 +61,26 @@ This a fork of the initial [Sentinel DLP Solution](https://techcommunity.microso
     - Watchlists named "Policy" and "SensitivityLabels"
     - Custom Tables named "PurviewDLP", "PurviewDLPSIT", and "PurviewDLPDetections".
     - Workbooks named "Microsoft DLP Incident Management", "Microsoft DLP Activity", and "Microsoft DLP Organizational Context"
-3. Click the **Deploy to Azure** button at the top of this page to deploy the solution and its components. After a successful deployment, you should be able to see data in the Azure Monitor tables along with alerts and incidents being created in Sentinel once new DLP events are generated.
+4. Click the **Deploy to Azure** button at the top of this page and fill in the required parameters. Hover over the information icon for each parameter to get more details on what to enter. 
+5. Click **Review + Create** to start the deployment. The deployment also activates the Office 365 Management API DLP.ALL subscription for the tenant if not already enabled. After a successful deployment, you should be able to see data in the Azure Monitor tables along with alerts and incidents being created in Sentinel once new DLP events are generated.
+
+## Screenshots
+### Incident Management Workbook
+![Incident Management Workbook](.\images\incidentManagement.png)
+
+### Sentinel Incident View
+![Incident Management Workbook](.\images\incident.png)
+
+## Contributing
+
+This project welcomes contributions and suggestions.  Most contributions require you to agree to a
+Contributor License Agreement (CLA) declaring that you have the right to, and actually do, grant us
+the rights to use your contribution. For details, visit https://cla.microsoft.com.
+
+When you submit a pull request, a CLA-bot will automatically determine whether you need to provide
+a CLA and decorate the PR appropriately (e.g., label, comment). Simply follow the instructions
+provided by the bot. You will only need to do this once across all repos using our CLA.
+
+This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/).
+For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or
+contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.

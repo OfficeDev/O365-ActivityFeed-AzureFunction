@@ -13,13 +13,13 @@ param ClientID string = 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
 @secure()
 @description('App Registration Client secret.')
 param ClientSecret string
-@description('Internal domain names for your organization to better determine the source of email messages.')
+@description('Comma seperated list of internal domain names for your organization to better determine the source of email messages.')
 param InternalDomainNames string = 'youradditionaldomain.com,yourdomain.com,yourtenant.onmicrosoft.com'
 @description('Name for Data Collection Endpoint to be created which is used to ingest data into Log Analytics workspace.')
 param DataCollectionEndpointName string = 'dce-sentineldlp'
 @description('Name for Data Collection Rule to be created which is used to ingest data into Log Analytics workspace.')
 param DataCollectionRuleName string = 'dcr-sentineldlp'
-@description('Azure Resource ID (NOT THE WORKSPACE ID) of the existing Log Analytics Workspace where you would like the DLP and optional Function App Application Insights data to reside. The format is: "/subscriptions/xxxxxxxx-xxxxxxxx-xxxxxxxx-xxxxxxxx-xxxxxxxx/resourcegroups/xxxxxxxx/providers/microsoft.operationalinsights/workspaces/xxxxxxxx"')
+@description('Azure Resource ID (NOT THE WORKSPACE ID) of the existing Log Analytics Workspace where you would like the DLP and optional Function App Application Insights data to reside. This can be found by clicking the "JSON View" link within the Overview page of the Log Analytics workspace resource. The format is: "/subscriptions/xxxxxxxx-xxxxxxxx-xxxxxxxx-xxxxxxxx-xxxxxxxx/resourcegroups/xxxxxxxx/providers/microsoft.operationalinsights/workspaces/xxxxxxxx"')
 param LogAnalyticsWorkspaceResourceID string = '/subscriptions/xxxxxxxx-xxxxxxxx-xxxxxxxx-xxxxxxxx-xxxxxxxx/resourcegroups/xxxxxxxx/providers/microsoft.operationalinsights/workspaces/xxxxxxxx'
 @description('Create a Sentinel scheduled query rule for each DLP policy and workload (i.e., Teams, SharePoint, Endpoint, etc.). If "false", a single scheduled query rule will be created to cover all policies and workloads.')
 param DLPPolicySync bool = false
@@ -27,7 +27,7 @@ param DLPPolicySync bool = false
 param DeployWorkbooks bool = true
 @description('Use the Azure Deployment Script resource to automatically deploy the Function App code. This requires the Microsoft.ContainerInstance resource provider to be registred on the subsription.')
 param DeployFunctionCode bool = true
-@description('Ingest the sensitive data detected by DLP rules into Log Analytics workpace.')
+@description('Select how you would like the the sensitive information type detections to be handled when ingesting into the Log Analytics workspace.')
 @allowed(
   [
     'Keep'
