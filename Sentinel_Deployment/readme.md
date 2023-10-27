@@ -42,7 +42,7 @@ This a fork of the initial [Sentinel DLP Solution](https://techcommunity.microso
 ## Getting Started
 ### Prerequisites
 - Sentinel/Log Analytics workspace Azure RESOURCE ID (Not the WORKSPACE ID) that the solution will ingest data into and provision the associated Sentinel artifacts (i.e., analytics rules, workbooks, function, etc.). This can be found by clicking the "JSON View" link within the Overview page of the Log Analytics workspace resource:
-![Log Analytics workspace resource ID](.\images\lawid.png)
+![Log Analytics workspace resource ID](./images/lawid.png)
 - Owner permissions on the above Sentinel/Log Analytics workspace.
 - Global Admin permissions on the Purview DLP Entra ID tenant to create the App Registration and grant Admin Consent as outlined in step #2 below.
 - Owner permissions on an Azure Resource Group or Subscription to deploy the solution to in step #3. If Owner permissions are not granted on the subscription, the Microsoft.ContainerInstance resource provider must be registered on the subscription before deployment in order for the code to be automatically deployed to the Function App.
@@ -66,10 +66,10 @@ This a fork of the initial [Sentinel DLP Solution](https://techcommunity.microso
 
 ## Screenshots
 ### Incident Management Workbook
-![Incident Management Workbook](.\images\incidentManagement.png)
+![Incident Management Workbook](./images/incidentManagement.png)
 
 ### Sentinel Incident View
-![Incident Management Workbook](.\images\incident.png)
+![Incident Management Workbook](./images/incident.png)
 
 ## Contributing
 
