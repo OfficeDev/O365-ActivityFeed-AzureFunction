@@ -1,4 +1,19 @@
 # Release Notes
+## 1.0.1 (11/10/2023)
+### Changes/Fixes
+- Function App Code
+    - Disabled the sending of Power BI SIT information by default as the core event was not being sent. To enable this workload (Preview), set the "EnablePBIWorkload" Application Setting to a value of "1" on the Function App.
+    - Updated .Net libaries to latest versions.
+    - Resolved intermitent Azure Monitor HTTP 400 error during high/concurrent loads.
+- Deployment
+    - Added new configuration values to Function App and ARM parameters to make future updates more seamless.
+    - Updated scope to create workbooks in the same resource group as the Sentinel workspace so they appear in the Sentinel workbooks interface.
+    - Updated Function App to use 32 bit instead of 64 bit.
+    - Removed network access rules on Key Vault as apparently [Function App does not always access Key Vault from the designated outboud IP addresses](https://learn.microsoft.com/en-us/azure/azure-functions/ip-addresses?tabs=portal#find-outbound-ip-addresses).
+    - Updated Key Vault reference to dynamically populate the DNS suffix to make the deployment more cross-environment friendly.
+    - Added parameter to specify GitHub content location to make testing new code easier.
+    - Updated Azure Monitor function to account for events that don't have any SIT info.
+
 ## 1.0.0 (10/25/2023)
 ### New Features
 - Fully packaged into a single ARM/Bicep deployment for easy installation and setup.

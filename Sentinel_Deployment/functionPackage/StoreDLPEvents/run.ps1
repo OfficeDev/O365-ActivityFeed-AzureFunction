@@ -18,6 +18,7 @@ $dcrImmutableId = $env:DcrImmutableId
 $dceUri = $env:DceUri
 $uamiClientId = $env:UamiClientId
 $sensitiveDataHandling = $env:SensitiveDataHandling
+$enablePbiWorkload = $env:EnablePBIWorkload
 
 #Retry logic primarily for AF429 where there is more than 60k requests per minute, much code reused from https://stackoverflow.com/questions/45470999/powershell-try-catch-and-retry
 function Test-Command {
@@ -286,8 +287,7 @@ Foreach ($user in $records) {
         Clear-Variable -name info
     }
     
-    #PowerBI upload
-    if ($user.Workload -eq "PowerBI") {
+    if ($user.Workload -eq "PowerBI" -and $enablePbiWorkload -eq '1') {
         #Remove/hash sensitive info if specified.
         Set-DetectedValues -Data $user -Method $sensitiveDataHandling
 
@@ -318,7 +318,7 @@ Foreach ($user in $records) {
 $allWS += $exupload
 $allWS += $spoupload
 $allWS += $endpointupload
-#$allWS += $powerbiupload
+if ($enablePbiWorkload -eq '1') { $allWS += $powerbiupload }
 if ($allWS) {
     #Add required TimeGenerated field and create alias for Id field since that name is not allowed by Azure Monitor.
     $timeGenerated = (Get-Date -Format 'yyyy-MM-ddTHH:mm:ssZ' -AsUTC)

@@ -98,9 +98,6 @@ function Send-DataToAzureMonitorBatched {
                     Write-Host ("Data too large, reducing batch size to: $BatchSize.")
                 }
             }
-            elseif ($_.Exception.InnerException.Message -like "*HTTP Error 400. The request verb is invalid.*") {
-                Write-Warning ("HTTP Error 400. The request verb is invalid. Retrying.")
-            }
             else { 
                 Write-Error $_ -ErrorAction Continue
                 $errorCount++

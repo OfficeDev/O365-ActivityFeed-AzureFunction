@@ -6,8 +6,10 @@ This a fork of the initial [Sentinel DLP Solution](https://techcommunity.microso
 - [Release Notes](releaseNotes.md)
 - [New Features](#new-features)
 - [Solution Components](#solution-components)
+- [Important Considerations](#important-considerations)
 - [Getting Started](#getting-started)
 - [Screenshots](#screenshots)
+- [Update Code](#update-code)
 - [Contributing](#contributing)
 
 ## New Features
@@ -31,36 +33,45 @@ This a fork of the initial [Sentinel DLP Solution](https://techcommunity.microso
 - Better error handling has been introduced to the code along with a more hardened configuration for the Azure components. For example, secrets are now stored in a Key Vault with restricted access from the Function App.
 
 ## Solution Components
-- **Function App** with all of the dependencies (i.e., Storage Account, Key Vault, Application Insights, etc.) and PowerShell code necessary to ingest the DLP events, sensitivity label information, and advanced Sentinel analytics rules (if desired). The [Azure Monitor Ingestion client library for .NET](https://learn.microsoft.com/en-us/dotnet/api/overview/azure/monitor.ingestion-readme?view=azure-dotnet) is used to send data to the Azure Monitor/Sentinel workspace.
+- **Function App** with all of the dependencies (i.e., Storage Account, Key Vault, Application Insights, User-Assigned Managed Identity, etc.) and PowerShell code necessary to ingest the DLP events, sensitivity label information, and advanced Sentinel analytics rules (if desired). The Function App gets deployed using the default Consumption SKU. This may need to be modified based on the load and security requirements. The following .Net packages are used to authenticate and send data to the Azure Monitor/Sentinel workspace:
+    - [Azure.Monitor.Ingestion](https://www.nuget.org/packages/Azure.Monitor.Ingestion)
+    - [Azure.Identity](https://www.nuget.org/packages/Azure.Identity)
 - **Azure Monitor Custom Tables** to house the core DLP events along with the sensitive information data.
-- **Azure Monitor Function** to parse and normalize the DLP event data across all of the different workload types (Endpoint, Teams/Exchange, and SharePoint/OneDrive)
+- **Azure Monitor Function** to parse and normalize the DLP event data across all of the different workload types (Endpoint, Teams/Exchange, and SharePoint/OneDrive). By default, a maximum of 30 sensitive info types and 5 detections per, will be returned. These values can be modified via the _DetectionsMax and _SITMax variables in the PurviewDLP function.
 - **Azure Monitor Data Collection Rule** and **Data Collection Endpoint** required to ingest the DLP events via the new Azure Monitor Logs Ingestion API.
 - **Sentinel Analytics Rule(s)** to automatically start turning the raw DLP events into actionable alerts and incidents within Sentinel. The appropriate entity mapping is also pre-configured.
 - **Sentinel Workbooks** to help with advanced DLP incident management and reporting.
 - **Sentinel Watchlists** to house sensitivity label information and to help with the analytics rule "DLP Policy Sync" feature if enabled.
 
+## Important Considerations
+- This is an advanced custom solution and is intended to be used as an example. Proper Azure and development expertise is recommended to maintain and modify as needed to meet functional, operational, and security requirements.
+- The following artifacts get deployed to the Sentinel/Log Analytics workspace. If artifacts of the same type and name already exist, they will be potentially **overwritten**:
+    - Log Analytics function named "PurviewDLP"
+    - Watchlists named "Policy" and "SensitivityLabels"
+    - Custom Tables named "PurviewDLP", "PurviewDLPSIT", and "PurviewDLPDetections".
+    - Workbooks named "Microsoft DLP Incident Management", "Microsoft DLP Activity", and "Microsoft DLP Organizational Context"
+- The Function App user-assigned managed identity will get the Sentinel Contributor role assignment on the Sentinel workspace in order to update the watchlists and analytics rules. You will want to consider using a custom role instead to limit the amount of privilege the Function App/Managed Identity has.
+- No network access restrictions have been put in place on the Function App, Key Vault, Storage Account, Data Collection Endpoint, etc. You will want to consider using private endpoints to fully restrict public network access. Please refer to [Securing Azure Functions](https://learn.microsoft.com/en-us/azure/azure-functions/security-concepts?tabs=v4) for more information on how to further harden and secure the configuration, including how to restrict outbound connections.
+- When running any workload in Azure, be sure to follow the recommended practices (Security, Operations, Reliability etc.) as outlined in the [Azure Well-Architected Framework](https://learn.microsoft.com/en-us/azure/well-architected/).
+
 ## Getting Started
 ### Prerequisites
 - Sentinel/Log Analytics workspace Azure RESOURCE ID (Not the WORKSPACE ID) that the solution will ingest data into and provision the associated Sentinel artifacts (i.e., analytics rules, workbooks, function, etc.). This can be found by clicking the "JSON View" link within the Overview page of the Log Analytics workspace resource:
 ![Log Analytics workspace resource ID](./images/lawid.png)
-- Owner permissions on the above Sentinel/Log Analytics workspace.
+- Owner permissions on the above Sentinel/Log Analytics workspace. If deploying workbooks, either Owner or Contributor permissions are needed on the Sentinel resource group.
 - Global Admin permissions on the Purview DLP Entra ID tenant to create the App Registration and grant Admin Consent as outlined in step #2 below.
 - Owner permissions on an Azure Resource Group or Subscription to deploy the solution to in step #3. If Owner permissions are not granted on the subscription, the Microsoft.ContainerInstance resource provider must be registered on the subscription before deployment in order for the code to be automatically deployed to the Function App.
 
 ### Deployment
+Review [Important Considerations](#important-considerations) before deploying.
 1. Enable the **Microsoft 365 (formerly, Office 365) Sentinel Connector** and ensure the **OfficeActivity** table is provisioned if you would like further enrichment for SharePoint DLP events.
-2. Create an **App Registration** with the following **Application** permissions and **grant Admin Consent**. Create a **secret** and copy the value along with the **Application (client) ID** and **Tenant ID** which will be used as parameter values in the below Azure deployment.
+2. Create an **App Registration** with the following **Application** permissions and **grant Admin Consent**. Create a **secret** and copy the value along with the **Application (client) ID** and **Tenant ID** which will be used as parameter values in the below Azure deployment. This secret will be stored in the Key Vault. Remember that it will need to be rotated before the expriation date set during creation.
     - **Microsoft Graph**
         - Group.Read.All
         - User.Read.All
         - InformationProtectionPolicy.Read.All
     - **Office 365 Management APIs**
         - ActivityFeed.ReadDlp
-3. **IMPORTANT**: The following artifacts get deployed to the Sentinel/Log Analytics workspace. If artifacts of the same type and name already exist, they will be **overwritten**:
-    - Log Analytics function named "PurviewDLP"
-    - Watchlists named "Policy" and "SensitivityLabels"
-    - Custom Tables named "PurviewDLP", "PurviewDLPSIT", and "PurviewDLPDetections".
-    - Workbooks named "Microsoft DLP Incident Management", "Microsoft DLP Activity", and "Microsoft DLP Organizational Context"
 4. Click the **Deploy to Azure** button at the top of this page and fill in the required parameters. Hover over the information icon for each parameter to get more details on what to enter. 
 5. Click **Review + Create** to start the deployment. The deployment also activates the Office 365 Management API DLP.ALL subscription for the tenant if not already enabled. After a successful deployment, you should be able to see data in the Azure Monitor tables along with alerts and incidents being created in Sentinel once new DLP events are generated.
 
@@ -70,6 +81,19 @@ This a fork of the initial [Sentinel DLP Solution](https://techcommunity.microso
 
 ### Sentinel Incident View
 ![Incident Management Workbook](./images/incident.png)
+
+## Update Code
+To update the Function App with the latest version of the code, you can use the following Azure PowerShell commands:
+```Powershell
+#Download latest Function App package.
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/OfficeDev/O365-ActivityFeed-AzureFunction/master/Sentinel_Deployment/functionPackage.zip" -OutFile "functionPackage.zip"
+
+#Select the subscription that contains the Function App to be updated.
+Set-AzContext -Subscription '[Subscription name]'
+
+#Update Function App with the new package.
+Publish-AzWebapp -ResourceGroupName "[Resource group name]" -Name "[Function App name]" -ArchivePath functionPackage.zip -Force
+```
 
 ## Contributing
 

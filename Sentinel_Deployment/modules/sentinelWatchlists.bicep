@@ -1,5 +1,6 @@
 param lawName string
 param policySync bool = false
+param labelSync bool = true
 
 resource workspace 'Microsoft.OperationalInsights/workspaces@2022-10-01' existing = {
   name: lawName
@@ -23,7 +24,7 @@ Name,Workload
   }
 }
 
-resource watchlistSL 'Microsoft.SecurityInsights/watchlists@2023-02-01' = {
+resource watchlistSL 'Microsoft.SecurityInsights/watchlists@2023-02-01' = if(labelSync == true) {
   name: 'SensitivityLabels'
   scope: workspace
   properties: {

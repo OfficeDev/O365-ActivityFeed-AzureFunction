@@ -58,7 +58,7 @@ Foreach ($workload in $workloads) {
     $token = $oauth.access_token | ConvertTo-SecureString -AsPlainText
 
     #Make the request
-    try { $rawRef = Invoke-WebRequest -Authentication Bearer -Token $token -Uri "https://manage.office.com/api/v1.0/$tenantGUID/activity/feed/subscriptions/content?contenttype=$workload&startTime=$Storedtime&endTime=$endTime&PublisherIdentifier=$TenantGUID" -UseBasicParsing -RetryIntervalSec 2 -MaximumRetryCount 5 }
+    try { $rawRef = Invoke-WebRequest -Authentication Bearer -Token $token -Uri "https://manage.office.com/api/v1.0/$tenantGUID/activity/feed/subscriptions/content?contenttype=$workload&startTime=$Storedtime&endTime=$endTime&PublisherIdentifier=$tenantGUID" -UseBasicParsing -RetryIntervalSec 2 -MaximumRetryCount 5 }
     catch { throw ("Error calling Office 365 Management API. " + $_.Exception) }
     
     if (-not ($rawRef)) { throw 'Failed to retrieve the content Blob Url' }
@@ -68,7 +68,7 @@ Foreach ($workload in $workloads) {
         $pageTracker = $true
         $pagedReq = $rawRef.Headers.NextPageUri
         while ($pageTracker -ne $false) {   
-            $pageuri = "$pagedReq&PublisherIdentifier=$TenantGUID"
+            $pageuri = "$pagedReq&PublisherIdentifier=$tenantGUID"
             try { $CurrentPage = Invoke-WebRequest -Authentication Bearer -Token $token -Uri $pageuri -UseBasicParsing -RetryIntervalSec 2 -MaximumRetryCount 5 }
             catch { throw ("Error calling Office 365 Management API. " + $_.Exception) }
             $pageArray += $CurrentPage
