@@ -1,5 +1,5 @@
 # Microsoft Purview DLP Sentinel Solution
-This a fork of the initial [Sentinel DLP Solution](https://techcommunity.microsoft.com/t5/security-compliance-and-identity/advanced-incident-management-for-office-and-endpoint-dlp-using/ba-p/1811497). It has been updated for easy deployment, modernization of components, and to introduce new capabilities. 
+This a fork of the initial [Sentinel DLP Solution](https://techcommunity.microsoft.com/t5/security-compliance-and-identity/advanced-incident-management-for-office-and-endpoint-dlp-using/ba-p/1811497). It has been updated for easy deployment, modernization of components, and to introduce new capabilities. Please review this document to understand the various components, considerations, and pre-prequisites before deployment.
 
 [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3a%2f%2fraw.githubusercontent.com%2fOfficeDev%2fO365-ActivityFeed-AzureFunction%2fmaster%2fSentinel_Deployment%2fmain.json)
 
@@ -9,7 +9,7 @@ This a fork of the initial [Sentinel DLP Solution](https://techcommunity.microso
 - [Important Considerations](#important-considerations)
 - [Getting Started](#getting-started)
 - [Screenshots](#screenshots)
-- [Update Code](#update-code)
+- [Updates](#update-code)
 - [Contributing](#contributing)
 
 ## New Features
@@ -33,9 +33,20 @@ This a fork of the initial [Sentinel DLP Solution](https://techcommunity.microso
 - Better error handling has been introduced to the code along with a more hardened configuration for the Azure components. For example, secrets are now stored in a Key Vault with restricted access from the Function App.
 
 ## Solution Components
-- **Function App** with all of the dependencies (i.e., Storage Account, Key Vault, Application Insights, User-Assigned Managed Identity, etc.) and PowerShell code necessary to ingest the DLP events, sensitivity label information, and advanced Sentinel analytics rules (if desired). The Function App gets deployed using the default Consumption SKU. This may need to be modified based on the load and security requirements. The following .Net packages are used to authenticate and send data to the Azure Monitor/Sentinel workspace:
-    - [Azure.Monitor.Ingestion](https://www.nuget.org/packages/Azure.Monitor.Ingestion)
-    - [Azure.Identity](https://www.nuget.org/packages/Azure.Identity)
+- **Function App** with all of the dependencies (i.e., Storage Account, Key Vault, Application Insights, User-Assigned Managed Identity, etc.) and PowerShell code necessary to ingest the DLP events and sync sensitivity label information, and advanced Sentinel analytics rules (if desired). The Function App gets deployed using the default Consumption SKU. This may need to be modified based on the load and security requirements. The following Functions get deployed:
+    - **QueueDLPEvents**: Polls the Office 365 Activity API every minute to see if there are new DLP events. If so, it sends the content URI to a storage account queue to then get processed by the StoreDLPEvents Function.
+    - **StoreDLPEvents**: Listens on an Azure storage account queue for new DLP event content URIs. When a new message arrives, it retrieves the content from Office 365 Management API, processes, enriches, and sends that data to Azure Monitor.
+    - **SyncSensitivityLabels**: (Optional) Polls the Graph API every hour to get current list of Sensitivity Labels. It then syncs the data with the Sentinel "SensitivityLabels" watchlist. This is used as a lookup to enrich events at query time.
+    - **SyncDLPAnalyticsRules**: (Optional) Polls the Azure Resource Manager API every hour to create a new Sentinel scheduled query rule for each DLP policy and workload. This is required when the 150 event per 5 min. limit is being reached and/or for more advanced customization based on policy/workload.
+    - The Functions are written in PowerShell with the following dependencies. These dependencies are [managed by the Function App](https://learn.microsoft.com/en-us/azure/azure-functions/functions-reference-powershell?tabs=portal#dependency-management).
+        - Azure PowerShell modules:
+            - Az.Accounts
+            - Az.Storage
+            - Az.OperationalInsights
+            - Az.Resources
+        - Because we don't have a native PowerShell module yet to send data to Azure Monitor DCR tables, a custom PowerShell module (AzMon.Ingestion) leveraging the following .Net packages is used to authenticate and send data to the Azure Monitor/Sentinel workspace in a reliable and optimized way. These are not automatically updated.
+            - [Azure.Monitor.Ingestion](https://www.nuget.org/packages/Azure.Monitor.Ingestion)
+            - [Azure.Identity](https://www.nuget.org/packages/Azure.Identity)
 - **Azure Monitor Custom Tables** to house the core DLP events along with the sensitive information data.
 - **Azure Monitor Function** to parse and normalize the DLP event data across all of the different workload types (Endpoint, Teams/Exchange, and SharePoint/OneDrive). By default, a maximum of 30 sensitive info types and 5 detections per, will be returned. These values can be modified via the _DetectionsMax and _SITMax variables in the PurviewDLP function.
 - **Azure Monitor Data Collection Rule** and **Data Collection Endpoint** required to ingest the DLP events via the new Azure Monitor Logs Ingestion API.
@@ -44,15 +55,27 @@ This a fork of the initial [Sentinel DLP Solution](https://techcommunity.microso
 - **Sentinel Watchlists** to house sensitivity label information and to help with the analytics rule "DLP Policy Sync" feature if enabled.
 
 ## Important Considerations
-- This is an advanced custom solution and is intended to be used as an example. Proper Azure and development expertise is recommended to maintain and modify as needed to meet functional, operational, and security requirements.
+> [!IMPORTANT]  
+> Crucial information necessary for users to succeed.
+- **This is an advanced custom solution and gets deployed as a universal template but requires proper Azure and development expertise to modify, maintain, and harden as needed to meet functional, operational, and security requirements. This solution is potentially processing and storing sensitive data so proper organizational security controls need to be implemented. When running any workload in Azure, be sure to follow the recommended practices (Security, Operations, Reliability etc.) as outlined in the [Azure Well-Architected Framework](https://learn.microsoft.com/en-us/azure/well-architected/).**
 - The following artifacts get deployed to the Sentinel/Log Analytics workspace. If artifacts of the same type and name already exist, they will be potentially **overwritten**:
     - Log Analytics function named "PurviewDLP"
     - Watchlists named "Policy" and "SensitivityLabels"
     - Custom Tables named "PurviewDLP", "PurviewDLPSIT", and "PurviewDLPDetections".
     - Workbooks named "Microsoft DLP Incident Management", "Microsoft DLP Activity", and "Microsoft DLP Organizational Context"
 - The Function App user-assigned managed identity will get the Sentinel Contributor role assignment on the Sentinel workspace in order to update the watchlists and analytics rules. You will want to consider using a custom role instead to limit the amount of privilege the Function App/Managed Identity has.
-- No network access restrictions have been put in place on the Function App, Key Vault, Storage Account, Data Collection Endpoint, etc. You will want to consider using private endpoints to fully restrict public network access. Please refer to [Securing Azure Functions](https://learn.microsoft.com/en-us/azure/azure-functions/security-concepts?tabs=v4) for more information on how to further harden and secure the configuration, including how to restrict outbound connections.
-- When running any workload in Azure, be sure to follow the recommended practices (Security, Operations, Reliability etc.) as outlined in the [Azure Well-Architected Framework](https://learn.microsoft.com/en-us/azure/well-architected/).
+- No network access restrictions have been put in place on the Function App, Key Vault, Storage Account, Data Collection Endpoint, etc. You will want to consider using private endpoints to fully restrict public network access. Please refer to [Securing Azure Functions](https://learn.microsoft.com/en-us/azure/azure-functions/security-concepts?tabs=v4) for more information on how to further harden and secure the configuration, including how to use [Virtual Network integration](https://learn.microsoft.com/en-us/azure/azure-functions/functions-networking-options?tabs=azure-cli#virtual-network-integration) to restrict outbound connections through a firewall. If outbound traffic is restricted, the following destinations are required:
+    - login.microsoftonline.com
+	- manage.office.com
+	- graph.microsoft.com
+	- management.azure.com
+    - www.powershellgallery.com
+    - *.azureedge.net
+	- *FunctionAppName*.azurewebsites.net
+	- *FunctionAppName*.scm.azurewebsites.net
+	- *StorageAccountName*.blob.core.windows.net
+	- *StorageAccountName*.queue.core.windows.net
+	- Data Collection Endpoint URI (e.g., *dcename*-nwyp.southcentralus-1.ingest.monitor.azure.com)
 
 ## Getting Started
 ### Prerequisites
@@ -82,8 +105,8 @@ Review [Important Considerations](#important-considerations) before deploying.
 ### Sentinel Incident View
 ![Incident Management Workbook](./images/incident.png)
 
-## Update Code
-To update the Function App with the latest version of the code, you can use the following Azure PowerShell commands:
+## Updates
+View the [Release Notes](releaseNotes.md) to know when new code updates have been released. To update the Function App with the latest version of the code, you can use the following Azure PowerShell commands:
 ```Powershell
 #Download latest Function App package.
 Invoke-WebRequest -Uri "https://raw.githubusercontent.com/OfficeDev/O365-ActivityFeed-AzureFunction/master/Sentinel_Deployment/functionPackage.zip" -OutFile "functionPackage.zip"

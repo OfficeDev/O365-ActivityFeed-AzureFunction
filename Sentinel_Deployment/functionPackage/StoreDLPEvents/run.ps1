@@ -327,15 +327,19 @@ if ($allWS) {
     $sits | Add-Member -NotePropertyName 'TimeGenerated' -NotePropertyValue $timeGenerated
     $detections | Add-Member -NotePropertyName 'TimeGenerated' -NotePropertyValue $timeGenerated
 
+    #Initiate objects needed to send data to Azure Monitor.
+    $azMonCredential = Get-AzMonCredential -UamiClientId $uamiClientId
+    $azMonLogsIngestionClient = Get-AzMonLogsIngestionClient -DceUri $dceUri -AzMonCredential $azMonCredential
+
     #Send received data to Azure Monitor.
     if ($detections.Count -gt 0) {
         Write-Host "Sending detection info:"
-        Send-DataToAzureMonitorBatched -Data $detections -BatchSize 10000 -TableName ("Custom-$LogType" + "Detections_CL") -JsonDepth 100 -UamiClientId $uamiClientId -DceURI $dceUri -DcrImmutableId $dcrImmutableId -SortBySize $false -EventIdPropertyName 'Identifier'
+        Send-AzMonData -LogsIngestionClient $azMonLogsIngestionClient -Data $detections -BatchSize 10000 -TableName ("Custom-$LogType" + "Detections_CL") -JsonDepth 100 -DcrImmutableId $dcrImmutableId -EventIdPropertyName 'Identifier'
     }
     
     Write-Host "Sending SIT info:"
-    Send-DataToAzureMonitorBatched -Data $sits -BatchSize 10000 -TableName ("Custom-$LogType" + "SIT_CL") -JsonDepth 100 -UamiClientId $uamiClientId -DceURI $dceUri -DcrImmutableId $dcrImmutableId -SortBySize $false -EventIdPropertyName 'Identifier'
+    Send-AzMonData -LogsIngestionClient $azMonLogsIngestionClient -Data $sits -BatchSize 10000 -TableName ("Custom-$LogType" + "SIT_CL") -JsonDepth 100 -DcrImmutableId $dcrImmutableId -EventIdPropertyName 'Identifier'
 
     Write-Host "Sending core event info:"
-    Send-DataToAzureMonitorBatched -Data $allWS -BatchSize 10000 -TableName ("Custom-$LogType" + "_CL") -JsonDepth 100 -UamiClientId $uamiClientId -DceURI $dceUri -DcrImmutableId $dcrImmutableId -SortBySize $false -EventIdPropertyName 'Identifier'
+    Send-AzMonData -LogsIngestionClient $azMonLogsIngestionClient -Data $allWS -BatchSize 10000 -TableName ("Custom-$LogType" + "_CL") -JsonDepth 100 -DcrImmutableId $dcrImmutableId -EventIdPropertyName 'Identifier'
 }
