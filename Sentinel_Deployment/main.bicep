@@ -6,6 +6,8 @@ param DeployApplicationInsights bool = true
 param KeyVaultName string = 'kv-sentineldlp-[Replace with globally unique identifier]'
 @description('A globally unique name for the Function App Storage Account. Must be between 3 and 24 characters in length and use numbers and lower-case letters only.')
 param StorageAccountName string = 'stsentineldlp[Replace with globally unique identifier]'
+@description('Name of custom role to be created at the Log Analytics resource group level. This role provides the Function App read/write access to Sentinel watchlists, alert rules, and read data in the PurviewDLP_CL table.')
+param CustomRoleName string = 'Custom Role - Sentinel DLP Contributor'
 @description('Azure AD tenant ID in which DLP instance resides.')
 param TenantID string = 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
 @description('App Registration Client ID.')
@@ -52,6 +54,7 @@ var functionAppPackageUri = '${RepoUri}/Sentinel_Deployment/functionPackage.zip'
 var deploymentScriptUri = '${RepoUri}/Sentinel_Deployment/deploymentScript.ps1'
 var endpointSeverityInRuleName = EndpointSeverityInRuleName == true ? 'true' : 'false'
 var deploymentVersion = '1.0.1'
+var roleIdOwner = '/providers/Microsoft.Authorization/roleDefinitions/8e3af657-a8ff-443c-a75c-2fe8c4bcb635'
 
 resource law 'Microsoft.OperationalInsights/workspaces@2022-10-01' existing = {
   name: split(LogAnalyticsWorkspaceResourceID, '/')[8]
@@ -333,11 +336,14 @@ resource applicationInsights 'Microsoft.Insights/components@2020-02-02' = if (De
 
 module roleAssignmentLaw 'modules/lawRoleAssignment.bicep' = if (DLPPolicySync == true || SensitivityLabelSync == true) {
   scope: resourceGroup(split(LogAnalyticsWorkspaceResourceID, '/')[2], split(LogAnalyticsWorkspaceResourceID, '/')[4])
+  dependsOn: [
+    createCustomTables
+  ]
   name: 'rbacAssignmentLaw'
   params: {
     principalId: userAssignedMi.properties.principalId
-    roleDefId: '/providers/Microsoft.Authorization/roleDefinitions/ab8e14d6-4a74-4a29-9ba8-549422addade'
-    scopedResourceName: split(LogAnalyticsWorkspaceResourceID, '/')[8]
+    lawName: split(LogAnalyticsWorkspaceResourceID, '/')[8]
+    roleName: CustomRoleName
   }
 }
 
@@ -346,7 +352,7 @@ resource roleAssignmentFa 'Microsoft.Authorization/roleAssignments@2022-04-01' =
   scope: functionApp
   properties: {
     principalId: userAssignedMi.properties.principalId
-    roleDefinitionId: '/providers/Microsoft.Authorization/roleDefinitions/8e3af657-a8ff-443c-a75c-2fe8c4bcb635'
+    roleDefinitionId: roleIdOwner
     principalType: 'ServicePrincipal'
   }
 }

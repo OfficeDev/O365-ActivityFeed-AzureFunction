@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.23.1.45101",
-      "templateHash": "14069309913997944576"
+      "templateHash": "10194644485337235698"
     }
   },
   "parameters": {
@@ -35,6 +35,13 @@
       "defaultValue": "stsentineldlp[Replace with globally unique identifier]",
       "metadata": {
         "description": "A globally unique name for the Function App Storage Account. Must be between 3 and 24 characters in length and use numbers and lower-case letters only."
+      }
+    },
+    "CustomRoleName": {
+      "type": "string",
+      "defaultValue": "Custom Role - Sentinel DLP Contributor",
+      "metadata": {
+        "description": "Name of custom role to be created at the Log Analytics resource group level. This role provides the Function App read/write access to Sentinel watchlists, alert rules, and read data in the PurviewDLP_CL table."
       }
     },
     "TenantID": {
@@ -159,7 +166,8 @@
     "functionAppPackageUri": "[format('{0}/Sentinel_Deployment/functionPackage.zip', parameters('RepoUri'))]",
     "deploymentScriptUri": "[format('{0}/Sentinel_Deployment/deploymentScript.ps1', parameters('RepoUri'))]",
     "endpointSeverityInRuleName": "[if(equals(parameters('EndpointSeverityInRuleName'), true()), 'true', 'false')]",
-    "deploymentVersion": "1.0.1"
+    "deploymentVersion": "1.0.1",
+    "roleIdOwner": "/providers/Microsoft.Authorization/roleDefinitions/8e3af657-a8ff-443c-a75c-2fe8c4bcb635"
   },
   "resources": [
     {
@@ -445,7 +453,7 @@
       "name": "[guid(subscription().id, resourceGroup().id, resourceId('Microsoft.Web/sites', parameters('FunctionAppName')))]",
       "properties": {
         "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('uami-{0}', parameters('FunctionAppName'))), '2022-01-31-preview').principalId]",
-        "roleDefinitionId": "/providers/Microsoft.Authorization/roleDefinitions/8e3af657-a8ff-443c-a75c-2fe8c4bcb635",
+        "roleDefinitionId": "[variables('roleIdOwner')]",
         "principalType": "ServicePrincipal"
       },
       "dependsOn": [
@@ -1381,11 +1389,11 @@
           "principalId": {
             "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('uami-{0}', parameters('FunctionAppName'))), '2022-01-31-preview').principalId]"
           },
-          "roleDefId": {
-            "value": "/providers/Microsoft.Authorization/roleDefinitions/ab8e14d6-4a74-4a29-9ba8-549422addade"
-          },
-          "scopedResourceName": {
+          "lawName": {
             "value": "[split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[8]]"
+          },
+          "roleName": {
+            "value": "[parameters('CustomRoleName')]"
           }
         },
         "template": {
@@ -1395,28 +1403,103 @@
             "_generator": {
               "name": "bicep",
               "version": "0.23.1.45101",
-              "templateHash": "15461286183934614094"
+              "templateHash": "15322811740691860933"
             }
           },
           "parameters": {
-            "scopedResourceName": {
-              "type": "string"
-            },
-            "roleDefId": {
+            "lawName": {
               "type": "string"
             },
             "principalId": {
               "type": "string"
+            },
+            "roleName": {
+              "type": "string",
+              "defaultValue": "Custom Role - Sentinel DLP Contributor"
+            },
+            "actions": {
+              "type": "array",
+              "defaultValue": [
+                "Microsoft.SecurityInsights/Watchlists/*/read",
+                "Microsoft.SecurityInsights/Watchlists/*/write",
+                "Microsoft.SecurityInsights/alertRules/write",
+                "Microsoft.SecurityInsights/alertRules/read",
+                "Microsoft.OperationalInsights/workspaces/read",
+                "Microsoft.OperationalInsights/workspaces/query/read",
+                "Microsoft.OperationalInsights/workspaces/analytics/query/action",
+                "Microsoft.OperationalInsights/workspaces/search/action"
+              ],
+              "metadata": {
+                "description": "Array of actions for the roleDefinition"
+              }
+            },
+            "notActions": {
+              "type": "array",
+              "defaultValue": [
+                "Microsoft.OperationalInsights/workspaces/sharedKeys/read"
+              ],
+              "metadata": {
+                "description": "Array of notActions for the roleDefinition"
+              }
             }
+          },
+          "variables": {
+            "roleDescription": "Provides access to query Sentinel Watchlists and alert rules. Also provides limited permissions to read workspace details and run a query in the workspace, but not to read data from any tables.",
+            "roleDefName": "[guid(resourceGroup().id, string(parameters('actions')), string(parameters('notActions')))]",
+            "roleIdReader": "/providers/Microsoft.Authorization/roleDefinitions/acdd72a7-3385-48ef-bd42-f606fba81ae7"
           },
           "resources": [
             {
-              "type": "Microsoft.Authorization/roleAssignments",
-              "apiVersion": "2020-10-01-preview",
-              "scope": "[format('Microsoft.OperationalInsights/workspaces/{0}', parameters('scopedResourceName'))]",
-              "name": "[guid(resourceId('Microsoft.OperationalInsights/workspaces', parameters('scopedResourceName')), parameters('roleDefId'), parameters('principalId'))]",
+              "type": "Microsoft.Authorization/roleDefinitions",
+              "apiVersion": "2022-04-01",
+              "name": "[variables('roleDefName')]",
               "properties": {
-                "roleDefinitionId": "[parameters('roleDefId')]",
+                "roleName": "[parameters('roleName')]",
+                "description": "[variables('roleDescription')]",
+                "type": "customRole",
+                "permissions": [
+                  {
+                    "actions": "[parameters('actions')]",
+                    "notActions": "[parameters('notActions')]"
+                  }
+                ],
+                "assignableScopes": [
+                  "[resourceGroup().id]"
+                ]
+              }
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[format('Microsoft.OperationalInsights/workspaces/{0}', parameters('lawName'))]",
+              "name": "[guid(resourceId('Microsoft.OperationalInsights/workspaces', parameters('lawName')), resourceId('Microsoft.Authorization/roleDefinitions', variables('roleDefName')), parameters('principalId'))]",
+              "properties": {
+                "roleDefinitionId": "[resourceId('Microsoft.Authorization/roleDefinitions', variables('roleDefName'))]",
+                "principalId": "[parameters('principalId')]",
+                "principalType": "ServicePrincipal"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Authorization/roleDefinitions', variables('roleDefName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[format('Microsoft.OperationalInsights/workspaces/{0}/tables/{1}', parameters('lawName'), 'PurviewDLP_CL')]",
+              "name": "[guid(resourceId('Microsoft.OperationalInsights/workspaces/tables', parameters('lawName'), 'PurviewDLP_CL'), variables('roleIdReader'), parameters('principalId'))]",
+              "properties": {
+                "roleDefinitionId": "[variables('roleIdReader')]",
+                "principalId": "[parameters('principalId')]",
+                "principalType": "ServicePrincipal"
+              }
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[format('Microsoft.OperationalInsights/workspaces/{0}/tables/{1}', parameters('lawName'), 'Watchlist')]",
+              "name": "[guid(resourceId('Microsoft.OperationalInsights/workspaces/tables', parameters('lawName'), 'Watchlist'), variables('roleIdReader'), parameters('principalId'))]",
+              "properties": {
+                "roleDefinitionId": "[variables('roleIdReader')]",
                 "principalId": "[parameters('principalId')]",
                 "principalType": "ServicePrincipal"
               }
@@ -1425,6 +1508,7 @@
         }
       },
       "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'createCustomTables')]",
         "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('uami-{0}', parameters('FunctionAppName')))]"
       ]
     },
