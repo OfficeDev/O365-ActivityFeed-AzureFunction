@@ -26,6 +26,13 @@ try {
 }
 catch { Write-Error ("Error calling Office 365 Management API. " + $_.Exception) -ErrorAction Continue }
 
+#Open up public access if enabled so we can deploy code.
+if ($RestrictedIPs -ne '') {
+    $resource = Get-AzResource -ResourceType Microsoft.Web/sites -ResourceGroupName $ResourceGroupName -ResourceName $FunctionAppName
+    $resource.Properties.publicNetworkAccess = 'Enabled'
+    $resource | Set-AzResource -Force
+}
+
 #Download Function App package and publish.
 Invoke-WebRequest -Uri $PackageUri -OutFile functionPackage.zip
 Publish-AzWebapp -ResourceGroupName $ResourceGroupName -Name $FunctionAppName -ArchivePath functionPackage.zip -Force
@@ -46,4 +53,4 @@ elseif ($RestrictedIPs -ne '') {
 
 #Cleanup the Service Principal Owner role assignments now that access is no longer needed.
 Remove-AzRoleAssignment -ObjectId $UAMIPrincipalId -RoleDefinitionName Owner -Scope $FAScope
-if ($VnetScope -ne '') { Remove-AzRoleAssignment -ObjectId $UAMIPrincipalId -RoleDefinitionName Owner -Scope $VnetScope }
+if ($VnetScope -ne '') { Remove-AzRoleAssignment -ObjectId $UAMIPrincipalId -RoleDefinitionName Contributor -Scope $VnetScope }

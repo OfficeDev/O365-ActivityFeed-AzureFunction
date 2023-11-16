@@ -1,8 +1,8 @@
 # Release Notes
-## 1.0.1 (11/13/2023)
+## 1.1.0 (11/15/2023)
 ### Changes/Fixes
 - Function App Code
-    - Disabled the sending of Power BI SIT information by default as the core event was not being sent. To enable this workload (Preview), set the "EnablePBIWorkload" Application Setting to a value of "1" on the Function App.
+    - Disabled the sending of Power BI SIT information by default as the core event was not being sent. To enable this workload (Private Preview), set the "EnablePBIWorkload" Application Setting to a value of "1" on the Function App.
     - Updated .Net libaries to latest versions. Added .csproj file to repo so GitHub Dependabot can monitor for updates.
     - Optimized Azure Monitor ingestion PowerShell function to make less authentication calls. Renamed to AzMon.Ingestion.
     - Resolved intermitent Azure Monitor HTTP 400 error during high/concurrent loads.
@@ -14,7 +14,10 @@
     - Updated Key Vault reference to dynamically populate the DNS suffix to make the deployment more cross-environment friendly.
     - Added parameter to specify GitHub content location to make testing new code easier.
     - Updated Azure Monitor function to account for events that don't have any SIT info and to account for potential duplicate sensitivity label entries in the Watchlist.
+    - Added new "ShowDetections" parameter to Azure Monitor function to control if sensitive info type detection value are returned in the query.
     - Added custom role to reduce access needed to Sentinel workspace.
+    - Added Private Networking (Private Endpoints) option to deployment.
+    - Updated Readme.
 
 ## 1.0.0 (10/25/2023)
 ### New Features
