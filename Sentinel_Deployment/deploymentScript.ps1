@@ -31,6 +31,8 @@ if ($RestrictedIPs -ne '') {
     $resource = Get-AzResource -ResourceType Microsoft.Web/sites -ResourceGroupName $ResourceGroupName -ResourceName $FunctionAppName
     $resource.Properties.publicNetworkAccess = 'Enabled'
     $resource | Set-AzResource -Force
+    #Give some time for access changes to kick in.
+    Start-Sleep -Seconds 30
 }
 
 #Download Function App package and publish.
@@ -53,4 +55,4 @@ elseif ($RestrictedIPs -ne '') {
 
 #Cleanup the Service Principal Owner role assignments now that access is no longer needed.
 Remove-AzRoleAssignment -ObjectId $UAMIPrincipalId -RoleDefinitionName Owner -Scope $FAScope
-if ($VnetScope -ne '') { Remove-AzRoleAssignment -ObjectId $UAMIPrincipalId -RoleDefinitionName Contributor -Scope $VnetScope }
+if ($VnetScope -ne '') { Remove-AzRoleAssignment -ObjectId $UAMIPrincipalId -RoleDefinitionName Owner -Scope $VnetScope }

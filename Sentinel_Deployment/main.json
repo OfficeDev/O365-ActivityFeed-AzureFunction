@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.23.1.45101",
-      "templateHash": "10729719228138851948"
+      "templateHash": "2474064806364853262"
     }
   },
   "parameters": {
@@ -2149,7 +2149,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.23.1.45101",
-              "templateHash": "6457495206375335838"
+              "templateHash": "13172351405313047218"
             }
           },
           "parameters": {
@@ -2188,7 +2188,7 @@
             }
           },
           "variables": {
-            "roleIdContributor": "/providers/Microsoft.Authorization/roleDefinitions/b24988ac-6180-42a0-ab88-20f7382dd24c"
+            "roleIdOwner": "/providers/Microsoft.Authorization/roleDefinitions/8e3af657-a8ff-443c-a75c-2fe8c4bcb635"
           },
           "resources": [
             {
@@ -2441,7 +2441,7 @@
               "name": "[guid(subscription().id, resourceGroup().id, resourceId('Microsoft.Network/virtualNetworks', format('vnet-{0}', parameters('FunctionAppName'))))]",
               "properties": {
                 "principalId": "[parameters('PrincipalId')]",
-                "roleDefinitionId": "[variables('roleIdContributor')]",
+                "roleDefinitionId": "[variables('roleIdOwner')]",
                 "principalType": "ServicePrincipal"
               },
               "dependsOn": [

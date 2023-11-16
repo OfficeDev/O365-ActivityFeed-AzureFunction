@@ -210,14 +210,14 @@ resource peDnsGroupKeyVault 'Microsoft.Network/privateEndpoints/privateDnsZoneGr
   }
 }
 
-var roleIdContributor = '/providers/Microsoft.Authorization/roleDefinitions/b24988ac-6180-42a0-ab88-20f7382dd24c'
+var roleIdOwner = '/providers/Microsoft.Authorization/roleDefinitions/8e3af657-a8ff-443c-a75c-2fe8c4bcb635'
 
 resource roleAssignmentVnet 'Microsoft.Authorization/roleAssignments@2022-04-01' = if(DeployCode == true) {
   name: guid(subscription().id, resourceGroup().id, virtualNetwork.id)
   scope: virtualNetwork
   properties: {
     principalId: PrincipalId
-    roleDefinitionId: roleIdContributor
+    roleDefinitionId: roleIdOwner
     principalType: 'ServicePrincipal'
   }
 }
