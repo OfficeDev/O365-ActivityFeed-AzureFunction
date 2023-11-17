@@ -87,9 +87,8 @@ This a fork of the initial [Sentinel DLP Solution](https://techcommunity.microso
 ### Prerequisites
 - Sentinel/Log Analytics workspace Azure RESOURCE ID (Not the WORKSPACE ID) that the solution will ingest data into and provision the associated Sentinel artifacts (i.e., analytics rules, workbooks, function, etc.). This can be found by clicking the "JSON View" link within the Overview page of the Log Analytics workspace resource:
 ![Log Analytics workspace resource ID](./images/lawid.png)
-- Owner permissions on the above Sentinel/Log Analytics workspace. If deploying workbooks, either Owner or Contributor permissions are needed on the Sentinel resource group.
 - Global Admin permissions on the Purview DLP Entra ID tenant to create the App Registration and grant Admin Consent as outlined in step #2 below.
-- Owner permissions on an Azure Resource Group or Subscription to deploy the solution to in step #3. If Owner permissions are not granted on the subscription, the Microsoft.ContainerInstance resource provider must be registered on the subscription before deployment in order for the code to be automatically deployed to the Function App.
+- Owner permissions on an Azure Resource Group to deploy the solution to in step #3. If Owner permissions are not granted on the subscription, the *Microsoft.ContainerInstance* resource provider must be [registered on the subscription](https://learn.microsoft.com/en-us/azure/azure-resource-manager/management/resource-providers-and-types#azure-portal) before deployment in order for the code to be automatically deployed to the Function App. If the Sentinel workspace is in a different resource group than where the solution will be deployed, Owner permissions are also required on the Resource Group in order to deploy the custom role.
 
 ### Deployment
 Review [Important Considerations](#important-considerations) before deploying.
@@ -101,8 +100,8 @@ Review [Important Considerations](#important-considerations) before deploying.
         - InformationProtectionPolicy.Read.All
     - **Office 365 Management APIs**
         - ActivityFeed.ReadDlp
-4. Click the **Deploy to Azure** button at the top of this page and fill in the required parameters. Hover over the information icon for each parameter to get more details on what to enter. 
-5. Click **Review + Create** to start the deployment. The deployment also activates the Office 365 Management API DLP.ALL subscription for the tenant if not already enabled. After a successful deployment, you should be able to see data in the Azure Monitor tables along with alerts and incidents being created in Sentinel once new DLP events are generated.
+3. Click the **Deploy to Azure** button at the top of this page and fill in the required parameters. Hover over the information icon for each parameter to get more details on what to enter. 
+4. Click **Review + Create** to start the deployment. The deployment also activates the Office 365 Management API DLP.ALL subscription for the tenant if not already enabled. After a successful deployment, you should be able to see data in the Azure Monitor tables along with alerts and incidents being created in Sentinel once new DLP events are generated.
 
 ## Screenshots
 ### Incident Management Workbook

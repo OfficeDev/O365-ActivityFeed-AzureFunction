@@ -14,7 +14,7 @@
     - Updated Key Vault reference to dynamically populate the DNS suffix to make the deployment more cross-environment friendly.
     - Added parameter to specify GitHub content location to make testing new code easier.
     - Updated Azure Monitor function to account for events that don't have any SIT info and to account for potential duplicate sensitivity label entries in the Watchlist.
-    - Added new "ShowDetections" parameter to Azure Monitor function to control if sensitive info type detection value are returned in the query.
+    - Added new "ShowDetections" parameter to Azure Monitor function to control if sensitive info type detection values are returned in the query/alerts.
     - Added custom role to reduce access needed to Sentinel workspace.
     - Added Private Networking (Private Endpoints) option to deployment.
     - Updated Readme.
