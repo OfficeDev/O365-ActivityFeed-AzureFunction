@@ -9,7 +9,7 @@ This a fork of the initial [Sentinel DLP Solution](https://techcommunity.microso
 - [Important Considerations](#important-considerations)
 - [Getting Started](#getting-started)
 - [Screenshots](#screenshots)
-- [Updates](#update-code)
+- [Updates](#updates)
 - [Contributing](#contributing)
 
 ## New Features
