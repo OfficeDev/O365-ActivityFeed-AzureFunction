@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.23.1.45101",
-      "templateHash": "18261917770999754426"
+      "templateHash": "16153157360903385201"
     }
   },
   "parameters": {
@@ -228,7 +228,12 @@
       },
       "properties": {
         "allowBlobPublicAccess": false,
-        "publicNetworkAccess": "[if(equals(parameters('EnablePrivateNetworking'), true()), 'Disabled', 'Enabled')]"
+        "publicNetworkAccess": "[if(equals(parameters('EnablePrivateNetworking'), true()), 'Disabled', 'Enabled')]",
+        "minimumTlsVersion": "TLS1_2",
+        "networkAcls": {
+          "defaultAction": "[if(equals(parameters('EnablePrivateNetworking'), true()), 'Deny', 'Allow')]",
+          "bypass": "None"
+        }
       },
       "dependsOn": [
         "[resourceId('Microsoft.Resources/deployments', 'createCustomTables')]"
@@ -275,7 +280,11 @@
             "tenantId": "[subscription().tenantId]"
           }
         ],
-        "publicNetworkAccess": "[if(equals(parameters('EnablePrivateNetworking'), true()), 'Disabled', 'Enabled')]"
+        "publicNetworkAccess": "[if(equals(parameters('EnablePrivateNetworking'), true()), 'Disabled', 'Enabled')]",
+        "networkAcls": {
+          "defaultAction": "[if(equals(parameters('EnablePrivateNetworking'), true()), 'Deny', 'Allow')]",
+          "bypass": "None"
+        }
       },
       "dependsOn": [
         "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('uami-{0}', parameters('FunctionAppName')))]"

@@ -118,6 +118,11 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2021-08-01' = {
   properties: {
     allowBlobPublicAccess: false
     publicNetworkAccess: EnablePrivateNetworking == true ? 'Disabled' : 'Enabled'
+    minimumTlsVersion: 'TLS1_2'
+    networkAcls: {
+      defaultAction: EnablePrivateNetworking == true ? 'Deny' : 'Allow'
+      bypass: 'None' 
+    } 
   }
 }
 
@@ -153,6 +158,10 @@ resource keyVault 'Microsoft.KeyVault/vaults@2022-07-01' = {
       }
     ]
     publicNetworkAccess: EnablePrivateNetworking == true ? 'Disabled' : 'Enabled'
+    networkAcls: {
+      defaultAction: EnablePrivateNetworking == true ? 'Deny' :'Allow'
+      bypass: 'None'  
+    }
   }
 }
 

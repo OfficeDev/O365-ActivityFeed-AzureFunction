@@ -71,15 +71,12 @@ This a fork of the initial [Sentinel DLP Solution](https://techcommunity.microso
 	- graph.microsoft.com
 	- management.azure.com
     - api.loganalytics.io
+    - api.loganalytics.azure.com
     - www.powershellgallery.com (PowerShell Gallery)
     - onegetcdn.azureedge.net (PowerShell Gallery)
     - psg-prod-centralus.azureedge.net (PowerShell Gallery)
     - psg-prod-eastus.azureedge.net (PowerShell Gallery)
     - az818661.vo.msecnd.net (PowerShell Gallery)
-	- *FunctionAppName*.azurewebsites.net
-	- *FunctionAppName*.scm.azurewebsites.net
-	- *StorageAccountName*.blob.core.windows.net
-	- *StorageAccountName*.queue.core.windows.net
 	- Data Collection Endpoint URI (e.g., *dcename*-nwyp.southcentralus-1.ingest.monitor.azure.com)
     - [Application Insights](https://learn.microsoft.com/en-us/azure/azure-monitor/app/ip-addresses#outgoing-ports)
 
