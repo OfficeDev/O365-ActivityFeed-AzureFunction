@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.23.1.45101",
-      "templateHash": "2474064806364853262"
+      "templateHash": "6137647814631092878"
     }
   },
   "parameters": {
@@ -157,21 +157,28 @@
       "type": "bool",
       "defaultValue": false,
       "metadata": {
-        "description": "By default, the included PurviewDLP Azure Monitor function will not return sensitive info type detected values, you must explicitly specify the \"ShowDetections = true\" parameter when running the function to return this data. Setting this deployment parameter to true will make the function return the detected values by default."
+        "description": "By default, the included PurviewDLP Azure Monitor function will not return sensitive info type detected values, you must explicitly specify the \"PurviewDLP(ShowDetections=true)\" parameter when running the function to return this data. Setting this deployment parameter to true will make the function return the detected values by default, including in alerts."
       }
     },
     "EndpointSeverityInRuleName": {
       "type": "bool",
       "defaultValue": true,
       "metadata": {
-        "description": "Because the API does not currently supply the alert severity value for Endpoint events, you can choose to have Sentinel derive the severity from the DLP policy rule name. The rule name must have a \"Low\", \"Medium\", or \"High\" suffix value with a space as the delimiter. For example, \"DLP rule name Medium\" or \"DLP rule name High\". If set to false, the severity will default to Medium for all alerts unless the sensitive info detection count is above 50. This threshold can be modified via the \"EndpointHighSeverityMatchCountTrigger\" PurviewDLP Log Analytics function."
+        "description": "Because the API does not currently supply the alert severity value for Endpoint events, you can choose to have Sentinel derive the severity from the DLP policy rule name. The rule name must have a \"Low\", \"Medium\", or \"High\" suffix value with a space as the delimiter. For example, \"DLP rule name Medium\" or \"DLP rule name High\". If set to false, the severity will default to Medium for all alerts unless the sensitive info detection count is above 50. This threshold can be modified via the \"EndpointHighSeverityMatchCountTrigger\" PurviewDLP Log Analytics function parameter."
+      }
+    },
+    "EnableElasticPremiumPlan": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": {
+        "description": "Recommended when processing a large number of events but increases cost."
       }
     },
     "EnablePrivateNetworking": {
       "type": "bool",
       "defaultValue": true,
       "metadata": {
-        "description": "Enabling Private Networking will restrict public access on all resources. A Virtual Network with the below address space and subnets, along with Private Endpoints and Private DNS Zones will be deployed to support this configuration. This will also leverage the Premium P0v3 Function App SKU instead of the consumption tier."
+        "description": "Enabling Private Networking will restrict public access to the Function App for additional security. A Virtual Network with the below address space and subnets, along with and NSG, Private Endpoints, and Private DNS Zones will be deployed to support this configuration. This will also leverage the Dedicated App Service Premium plan (P0v3) instead of the Consumption plan (If the Elastic Premium Plan is selected, it will be used instead of the Dedicated App Service Premium Plan.)."
       }
     },
     "PrivateNetworkAddressSpace": {
@@ -304,8 +311,8 @@
       "name": "[parameters('FunctionAppName')]",
       "location": "[variables('location')]",
       "sku": {
-        "name": "[if(equals(parameters('EnablePrivateNetworking'), true()), 'P0v3', 'Y1')]",
-        "tier": "[if(equals(parameters('EnablePrivateNetworking'), true()), 'PremiumV3', 'Dynamic')]"
+        "name": "[if(equals(parameters('EnableElasticPremiumPlan'), true()), 'EP1', if(equals(parameters('EnablePrivateNetworking'), true()), 'P0v3', 'Y1'))]",
+        "tier": "[if(equals(parameters('EnableElasticPremiumPlan'), true()), 'ElasticPremium', if(equals(parameters('EnablePrivateNetworking'), true()), 'PremiumV3', 'Dynamic'))]"
       }
     },
     {
@@ -328,6 +335,7 @@
         "clientCertMode": "OptionalInteractiveUser",
         "virtualNetworkSubnetId": "[if(equals(parameters('EnablePrivateNetworking'), true()), reference(resourceId('Microsoft.Resources/deployments', 'privateNetwork'), '2022-09-01').outputs.functionAppSubnetId.value, null())]",
         "vnetContentShareEnabled": "[if(equals(parameters('EnablePrivateNetworking'), true()), true(), false())]",
+        "vnetRouteAllEnabled": "[if(equals(parameters('EnablePrivateNetworking'), true()), true(), false())]",
         "siteConfig": {
           "appSettings": [
             {
@@ -373,10 +381,6 @@
             {
               "name": "WEBSITE_RUN_FROM_PACKAGE",
               "value": "1"
-            },
-            {
-              "name": "WEBSITE_DNS_SERVER",
-              "value": "168.63.129.16"
             },
             {
               "name": "WEBSITE_CONTENTOVERVNET",
@@ -467,7 +471,7 @@
           "minTlsVersion": "1.2",
           "ftpsState": "Disabled",
           "http20Enabled": true,
-          "alwaysOn": "[if(parameters('EnablePrivateNetworking'), true(), false())]"
+          "alwaysOn": "[if(or(not(equals(parameters('EnablePrivateNetworking'), true())), equals(parameters('EnableElasticPremiumPlan'), true())), false(), true())]"
         }
       },
       "dependsOn": [
@@ -543,10 +547,11 @@
           }
         ],
         "primaryScriptUri": "[variables('deploymentScriptUri')]",
-        "arguments": "[if(equals(parameters('EnablePrivateNetworking'), true()), format('-PackageUri {0} -SubscriptionId {1} -ResourceGroupName {2} -FunctionAppName {3} -FAScope {4} -UAMIPrincipalId {5} -VnetScope {6} -RestrictedIPs \"None\"', variables('functionAppPackageUri'), split(subscription().id, '/')[2], resourceGroup().name, parameters('FunctionAppName'), resourceId('Microsoft.Web/sites', parameters('FunctionAppName')), reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('uami-{0}', parameters('FunctionAppName'))), '2022-01-31-preview').principalId, reference(resourceId('Microsoft.Resources/deployments', 'privateNetwork'), '2022-09-01').outputs.vnetId.value), format('-PackageUri {0} -SubscriptionId {1} -ResourceGroupName {2} -FunctionAppName {3} -FAScope {4} -UAMIPrincipalId {5}', variables('functionAppPackageUri'), split(subscription().id, '/')[2], resourceGroup().name, parameters('FunctionAppName'), resourceId('Microsoft.Web/sites', parameters('FunctionAppName')), reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('uami-{0}', parameters('FunctionAppName'))), '2022-01-31-preview').principalId))]"
+        "arguments": "[if(equals(parameters('EnablePrivateNetworking'), true()), format('-PackageUri {0} -SubscriptionId {1} -ResourceGroupName {2} -FunctionAppName {3} -FAScope {4} -UAMIPrincipalId {5} -VnetScope {6} -RestrictedIPs \"None\"', variables('functionAppPackageUri'), split(subscription().id, '/')[2], resourceGroup().name, reference(resourceId('Microsoft.Resources/deployments', 'functionAppPe'), '2022-09-01').outputs.functionAppName.value, resourceId('Microsoft.Web/sites', parameters('FunctionAppName')), reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('uami-{0}', parameters('FunctionAppName'))), '2022-01-31-preview').principalId, reference(resourceId('Microsoft.Resources/deployments', 'privateNetwork'), '2022-09-01').outputs.vnetId.value), format('-PackageUri {0} -SubscriptionId {1} -ResourceGroupName {2} -FunctionAppName {3} -FAScope {4} -UAMIPrincipalId {5}', variables('functionAppPackageUri'), split(subscription().id, '/')[2], resourceGroup().name, parameters('FunctionAppName'), resourceId('Microsoft.Web/sites', parameters('FunctionAppName')), reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('uami-{0}', parameters('FunctionAppName'))), '2022-01-31-preview').principalId))]"
       },
       "dependsOn": [
         "[resourceId('Microsoft.Web/sites', parameters('FunctionAppName'))]",
+        "[resourceId('Microsoft.Resources/deployments', 'functionAppPe')]",
         "[resourceId('Microsoft.Resources/deployments', 'privateNetwork')]",
         "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('uami-{0}', parameters('FunctionAppName')))]"
       ]
@@ -2149,7 +2154,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.23.1.45101",
-              "templateHash": "13172351405313047218"
+              "templateHash": "7545496493815252664"
             }
           },
           "parameters": {
@@ -2206,7 +2211,10 @@
                   {
                     "name": "privateEndpoints",
                     "properties": {
-                      "addressPrefix": "[parameters('PrivateEndpointsSubnet')]"
+                      "addressPrefix": "[parameters('PrivateEndpointsSubnet')]",
+                      "networkSecurityGroup": {
+                        "id": "[resourceId('Microsoft.Network/networkSecurityGroups', 'nsg-sentineldlp')]"
+                      }
                     }
                   },
                   {
@@ -2220,11 +2228,17 @@
                             "serviceName": "Microsoft.Web/serverFarms"
                           }
                         }
-                      ]
+                      ],
+                      "networkSecurityGroup": {
+                        "id": "[resourceId('Microsoft.Network/networkSecurityGroups', 'nsg-sentineldlp')]"
+                      }
                     }
                   }
                 ]
-              }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/networkSecurityGroups', 'nsg-sentineldlp')]"
+              ]
             },
             {
               "type": "Microsoft.Network/privateEndpoints",
@@ -2267,6 +2281,31 @@
                       "privateLinkServiceId": "[parameters('StorageAccountId')]",
                       "groupIds": [
                         "blob"
+                      ]
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', format('vnet-{0}', parameters('FunctionAppName')))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Network/privateEndpoints",
+              "apiVersion": "2022-07-01",
+              "name": "[format('pe-queue-{0}', parameters('StorageAccountName'))]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "subnet": {
+                  "id": "[reference(resourceId('Microsoft.Network/virtualNetworks', format('vnet-{0}', parameters('FunctionAppName'))), '2022-07-01').subnets[0].id]"
+                },
+                "privateLinkServiceConnections": [
+                  {
+                    "name": "[format('pe-queue-{0}', parameters('StorageAccountName'))]",
+                    "properties": {
+                      "privateLinkServiceId": "[parameters('StorageAccountId')]",
+                      "groupIds": [
+                        "queue"
                       ]
                     }
                   }
@@ -2322,6 +2361,15 @@
             {
               "type": "Microsoft.Network/privateDnsZones",
               "apiVersion": "2020-06-01",
+              "name": "[format('privatelink.queue.{0}', environment().suffixes.storage)]",
+              "location": "global",
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', format('vnet-{0}', parameters('FunctionAppName')))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Network/privateDnsZones",
+              "apiVersion": "2020-06-01",
               "name": "privatelink.vaultcore.azure.net",
               "location": "global",
               "dependsOn": [
@@ -2357,6 +2405,22 @@
               },
               "dependsOn": [
                 "[resourceId('Microsoft.Network/privateDnsZones', format('privatelink.file.{0}', environment().suffixes.storage))]",
+                "[resourceId('Microsoft.Network/virtualNetworks', format('vnet-{0}', parameters('FunctionAppName')))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Network/privateDnsZones/virtualNetworkLinks",
+              "apiVersion": "2020-06-01",
+              "name": "[format('{0}/{1}', format('privatelink.queue.{0}', environment().suffixes.storage), format('{0}-link', format('privatelink.queue.{0}', environment().suffixes.storage)))]",
+              "location": "global",
+              "properties": {
+                "registrationEnabled": false,
+                "virtualNetwork": {
+                  "id": "[resourceId('Microsoft.Network/virtualNetworks', format('vnet-{0}', parameters('FunctionAppName')))]"
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/privateDnsZones', format('privatelink.queue.{0}', environment().suffixes.storage))]",
                 "[resourceId('Microsoft.Network/virtualNetworks', format('vnet-{0}', parameters('FunctionAppName')))]"
               ]
             },
@@ -2417,6 +2481,25 @@
             {
               "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
               "apiVersion": "2022-07-01",
+              "name": "[format('{0}/dnsGroup', format('pe-queue-{0}', parameters('StorageAccountName')))]",
+              "properties": {
+                "privateDnsZoneConfigs": [
+                  {
+                    "name": "config1",
+                    "properties": {
+                      "privateDnsZoneId": "[resourceId('Microsoft.Network/privateDnsZones', format('privatelink.queue.{0}', environment().suffixes.storage))]"
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/privateEndpoints', format('pe-queue-{0}', parameters('StorageAccountName')))]",
+                "[resourceId('Microsoft.Network/privateDnsZones', format('privatelink.queue.{0}', environment().suffixes.storage))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
+              "apiVersion": "2022-07-01",
               "name": "[format('{0}/dnsGroup', format('pe-{0}', parameters('KeyVaultName')))]",
               "properties": {
                 "privateDnsZoneConfigs": [
@@ -2447,6 +2530,12 @@
               "dependsOn": [
                 "[resourceId('Microsoft.Network/virtualNetworks', format('vnet-{0}', parameters('FunctionAppName')))]"
               ]
+            },
+            {
+              "type": "Microsoft.Network/networkSecurityGroups",
+              "apiVersion": "2023-05-01",
+              "name": "nsg-sentineldlp",
+              "location": "[parameters('location')]"
             }
           ],
           "outputs": {
@@ -2501,7 +2590,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.23.1.45101",
-              "templateHash": "16006531913318987464"
+              "templateHash": "14827048058843371003"
             }
           },
           "parameters": {
@@ -2584,7 +2673,13 @@
                 "[resourceId('Microsoft.Network/privateDnsZones', 'privatelink.azurewebsites.net')]"
               ]
             }
-          ]
+          ],
+          "outputs": {
+            "functionAppName": {
+              "type": "string",
+              "value": "[parameters('FunctionAppName')]"
+            }
+          }
         }
       },
       "dependsOn": [

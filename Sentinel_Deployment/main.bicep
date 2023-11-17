@@ -47,11 +47,13 @@ param RepoUri string = 'https://raw.githubusercontent.com/OfficeDev/O365-Activit
   ]
 )
 param SensitiveDataHandling string = 'Hash'
-@description('By default, the included PurviewDLP Azure Monitor function will not return sensitive info type detected values, you must explicitly specify the "ShowDetections = true" parameter when running the function to return this data. Setting this deployment parameter to true will make the function return the detected values by default.')
+@description('By default, the included PurviewDLP Azure Monitor function will not return sensitive info type detected values, you must explicitly specify the "PurviewDLP(ShowDetections=true)" parameter when running the function to return this data. Setting this deployment parameter to true will make the function return the detected values by default, including in alerts.')
 param ShowSensitiveInfoDetectionValues bool = false
-@description('Because the API does not currently supply the alert severity value for Endpoint events, you can choose to have Sentinel derive the severity from the DLP policy rule name. The rule name must have a "Low", "Medium", or "High" suffix value with a space as the delimiter. For example, "DLP rule name Medium" or "DLP rule name High". If set to false, the severity will default to Medium for all alerts unless the sensitive info detection count is above 50. This threshold can be modified via the "EndpointHighSeverityMatchCountTrigger" PurviewDLP Log Analytics function.')
+@description('Because the API does not currently supply the alert severity value for Endpoint events, you can choose to have Sentinel derive the severity from the DLP policy rule name. The rule name must have a "Low", "Medium", or "High" suffix value with a space as the delimiter. For example, "DLP rule name Medium" or "DLP rule name High". If set to false, the severity will default to Medium for all alerts unless the sensitive info detection count is above 50. This threshold can be modified via the "EndpointHighSeverityMatchCountTrigger" PurviewDLP Log Analytics function parameter.')
 param EndpointSeverityInRuleName bool = true
-@description('Enabling Private Networking will restrict public access on all resources. A Virtual Network with the below address space and subnets, along with Private Endpoints and Private DNS Zones will be deployed to support this configuration. This will also leverage the Premium P0v3 Function App SKU instead of the consumption tier.')
+@description('Recommended when processing a large number of events but increases cost.')
+param EnableElasticPremiumPlan bool = false
+@description('Enabling Private Networking will restrict public access to the Function App for additional security. A Virtual Network with the below address space and subnets, along with and NSG, Private Endpoints, and Private DNS Zones will be deployed to support this configuration. This will also leverage the Dedicated App Service Premium plan (P0v3) instead of the Consumption plan (If the Elastic Premium Plan is selected, it will be used instead of the Dedicated App Service Premium Plan.).')
 param EnablePrivateNetworking bool = true
 @description('If enabling Private Networking, choose the desired address space for the Virtual Network or leave the default.')
 param PrivateNetworkAddressSpace string = '10.0.0.0/24'
@@ -174,10 +176,8 @@ resource hostingPlan 'Microsoft.Web/serverfarms@2021-03-01' = {
   name: FunctionAppName
   location: location
   sku: {
-    name: EnablePrivateNetworking == true ? 'P0v3' : 'Y1'
-    tier: EnablePrivateNetworking == true ? 'PremiumV3' : 'Dynamic'
-    //name: EnablePrivateNetworking == true ? 'EP1' : 'Y1'
-    //tier: EnablePrivateNetworking == true ? 'ElasticPremium' : 'Dynamic'
+    name: EnableElasticPremiumPlan == true ? 'EP1' : EnablePrivateNetworking == true ? 'P0v3' : 'Y1'
+    tier: EnableElasticPremiumPlan == true ? 'ElasticPremium' : EnablePrivateNetworking == true ? 'PremiumV3' : 'Dynamic'
   }
 }
 
@@ -199,6 +199,7 @@ resource functionApp 'Microsoft.Web/sites@2022-03-01' = {
     clientCertMode: 'OptionalInteractiveUser'
     virtualNetworkSubnetId: EnablePrivateNetworking == true ? privateNetwork.outputs.functionAppSubnetId : (null)
     vnetContentShareEnabled: EnablePrivateNetworking == true ? true : false
+    vnetRouteAllEnabled: EnablePrivateNetworking == true ? true : false 
     siteConfig: {
       appSettings: [
         {
@@ -244,10 +245,6 @@ resource functionApp 'Microsoft.Web/sites@2022-03-01' = {
         {
           name: 'WEBSITE_RUN_FROM_PACKAGE'
           value: '1'
-        }
-        {
-          name: 'WEBSITE_DNS_SERVER'
-          value: '168.63.129.16'
         }
         {
           name: 'WEBSITE_CONTENTOVERVNET'
@@ -338,7 +335,7 @@ resource functionApp 'Microsoft.Web/sites@2022-03-01' = {
       minTlsVersion: '1.2'
       ftpsState: 'Disabled'
       http20Enabled: true
-      alwaysOn: EnablePrivateNetworking ? true : false
+      alwaysOn: EnablePrivateNetworking != true || EnableElasticPremiumPlan == true ? false : true
     }
   }
   dependsOn: [
@@ -479,7 +476,7 @@ resource deploymentScript 'Microsoft.Resources/deploymentScripts@2020-10-01' = i
       } 
     ] 
     primaryScriptUri: deploymentScriptUri
-    arguments: EnablePrivateNetworking == true ? '-PackageUri ${functionAppPackageUri} -SubscriptionId ${split(subscription().id, '/')[2]} -ResourceGroupName ${resourceGroup().name} -FunctionAppName ${functionApp.name} -FAScope ${functionApp.id} -UAMIPrincipalId ${userAssignedMi.properties.principalId} -VnetScope ${privateNetwork.outputs.vnetId} -RestrictedIPs "None"' : '-PackageUri ${functionAppPackageUri} -SubscriptionId ${split(subscription().id, '/')[2]} -ResourceGroupName ${resourceGroup().name} -FunctionAppName ${functionApp.name} -FAScope ${functionApp.id} -UAMIPrincipalId ${userAssignedMi.properties.principalId}'
+    arguments: EnablePrivateNetworking == true ? '-PackageUri ${functionAppPackageUri} -SubscriptionId ${split(subscription().id, '/')[2]} -ResourceGroupName ${resourceGroup().name} -FunctionAppName ${functionAppPe.outputs.functionAppName} -FAScope ${functionApp.id} -UAMIPrincipalId ${userAssignedMi.properties.principalId} -VnetScope ${privateNetwork.outputs.vnetId} -RestrictedIPs "None"' : '-PackageUri ${functionAppPackageUri} -SubscriptionId ${split(subscription().id, '/')[2]} -ResourceGroupName ${resourceGroup().name} -FunctionAppName ${functionApp.name} -FAScope ${functionApp.id} -UAMIPrincipalId ${userAssignedMi.properties.principalId}'
   }
 }
 

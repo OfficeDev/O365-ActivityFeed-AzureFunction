@@ -24,12 +24,15 @@ resource virtualNetwork 'Microsoft.Network/virtualNetworks@2022-07-01' = {
         name: 'privateEndpoints'
         properties: {
           addressPrefix: PrivateEndpointsSubnet
+          networkSecurityGroup: {
+           id: nsg.id
+          } 
         }  
       }
       {
         name: 'functionAppVnetIntegration'
         properties: {
-          addressPrefix: FunctionAppSubnet
+          addressPrefix: FunctionAppSubnet 
           delegations: [
             {
               name: 'delegation'
@@ -37,7 +40,10 @@ resource virtualNetwork 'Microsoft.Network/virtualNetworks@2022-07-01' = {
                 serviceName: 'Microsoft.Web/serverFarms' 
               }                
             } 
-          ]  
+          ]
+          networkSecurityGroup: {
+           id: nsg.id
+          } 
         } 
       }  
     ]   
@@ -86,6 +92,27 @@ resource peBlob 'Microsoft.Network/privateEndpoints@2022-07-01' = {
   } 
 }
 
+resource peQueue 'Microsoft.Network/privateEndpoints@2022-07-01' = {
+  name: 'pe-queue-${StorageAccountName}'
+  location: location
+  properties: {
+     subnet: {
+      id: virtualNetwork.properties.subnets[0].id
+     }
+     privateLinkServiceConnections: [
+      {
+        name: 'pe-queue-${StorageAccountName}'
+        properties: {
+         privateLinkServiceId: StorageAccountId
+         groupIds: [
+          'queue'
+         ] 
+        }
+      }
+     ] 
+  } 
+}
+
 resource peFile 'Microsoft.Network/privateEndpoints@2022-07-01' = {
   name: 'pe-file-${StorageAccountName}'
   location: location
@@ -124,6 +151,14 @@ resource privateDnsZoneFile 'Microsoft.Network/privateDnsZones@2020-06-01' = {
   ]
 }
 
+resource privateDnsZoneQueue 'Microsoft.Network/privateDnsZones@2020-06-01' = {
+  name: 'privatelink.queue.${environment().suffixes.storage}'
+  location: 'global'
+  dependsOn: [
+    virtualNetwork
+  ]
+}
+
 resource privateDnsZoneKeyVault 'Microsoft.Network/privateDnsZones@2020-06-01' = {
   name: 'privatelink.vaultcore.azure.net'
   location: 'global'
@@ -147,6 +182,18 @@ resource privateDnsZoneLinkBlob 'Microsoft.Network/privateDnsZones/virtualNetwor
 resource privateDnsZoneLinkFile 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = {
   name: '${privateDnsZoneFile.name}-link'
   parent: privateDnsZoneFile
+  location: 'global'
+  properties: {
+    registrationEnabled: false
+    virtualNetwork: {
+      id: virtualNetwork.id
+    }  
+  }   
+}
+
+resource privateDnsZoneLinkQueue 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = {
+  name: '${privateDnsZoneQueue.name}-link'
+  parent: privateDnsZoneQueue
   location: 'global'
   properties: {
     registrationEnabled: false
@@ -196,6 +243,20 @@ resource peDnsGroupFile 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups
   }
 }
 
+resource peDnsGroupQueue 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2022-07-01' = {
+  name: '${peQueue.name}/dnsGroup'
+  properties: {
+    privateDnsZoneConfigs: [
+      {
+        name: 'config1'
+        properties: {
+          privateDnsZoneId: privateDnsZoneQueue.id
+        } 
+      }
+    ]
+  }
+}
+
 resource peDnsGroupKeyVault 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2022-07-01' = {
   name: '${peKeyVault.name}/dnsGroup'
   properties: {
@@ -220,6 +281,43 @@ resource roleAssignmentVnet 'Microsoft.Authorization/roleAssignments@2022-04-01'
     roleDefinitionId: roleIdOwner
     principalType: 'ServicePrincipal'
   }
+}
+
+resource nsg 'Microsoft.Network/networkSecurityGroups@2023-05-01' = {
+  name: 'nsg-sentineldlp'
+  location: location
+  /*
+  properties: {
+    securityRules: [
+      {
+        name: 'AllowOutboundAzureCloud'
+        properties: {
+          protocol: '*'
+          sourcePortRange: '*'
+          destinationPortRange: '*'
+          sourceAddressPrefix: '*'
+          destinationAddressPrefix: 'AzureCloud'
+          access: 'Allow'
+          priority: 100
+          direction: 'Outbound'
+        }   
+      }
+      {
+        name: 'DenyOutboundInternet'
+        properties: {
+          protocol: '*'
+          sourcePortRange: '*'
+          destinationPortRange: '*'
+          sourceAddressPrefix: '*'
+          destinationAddressPrefix: 'Internet'
+          access: 'Deny'
+          priority: 110
+          direction: 'Outbound'
+        }   
+      } 
+    ] 
+  }
+  */  
 }
 
 output functionAppSubnetId string = virtualNetwork.properties.subnets[1].id

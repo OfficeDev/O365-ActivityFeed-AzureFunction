@@ -3,9 +3,9 @@
 ### Changes/Fixes
 - Function App Code
     - Disabled the sending of Power BI SIT information by default as the core event was not being sent. To enable this workload (Private Preview), set the "EnablePBIWorkload" Application Setting to a value of "1" on the Function App.
-    - Updated .Net libaries to latest versions. Added .csproj file to repo so GitHub Dependabot can monitor for updates.
+    - Updated .Net libraries to latest versions. Added .csproj file to repo so GitHub Dependabot can monitor for updates.
     - Optimized Azure Monitor ingestion PowerShell function to make less authentication calls. Renamed to AzMon.Ingestion.
-    - Resolved intermitent Azure Monitor HTTP 400 error during high/concurrent loads.
+    - Resolved intermittent Azure Monitor HTTP 400 error during high/concurrent loads.
 - Deployment
     - Added new configuration values to Function App and ARM parameters to make future updates more seamless.
     - Updated scope to create workbooks in the same resource group as the Sentinel workspace so they appear in the Sentinel workbooks interface.

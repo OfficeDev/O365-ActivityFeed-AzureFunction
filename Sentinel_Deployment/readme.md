@@ -1,5 +1,5 @@
 # Microsoft Purview DLP Sentinel Solution
-This a fork of the initial [Sentinel DLP Solution](https://techcommunity.microsoft.com/t5/security-compliance-and-identity/advanced-incident-management-for-office-and-endpoint-dlp-using/ba-p/1811497). It has been updated for easy deployment, modernization of components, and to introduce new capabilities. Please review this document to understand the various components, considerations, and pre-prequisites before deployment.
+This a fork of the initial [Sentinel DLP Solution](https://techcommunity.microsoft.com/t5/security-compliance-and-identity/advanced-incident-management-for-office-and-endpoint-dlp-using/ba-p/1811497). It has been updated for easy deployment, modernization of components, and to introduce new capabilities. Please review this document to understand the various components, considerations, and pre-requisites before deployment.
 
 [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3a%2f%2fraw.githubusercontent.com%2fOfficeDev%2fO365-ActivityFeed-AzureFunction%2fmaster%2fSentinel_Deployment%2fmain.json)
 
@@ -54,18 +54,18 @@ This a fork of the initial [Sentinel DLP Solution](https://techcommunity.microso
 - **Sentinel Workbooks** to help with advanced DLP incident management and reporting.
 - **Sentinel Watchlists** to house sensitivity label information and to help with the analytics rule "DLP Policy Sync" feature if enabled.
 - **Custom Role** to provide access to query Sentinel Watchlists and alert rules. Also provides limited permissions to read workspace details and run a query in the workspace, but not to read data from any tables. Direct "Reader" role assignments are added to the PurviewDLP_CL and Watchlist tables to provide read access to the data within.
-- **Private Networking**, if enabled, restricts public access on all resources. A Virtual Network, along with Private Endpoints and Private DNS Zones will be deployed to support this configuration.
+- **Private Networking**, if enabled, restricts public access to the Function App for additional security. A Virtual Network, along with an NSG, Private Endpoints, and Private DNS Zones will be deployed to support this configuration. Although outbound traffic will be routed through the virtual network and NSG, no outbound restrictions are configured by this template. It is recommended to peer with a hub firewall to restrict outbound/internet access. Please see [Important Considerations](#important-considerations) for required firewall exclusion details.
 
 ## Important Considerations
 > [!IMPORTANT]  
 > Crucial information necessary for users to succeed.
-- **This is an advanced custom solution and is intended to be used as a base template to allow for easy testing and piloting of the solution. It requires proper Azure and DevOps expertise to modify, maintain, and harden as needed to meet functional, operational, and security requirements. This solution is potentially processing and storing sensitive data so proper organizational security controls need to be implemented. When running any workload in Azure, be sure to follow the recommended practices (Security, Operations, Reliability etc.) as outlined in the [Azure Well-Architected Framework](https://learn.microsoft.com/en-us/azure/well-architected/). Also, be mindful of the senstive data that may be ingested into Sentinel and who/what may have access.**
-- The following artifacts get deployed to the Sentinel/Log Analytics workspace. If artifacts of the same type and name already exist, they will be potentially **overwritten**:
+- **This is an advanced custom solution and is intended to be used as a base template to allow for easy testing and piloting of the solution. It requires proper Azure and DevOps expertise to modify, maintain, and harden as needed to meet functional, operational, and security requirements. This solution is potentially processing and storing sensitive data so proper organizational security controls need to be implemented. When running any workload in Azure, be sure to follow the recommended practices (Security, Operations, Reliability etc.) as outlined in the [Azure Well-Architected Framework](https://learn.microsoft.com/en-us/azure/well-architected/). Also, be mindful of the sensitive data that may be ingested into Sentinel and who/what may have access. A dedicated workspace is recommended to allow for proper segmentation. See [Azure Monitor](https://learn.microsoft.com/en-us/security/benchmark/azure/baselines/azure-monitor-security-baseline) and [Sentinel](https://learn.microsoft.com/en-us/security/benchmark/azure/baselines/microsoft-sentinel-security-baseline) security baselines for further guidance on how to secure this resource.**
+- The following artifacts get deployed to the Sentinel/Log Analytics workspace. If artifacts of the same type and name/id already exist, they will be potentially **overwritten**:
     - Log Analytics function named "PurviewDLP"
     - Watchlists named "Policy" and "SensitivityLabels"
     - Custom Tables named "PurviewDLP", "PurviewDLPSIT", and "PurviewDLPDetections".
     - Workbooks named "Microsoft DLP Incident Management", "Microsoft DLP Activity", and "Microsoft DLP Organizational Context"
-- No restrictions for outbound network access are a part of the template. Please refer to [Securing Azure Functions](https://learn.microsoft.com/en-us/azure/azure-functions/security-concepts?tabs=v4) for more information on how to further harden and secure the configuration, including how to use [Virtual Network integration](https://learn.microsoft.com/en-us/azure/azure-functions/functions-networking-options?tabs=azure-cli#virtual-network-integration) to restrict outbound connections through a firewall. If outbound traffic is restricted, the following external HTTPS (Port 443) destinations are required:
+- No outbound network access restrictions are a part of the template. Please refer to [Securing Azure Functions](https://learn.microsoft.com/en-us/azure/azure-functions/security-concepts?tabs=v4) for more information on how to further harden and secure the configuration. It is recommended to use the Private Networking option and peer the deployed Virtual Network with a hub firewall to restrict outbound/internet access. The following external HTTPS (Port 443) destinations are required to be added as exceptions:
     - login.microsoftonline.com
 	- manage.office.com
 	- graph.microsoft.com
@@ -94,7 +94,7 @@ This a fork of the initial [Sentinel DLP Solution](https://techcommunity.microso
 ### Deployment
 Review [Important Considerations](#important-considerations) before deploying.
 1. Enable the **Microsoft 365 (formerly, Office 365) Sentinel Connector** and ensure the **OfficeActivity** table is provisioned if you would like further enrichment for SharePoint DLP events.
-2. Create an **App Registration** with the following **Application** permissions and **grant Admin Consent**. Create a **secret** and copy the value along with the **Application (client) ID** and **Tenant ID** which will be used as parameter values in the below Azure deployment. This secret will be stored in the Key Vault. Remember that it will need to be rotated before the expriation date set during creation.
+2. Create an **App Registration** with the following **Application** permissions and **grant Admin Consent**. Create a **secret** and copy the value along with the **Application (client) ID** and **Tenant ID** which will be used as parameter values in the below Azure deployment. This secret will be stored in the Key Vault. Remember that it will need to be rotated before the expiration date set during creation.
     - **Microsoft Graph**
         - Group.Read.All
         - User.Read.All
@@ -112,7 +112,11 @@ Review [Important Considerations](#important-considerations) before deploying.
 ![Incident Management Workbook](./images/incident.png)
 
 ## Updates
-View the [Release Notes](releaseNotes.md) to see version details. You can also subscribe to/watch the repo for new pull requests to get notified when updates occur. To check the current running version, perform the following:
+View the [Release Notes](releaseNotes.md) to see version details. You can also subscribe to/watch the repo for new pull requests to get notified when updates occur. 
+
+Before proceeding, if your Function App was configured for Private Network Access, you will need to make sure you are accessing from a device that has connectivity to its private endpoint or that a valid exclusion for your client's public IP address has been added. See [Set up Azure App Service access restrictions](https://learn.microsoft.com/en-us/azure/app-service/app-service-ip-restrictions?tabs=azurecli) for more information.
+
+To check the current running version, perform the following:
 1. In the Azure Portal, navigate to the Function App and select **Advanced Tools**, then select **Go**. This will bring you to the Kudu portal.
 2. In the Kudu portal, select **PowerShell** from the **Debug Console** menu at the top.
 3. In the **Kudu Remote Execution Console**, type: **cat .\site\wwwroot\version.info**. The current version should be displayed.

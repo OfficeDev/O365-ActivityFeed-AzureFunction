@@ -55,3 +55,5 @@ resource peDnsGroupFunctionApp 'Microsoft.Network/privateEndpoints/privateDnsZon
     ]
   }
 }
+
+output functionAppName string = FunctionAppName
