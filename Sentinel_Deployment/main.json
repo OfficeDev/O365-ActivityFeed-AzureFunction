@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.23.1.45101",
-      "templateHash": "16153157360903385201"
+      "templateHash": "818355555565772795"
     }
   },
   "parameters": {
@@ -204,7 +204,7 @@
     }
   },
   "variables": {
-    "deploymentVersion": "1.1.0",
+    "deploymentVersion": "1.1.1",
     "location": "[resourceGroup().location]",
     "functionAppPackageUri": "[format('{0}/Sentinel_Deployment/functionPackage.zip', parameters('RepoUri'))]",
     "deploymentScriptUri": "[format('{0}/Sentinel_Deployment/deploymentScript.ps1', parameters('RepoUri'))]",

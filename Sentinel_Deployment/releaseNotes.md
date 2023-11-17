@@ -1,4 +1,11 @@
 # Release Notes
+## 1.1.1 (11/17/2023)
+### Changes/Fixes
+- Function App Code
+    - Configured Function timeout for 5 min.
+- Deployment
+    - Set storage account to minumum TLS 1.2 and removed trusted services exception as its not needed.
+
 ## 1.1.0 (11/15/2023)
 ### Changes/Fixes
 - Function App Code
