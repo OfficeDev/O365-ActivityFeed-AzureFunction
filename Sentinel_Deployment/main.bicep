@@ -7,7 +7,7 @@ param DeployApplicationInsights bool = true
 param KeyVaultName string = 'kv-sentineldlp-[Replace with globally unique identifier]'
 @description('A globally unique name for the Function App Storage Account. Must be between 3 and 24 characters in length and use numbers and lower-case letters only.')
 param StorageAccountName string = 'stsentineldlp[Replace with globally unique identifier]'
-@description('Name of custom role to be created at the Log Analytics resource group level. This role provides the Function App read/write access to Sentinel watchlists, alert rules, and read data in the PurviewDLP_CL table.')
+@description('Name of custom role to be created at the Log Analytics resource group level. The name needs to be unique across the entire tenant. This role provides the Function App read/write access to Sentinel watchlists, alert rules, and read data in the PurviewDLP_CL table.')
 param CustomRoleName string = 'Custom Role - Sentinel DLP Contributor'
 @description('Azure AD tenant ID in which DLP instance resides.')
 param TenantID string = 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
@@ -16,8 +16,8 @@ param ClientID string = 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
 @secure()
 @description('App Registration Client secret.')
 param ClientSecret string
-@description('Comma seperated list of internal domain names for your organization to better determine the source of email messages.')
-param InternalDomainNames string = 'youradditionaldomain.com,yourdomain.com,yourtenant.onmicrosoft.com'
+@description('Comma seperated list of internal domain names for your organization to better determine the source of email messages. If domains are left out, enrichment will not occur for those users.')
+param InternalDomainNames string = 'yourtenant.onmicrosoft.com,yourdomain.com,youradditionaldomain.com'
 @description('Name for Data Collection Endpoint to be created which is used to ingest data into Log Analytics workspace.')
 param DataCollectionEndpointName string = 'dce-sentineldlp'
 @description('Name for Data Collection Rule to be created which is used to ingest data into Log Analytics workspace.')
@@ -53,7 +53,7 @@ param ShowSensitiveInfoDetectionValues bool = false
 param EndpointSeverityInRuleName bool = true
 @description('Recommended when processing a large number of events but increases cost.')
 param EnableElasticPremiumPlan bool = false
-@description('Enabling Private Networking will restrict public access to the Function App for additional security. A Virtual Network with the below address space and subnets, along with and NSG, Private Endpoints, and Private DNS Zones will be deployed to support this configuration. This will also leverage the Dedicated App Service Premium plan (P0v3) instead of the Consumption plan (If the Elastic Premium Plan is selected, it will be used instead of the Dedicated App Service Premium Plan.).')
+@description('Enabling Private Networking will restrict public access to the Function App for additional security. A Virtual Network with the below address space and subnets, along with an NSG, Private Endpoints, and Private DNS Zones will be deployed to support this configuration. This will also leverage the Dedicated App Service Premium plan (P0v3) instead of the Consumption plan (If the Elastic Premium Plan is selected, it will be used instead of the Dedicated App Service Premium Plan.).')
 param EnablePrivateNetworking bool = true
 @description('If enabling Private Networking, choose the desired address space for the Virtual Network or leave the default.')
 param PrivateNetworkAddressSpace string = '10.0.0.0/24'

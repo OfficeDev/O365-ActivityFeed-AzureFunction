@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.23.1.45101",
-      "templateHash": "6137647814631092878"
+      "templateHash": "18261917770999754426"
     }
   },
   "parameters": {
@@ -41,7 +41,7 @@
       "type": "string",
       "defaultValue": "Custom Role - Sentinel DLP Contributor",
       "metadata": {
-        "description": "Name of custom role to be created at the Log Analytics resource group level. This role provides the Function App read/write access to Sentinel watchlists, alert rules, and read data in the PurviewDLP_CL table."
+        "description": "Name of custom role to be created at the Log Analytics resource group level. The name needs to be unique across the entire tenant. This role provides the Function App read/write access to Sentinel watchlists, alert rules, and read data in the PurviewDLP_CL table."
       }
     },
     "TenantID": {
@@ -66,9 +66,9 @@
     },
     "InternalDomainNames": {
       "type": "string",
-      "defaultValue": "youradditionaldomain.com,yourdomain.com,yourtenant.onmicrosoft.com",
+      "defaultValue": "yourtenant.onmicrosoft.com,yourdomain.com,youradditionaldomain.com",
       "metadata": {
-        "description": "Comma seperated list of internal domain names for your organization to better determine the source of email messages."
+        "description": "Comma seperated list of internal domain names for your organization to better determine the source of email messages. If domains are left out, enrichment will not occur for those users."
       }
     },
     "DataCollectionEndpointName": {
@@ -178,7 +178,7 @@
       "type": "bool",
       "defaultValue": true,
       "metadata": {
-        "description": "Enabling Private Networking will restrict public access to the Function App for additional security. A Virtual Network with the below address space and subnets, along with and NSG, Private Endpoints, and Private DNS Zones will be deployed to support this configuration. This will also leverage the Dedicated App Service Premium plan (P0v3) instead of the Consumption plan (If the Elastic Premium Plan is selected, it will be used instead of the Dedicated App Service Premium Plan.)."
+        "description": "Enabling Private Networking will restrict public access to the Function App for additional security. A Virtual Network with the below address space and subnets, along with an NSG, Private Endpoints, and Private DNS Zones will be deployed to support this configuration. This will also leverage the Dedicated App Service Premium plan (P0v3) instead of the Consumption plan (If the Elastic Premium Plan is selected, it will be used instead of the Dedicated App Service Premium Plan.)."
       }
     },
     "PrivateNetworkAddressSpace": {
