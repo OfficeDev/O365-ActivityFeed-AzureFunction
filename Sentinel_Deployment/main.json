@@ -4,8 +4,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.22.6.54827",
-      "templateHash": "1060446530757627490"
+      "version": "0.23.1.45101",
+      "templateHash": "18261917770999754426"
     }
   },
   "parameters": {
@@ -37,6 +37,13 @@
         "description": "A globally unique name for the Function App Storage Account. Must be between 3 and 24 characters in length and use numbers and lower-case letters only."
       }
     },
+    "CustomRoleName": {
+      "type": "string",
+      "defaultValue": "Custom Role - Sentinel DLP Contributor",
+      "metadata": {
+        "description": "Name of custom role to be created at the Log Analytics resource group level. The name needs to be unique across the entire tenant. This role provides the Function App read/write access to Sentinel watchlists, alert rules, and read data in the PurviewDLP_CL table."
+      }
+    },
     "TenantID": {
       "type": "string",
       "defaultValue": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
@@ -59,9 +66,9 @@
     },
     "InternalDomainNames": {
       "type": "string",
-      "defaultValue": "youradditionaldomain.com,yourdomain.com,yourtenant.onmicrosoft.com",
+      "defaultValue": "yourtenant.onmicrosoft.com,yourdomain.com,youradditionaldomain.com",
       "metadata": {
-        "description": "Comma seperated list of internal domain names for your organization to better determine the source of email messages."
+        "description": "Comma seperated list of internal domain names for your organization to better determine the source of email messages. If domains are left out, enrichment will not occur for those users."
       }
     },
     "DataCollectionEndpointName": {
@@ -85,11 +92,32 @@
         "description": "Azure Resource ID (NOT THE WORKSPACE ID) of the existing Log Analytics Workspace where you would like the DLP and optional Function App Application Insights data to reside. This can be found by clicking the \"JSON View\" link within the Overview page of the Log Analytics workspace resource. The format is: \"/subscriptions/xxxxxxxx-xxxxxxxx-xxxxxxxx-xxxxxxxx-xxxxxxxx/resourcegroups/xxxxxxxx/providers/microsoft.operationalinsights/workspaces/xxxxxxxx\""
       }
     },
+    "DeployAnalyticsRules": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "Create Sentinel Analytics Rule(s) to create alerts and incidents out of DLP events."
+      }
+    },
     "DLPPolicySync": {
       "type": "bool",
       "defaultValue": false,
       "metadata": {
         "description": "Create a Sentinel scheduled query rule for each DLP policy and workload (i.e., Teams, SharePoint, Endpoint, etc.). If \"false\", a single scheduled query rule will be created to cover all policies and workloads."
+      }
+    },
+    "SensitivityLabelSync": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "Sync Purview Sensitivity Label information to a Sentinel Watchlist so the label name can be looked up when referenced in events."
+      }
+    },
+    "DeployAzureMonitorFunction": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "Required for Analytics Rule(s) and Workbooks. Create Azure Monitor Function named PurviewDLP to normalize DLP data at query time."
       }
     },
     "DeployWorkbooks": {
@@ -106,6 +134,13 @@
         "description": "Use the Azure Deployment Script resource to automatically deploy the Function App code. This requires the Microsoft.ContainerInstance resource provider to be registred on the subsription."
       }
     },
+    "RepoUri": {
+      "type": "string",
+      "defaultValue": "https://raw.githubusercontent.com/OfficeDev/O365-ActivityFeed-AzureFunction/master",
+      "metadata": {
+        "description": "GitHub repo where Azure Function package and post deployment script is located. Leave the default value unless you are using content from a different location. This is not applicable if the Deploy Function Code parameter is set to false."
+      }
+    },
     "SensitiveDataHandling": {
       "type": "string",
       "defaultValue": "Hash",
@@ -118,19 +153,62 @@
         "description": "Select how you would like the the sensitive information type detections to be handled when ingesting into the Log Analytics workspace."
       }
     },
+    "ShowSensitiveInfoDetectionValues": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": {
+        "description": "By default, the included PurviewDLP Azure Monitor function will not return sensitive info type detected values, you must explicitly specify the \"PurviewDLP(ShowDetections=true)\" parameter when running the function to return this data. Setting this deployment parameter to true will make the function return the detected values by default, including in alerts."
+      }
+    },
     "EndpointSeverityInRuleName": {
       "type": "bool",
       "defaultValue": true,
       "metadata": {
-        "description": "Because the API does not currently supply the alert severity value for Endpoint events, you can choose to have Sentinel derive the severity from the DLP policy rule name. The rule name must have a \"Low\", \"Medium\", or \"High\" suffix value with a space as the delimiter. For example, \"DLP rule name Medium\" or \"DLP rule name High\". If set to false, the severity will default to Medium for all alerts unless the sensitive info detection count is above 50. This threshold can be modified via the \"EndpointHighSeverityMatchCountTrigger\" PurviewDLP Log Analytics function."
+        "description": "Because the API does not currently supply the alert severity value for Endpoint events, you can choose to have Sentinel derive the severity from the DLP policy rule name. The rule name must have a \"Low\", \"Medium\", or \"High\" suffix value with a space as the delimiter. For example, \"DLP rule name Medium\" or \"DLP rule name High\". If set to false, the severity will default to Medium for all alerts unless the sensitive info detection count is above 50. This threshold can be modified via the \"EndpointHighSeverityMatchCountTrigger\" PurviewDLP Log Analytics function parameter."
+      }
+    },
+    "EnableElasticPremiumPlan": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": {
+        "description": "Recommended when processing a large number of events but increases cost."
+      }
+    },
+    "EnablePrivateNetworking": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "Enabling Private Networking will restrict public access to the Function App for additional security. A Virtual Network with the below address space and subnets, along with an NSG, Private Endpoints, and Private DNS Zones will be deployed to support this configuration. This will also leverage the Dedicated App Service Premium plan (P0v3) instead of the Consumption plan (If the Elastic Premium Plan is selected, it will be used instead of the Dedicated App Service Premium Plan.)."
+      }
+    },
+    "PrivateNetworkAddressSpace": {
+      "type": "string",
+      "defaultValue": "10.0.0.0/24",
+      "metadata": {
+        "description": "If enabling Private Networking, choose the desired address space for the Virtual Network or leave the default."
+      }
+    },
+    "PrivateEndpointsSubnet": {
+      "type": "string",
+      "defaultValue": "10.0.0.0/26",
+      "metadata": {
+        "description": "If enabling Private Networking, choose the desired address space for the Private Endpoints subnet or leave the default. Do not make subnets any smaller than the default."
+      }
+    },
+    "FunctionAppSubnet": {
+      "type": "string",
+      "defaultValue": "10.0.0.64/26",
+      "metadata": {
+        "description": "If enabling Private Networking, choose the desired address space for the Function App vnet integration subnet or leave the default. Do not make subnets any smaller than the default."
       }
     }
   },
   "variables": {
+    "deploymentVersion": "1.1.0",
     "location": "[resourceGroup().location]",
-    "functionAppPackageUri": "https://raw.githubusercontent.com/OfficeDev/O365-ActivityFeed-AzureFunction/master/Sentinel_Deployment/functionPackage.zip",
-    "deploymentScriptUri": "https://raw.githubusercontent.com/OfficeDev/O365-ActivityFeed-AzureFunction/master/Sentinel_Deployment/deploymentScript.ps1",
-    "endpointSeverityInRuleName": "[if(equals(parameters('EndpointSeverityInRuleName'), true()), 'true', 'false')]"
+    "functionAppPackageUri": "[format('{0}/Sentinel_Deployment/functionPackage.zip', parameters('RepoUri'))]",
+    "deploymentScriptUri": "[format('{0}/Sentinel_Deployment/deploymentScript.ps1', parameters('RepoUri'))]",
+    "roleIdOwner": "/providers/Microsoft.Authorization/roleDefinitions/8e3af657-a8ff-443c-a75c-2fe8c4bcb635"
   },
   "resources": [
     {
@@ -149,7 +227,8 @@
         "name": "Standard_LRS"
       },
       "properties": {
-        "allowBlobPublicAccess": false
+        "allowBlobPublicAccess": false,
+        "publicNetworkAccess": "[if(equals(parameters('EnablePrivateNetworking'), true()), 'Disabled', 'Enabled')]"
       },
       "dependsOn": [
         "[resourceId('Microsoft.Resources/deployments', 'createCustomTables')]"
@@ -195,7 +274,8 @@
             },
             "tenantId": "[subscription().tenantId]"
           }
-        ]
+        ],
+        "publicNetworkAccess": "[if(equals(parameters('EnablePrivateNetworking'), true()), 'Disabled', 'Enabled')]"
       },
       "dependsOn": [
         "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('uami-{0}', parameters('FunctionAppName')))]"
@@ -214,6 +294,7 @@
       ]
     },
     {
+      "condition": "[not(equals(parameters('ClientSecret'), ''))]",
       "type": "Microsoft.KeyVault/vaults/secrets",
       "apiVersion": "2022-07-01",
       "name": "[format('{0}/{1}', parameters('KeyVaultName'), 'ClientSecret')]",
@@ -230,8 +311,8 @@
       "name": "[parameters('FunctionAppName')]",
       "location": "[variables('location')]",
       "sku": {
-        "name": "Y1",
-        "tier": "Dynamic"
+        "name": "[if(equals(parameters('EnableElasticPremiumPlan'), true()), 'EP1', if(equals(parameters('EnablePrivateNetworking'), true()), 'P0v3', 'Y1'))]",
+        "tier": "[if(equals(parameters('EnableElasticPremiumPlan'), true()), 'ElasticPremium', if(equals(parameters('EnablePrivateNetworking'), true()), 'PremiumV3', 'Dynamic'))]"
       }
     },
     {
@@ -252,6 +333,9 @@
         "httpsOnly": true,
         "clientCertEnabled": true,
         "clientCertMode": "OptionalInteractiveUser",
+        "virtualNetworkSubnetId": "[if(equals(parameters('EnablePrivateNetworking'), true()), reference(resourceId('Microsoft.Resources/deployments', 'privateNetwork'), '2022-09-01').outputs.functionAppSubnetId.value, null())]",
+        "vnetContentShareEnabled": "[if(equals(parameters('EnablePrivateNetworking'), true()), true(), false())]",
+        "vnetRouteAllEnabled": "[if(equals(parameters('EnablePrivateNetworking'), true()), true(), false())]",
         "siteConfig": {
           "appSettings": [
             {
@@ -268,7 +352,7 @@
             },
             {
               "name": "AzureWebJobsSecretStorageKeyVaultUri",
-              "value": "[format('https://{0}.vault.azure.net/', parameters('KeyVaultName'))]"
+              "value": "[format('https://{0}{1}/', parameters('KeyVaultName'), environment().suffixes.keyvaultDns)]"
             },
             {
               "name": "AzureWebJobsSecretStorageKeyVaultClientId",
@@ -299,8 +383,16 @@
               "value": "1"
             },
             {
+              "name": "WEBSITE_CONTENTOVERVNET",
+              "value": "[if(equals(parameters('EnablePrivateNetworking'), true()), '1', '0')]"
+            },
+            {
               "name": "AzureWebJobs.SyncDLPAnalyticsRules.Disabled",
               "value": "[if(equals(parameters('DLPPolicySync'), false()), '1', '0')]"
+            },
+            {
+              "name": "AzureWebJobs.SyncSensitivityLabels.Disabled",
+              "value": "[if(equals(parameters('SensitivityLabelSync'), false()), '1', '0')]"
             },
             {
               "name": "ClientID",
@@ -353,12 +445,33 @@
             {
               "name": "SensitiveDataHandling",
               "value": "[parameters('SensitiveDataHandling')]"
+            },
+            {
+              "name": "DeploymentVersion",
+              "value": "[variables('deploymentVersion')]"
+            },
+            {
+              "name": "StorageAccountName",
+              "value": "[parameters('StorageAccountName')]"
+            },
+            {
+              "name": "DcrName",
+              "value": "[parameters('DataCollectionRuleName')]"
+            },
+            {
+              "name": "DceName",
+              "value": "[parameters('DataCollectionEndpointName')]"
+            },
+            {
+              "name": "EnablePBIWorkload",
+              "value": "0"
             }
           ],
           "powerShellVersion": "7.2",
           "minTlsVersion": "1.2",
           "ftpsState": "Disabled",
-          "use32BitWorkerProcess": false
+          "http20Enabled": true,
+          "alwaysOn": "[if(or(not(equals(parameters('EnablePrivateNetworking'), true())), equals(parameters('EnableElasticPremiumPlan'), true())), false(), true())]"
         }
       },
       "dependsOn": [
@@ -367,6 +480,7 @@
         "[resourceId('Microsoft.Storage/storageAccounts/fileServices/shares', split(format('{0}/default/{1}', parameters('StorageAccountName'), toLower(parameters('FunctionAppName'))), '/')[0], split(format('{0}/default/{1}', parameters('StorageAccountName'), toLower(parameters('FunctionAppName'))), '/')[1], split(format('{0}/default/{1}', parameters('StorageAccountName'), toLower(parameters('FunctionAppName'))), '/')[2])]",
         "[resourceId('Microsoft.Web/serverfarms', parameters('FunctionAppName'))]",
         "[resourceId('Microsoft.KeyVault/vaults/secrets', parameters('KeyVaultName'), 'StorageAccountConnectionString')]",
+        "[resourceId('Microsoft.Resources/deployments', 'privateNetwork')]",
         "[resourceId('Microsoft.Storage/storageAccounts', parameters('StorageAccountName'))]",
         "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('uami-{0}', parameters('FunctionAppName')))]"
       ]
@@ -385,13 +499,14 @@
       }
     },
     {
+      "condition": "[equals(parameters('DeployFunctionCode'), true())]",
       "type": "Microsoft.Authorization/roleAssignments",
       "apiVersion": "2022-04-01",
       "scope": "[format('Microsoft.Web/sites/{0}', parameters('FunctionAppName'))]",
       "name": "[guid(subscription().id, resourceGroup().id, resourceId('Microsoft.Web/sites', parameters('FunctionAppName')))]",
       "properties": {
         "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('uami-{0}', parameters('FunctionAppName'))), '2022-01-31-preview').principalId]",
-        "roleDefinitionId": "/providers/Microsoft.Authorization/roleDefinitions/8e3af657-a8ff-443c-a75c-2fe8c4bcb635",
+        "roleDefinitionId": "[variables('roleIdOwner')]",
         "principalType": "ServicePrincipal"
       },
       "dependsOn": [
@@ -432,10 +547,12 @@
           }
         ],
         "primaryScriptUri": "[variables('deploymentScriptUri')]",
-        "arguments": "[format('-PackageUri {0} -SubscriptionId {1} -ResourceGroupName {2} -FunctionAppName {3} -FAScope {4} -UAMIPrincipalId {5}', variables('functionAppPackageUri'), split(subscription().id, '/')[2], resourceGroup().name, parameters('FunctionAppName'), resourceId('Microsoft.Web/sites', parameters('FunctionAppName')), reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('uami-{0}', parameters('FunctionAppName'))), '2022-01-31-preview').principalId)]"
+        "arguments": "[if(equals(parameters('EnablePrivateNetworking'), true()), format('-PackageUri {0} -SubscriptionId {1} -ResourceGroupName {2} -FunctionAppName {3} -FAScope {4} -UAMIPrincipalId {5} -VnetScope {6} -RestrictedIPs \"None\"', variables('functionAppPackageUri'), split(subscription().id, '/')[2], resourceGroup().name, reference(resourceId('Microsoft.Resources/deployments', 'functionAppPe'), '2022-09-01').outputs.functionAppName.value, resourceId('Microsoft.Web/sites', parameters('FunctionAppName')), reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('uami-{0}', parameters('FunctionAppName'))), '2022-01-31-preview').principalId, reference(resourceId('Microsoft.Resources/deployments', 'privateNetwork'), '2022-09-01').outputs.vnetId.value), format('-PackageUri {0} -SubscriptionId {1} -ResourceGroupName {2} -FunctionAppName {3} -FAScope {4} -UAMIPrincipalId {5}', variables('functionAppPackageUri'), split(subscription().id, '/')[2], resourceGroup().name, parameters('FunctionAppName'), resourceId('Microsoft.Web/sites', parameters('FunctionAppName')), reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('uami-{0}', parameters('FunctionAppName'))), '2022-01-31-preview').principalId))]"
       },
       "dependsOn": [
         "[resourceId('Microsoft.Web/sites', parameters('FunctionAppName'))]",
+        "[resourceId('Microsoft.Resources/deployments', 'functionAppPe')]",
+        "[resourceId('Microsoft.Resources/deployments', 'privateNetwork')]",
         "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('uami-{0}', parameters('FunctionAppName')))]"
       ]
     },
@@ -471,8 +588,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.22.6.54827",
-              "templateHash": "5830997741909051014"
+              "version": "0.23.1.45101",
+              "templateHash": "13055024411322237904"
             }
           },
           "parameters": {
@@ -932,8 +1049,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.22.6.54827",
-                      "templateHash": "10719510965779735832"
+                      "version": "0.23.1.45101",
+                      "templateHash": "2934886804831282446"
                     }
                   },
                   "parameters": {
@@ -1060,8 +1177,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.22.6.54827",
-                      "templateHash": "10719510965779735832"
+                      "version": "0.23.1.45101",
+                      "templateHash": "2934886804831282446"
                     }
                   },
                   "parameters": {
@@ -1160,8 +1277,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.22.6.54827",
-                      "templateHash": "10719510965779735832"
+                      "version": "0.23.1.45101",
+                      "templateHash": "2934886804831282446"
                     }
                   },
                   "parameters": {
@@ -1222,6 +1339,7 @@
       ]
     },
     {
+      "condition": "[equals(parameters('DeployAzureMonitorFunction'), true())]",
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "purviewDLPFunction",
@@ -1249,10 +1367,10 @@
             "value": "PurviewDLP"
           },
           "functionParams": {
-            "value": "[format('WorkloadNames:dynamic = dynamic([''Exchange'', ''MicrosoftTeams'', ''SharePoint'', ''OneDrive'', ''Endpoint'']), EndpointSeverityInRuleName:bool = {0}, EndpointHighSeverityMatchCountTrigger:int = 50, EndpointSeverityDelimiter:string = '' ''', variables('endpointSeverityInRuleName'))]"
+            "value": "[format('WorkloadNames:dynamic = dynamic([''Exchange'', ''MicrosoftTeams'', ''SharePoint'', ''OneDrive'', ''Endpoint'']), EndpointSeverityInRuleName:bool = {0}, EndpointHighSeverityMatchCountTrigger:int = 50, EndpointSeverityDelimiter:string = '' '', ShowDetections:bool = {1}', string(parameters('EndpointSeverityInRuleName')), string(parameters('ShowSensitiveInfoDetectionValues')))]"
           },
           "query": {
-            "value": "let _DetectionsMax = 5;\nlet _SITMax = 30;\nlet _EndpointSeverityInRuleName = EndpointSeverityInRuleName;\nlet _EndpointHighSeverityMatchCountTrigger = EndpointHighSeverityMatchCountTrigger;\nlet _EndpointSeverityDelimiter = EndpointSeverityDelimiter;\nlet _WorkloadNames = WorkloadNames;\n\n//Get DLP data elements that are shared across all workloads.\nlet DLPCommon = PurviewDLP_CL\n| where Workload in (_WorkloadNames) and Workload != 'Endpoint' and Operation =~ 'DLPRuleMatch'\n| summarize arg_max(TimeGenerated, *) by Identifier\n| mv-expand PolicyDetails\n| where PolicyDetails.PolicyName != ''\n| mv-expand Rules = PolicyDetails.Rules\n| summarize TotalMatchCount = toint(sum(toint(Rules.ConditionsMatched.TotalCount))), arg_max(TimeGenerated, *) by Identifier\n| join kind=leftouter (PurviewDLPSIT_CL\n    | summarize arg_max(TimeGenerated, *) by Identifier, SensitiveInformationTypeName\n    | join kind=leftouter (PurviewDLPDetections_CL\n        | summarize arg_max(TimeGenerated, *) by Identifier, Name, Value, SensitiveInfoId\n        | extend Detections = bag_pack('Name', Name, 'Value', Value)\n        | summarize Detections = make_list(Detections, _DetectionsMax), arg_max(TimeGenerated, *) by SensitiveInfoId\n        ) on SensitiveInfoId\n    ) on Identifier\n| extend SensitiveInfoType = bag_pack('Name', SensitiveInformationTypeName, 'Count', toint(SITCount), 'Confidence', toint(Confidence), 'Location', Location, 'Detections', Detections)\n| extend ActionsTaken = strcat_array(Rules.Actions, ', ')\n| extend SensitiveInfoTypeString = iff(SensitiveInfoType.Count > 0, strcat(SensitiveInfoType.Name, ' (', SensitiveInfoType.Count, ', ', SensitiveInfoType.Confidence, '%)'), '')\n| summarize SensitiveInfoTypesArray = make_list(SensitiveInfoType, _SITMax), SensitiveInfoTypes = make_list(SensitiveInfoTypeString), arg_max(TimeGenerated, *) by Identifier\n| extend\n    PolicyName = tostring(PolicyDetails.PolicyName),\n    RuleName = tostring(Rules.RuleName),\n    RuleSeverity = tostring(Rules.Severity),\n    UserPrincipalName = tolower(UserId),\n    UserObjectId = UserKey,\n    Deeplink = strcat('https://compliance.microsoft.com/datalossprevention/alerts/eventdeeplink?eventid=', Identifier, '&creationtime=', CreationTime);\n\n//Get Sharepoint and OneDrive specific data elements from common datatable defined above.\nlet DLPSPOD = DLPCommon\n| where Workload in ('SharePoint', 'OneDrive')\n| extend SensitivityLabelIds = todynamic(iff(array_length(SharePointMetaData.SensitivityLabelIds) == 0, '', SharePointMetaData.SensitivityLabelIds))\n| mv-expand SensitivityLabelId = SensitivityLabelIds\n| extend SensitivityLabelId = tostring(SensitivityLabelId)\n| join kind = leftouter (_GetWatchlist('SensitivityLabels')\n    | extend SensitivityLabelId = tostring(column_ifexists('id', '')),\n        SensitivityLabelName = tostring(column_ifexists('name', ''))) on SensitivityLabelId\n| extend OfficeObjectId = url_decode(tostring(SharePointMetaData.FilePathUrl))\n| join kind = leftouter (OfficeActivity\n    | where TimeGenerated > ago(30m)\n    | where Operation == \"AddedToSecureLink\" or Operation == \"SecureLinkUsed\"\n    | extend UserId = tolower(UserId),\n        TargetUserOrGroupName = tolower(iff(isempty(TargetUserOrGroupName), split(UserId, \"#\")[1], TargetUserOrGroupName))\n    ) on $left.UserPrincipalName == $right.UserId, OfficeObjectId\n| extend Filename = tostring(SharePointMetaData.FileName),\n    FilePath = tostring(SharePointMetaData.FilePathUrl),\n    SiteUrl = tostring(SharePointMetaData.SiteCollectionUrl),\n    ExceptionReason = tostring(SharePointMetaData.ExceptionInfo.Reason)\n| summarize SensitivityLabels = make_list(SensitivityLabelName), arg_max(TimeGenerated, *) by Identifier;\n\n//Get Exchange and Teams specific data elements from common datatable defined above.\nlet DLPEXOT = DLPCommon\n| where Workload in ('Exchange', 'MicrosoftTeams')\n| extend Recipients = iff(Workload == 'Exchange', tostring(strcat(array_strcat(ExchangeMetaData.To, ', '), iff(array_length(ExchangeMetaData.CC) == 0, '', \", \"), array_strcat(ExchangeMetaData.CC, ', '), iff(array_length(ExchangeMetaData.BCC) == 0, '', \", \"))), tostring(strcat_array(ExchangeMetaData.To, ', '))),\n    InternetMessageId = replace_string(replace_string(tostring(ExchangeMetaData.MessageID), '<', ''), '>',''),\n    EmailSubject = tostring(ExchangeMetaData.Subject),\n    Sender = UserPrincipalName,\n    ExceptionReason = tostring(ExchangeMetaData.ExceptionInfo.Reason),\n    ExceptionJustification = tostring(ExchangeMetaData.ExceptionInfo.Justification)\n| summarize DetectedLocations = make_set(SensitiveInfoType.Location), arg_max(TimeGenerated, *) by Identifier;\n\n//Define datatable so we can lookup Endpoint DLP action names from their Id.\nlet EndpointAction = datatable(ActionName: string, ActionId: int) [\n    \"None\", \"0\",\n    \"Audit\", \"1\",\n    \"Warn\", \"2\",\n    \"WarnAndBypass\", \"3\",\n    \"Block\", \"4\",\n    \"Allow\", \"5\"\n];\n//Array to match severity as the last word in rule name if present.\nlet EndpointSeverities = dynamic(['Low', 'Medium', 'High']);\n\n//Get Endpoint specific data elements from common datatable defined above.\nlet DLPEndpoint = PurviewDLP_CL\n| where Workload in ('Endpoint') and 'Endpoint' in (_WorkloadNames) and  Operation =~ 'DLPRuleMatch'\n| summarize arg_max(TimeGenerated, *) by Identifier\n| extend IngestionTime = ingestion_time()\n| mv-expand PolicyDetails\n| where PolicyDetails.PolicyName != ''\n| mv-expand Rules = PolicyDetails.Rules\n| join kind=leftouter (PurviewDLPSIT_CL\n    | summarize arg_max(TimeGenerated, *) by Identifier, SensitiveInformationTypeName\n    | join kind=leftouter (PurviewDLPDetections_CL\n        | summarize arg_max(TimeGenerated, *) by Identifier, Name, Value\n        | extend Detections = bag_pack('Name', Name, 'Value', Value)\n        | summarize Detections = make_list(Detections, _DetectionsMax), arg_max(TimeGenerated, *) by SensitiveInfoId\n        ) on SensitiveInfoId\n    ) on Identifier\n| extend SensitiveInfoType = bag_pack('Name', SensitiveInformationTypeName, 'Count', toint(SITCount), 'Confidence', toint(Confidence), 'Location', Location, 'Detections', Detections)\n| extend SensitiveInfoType = bag_pack('Name', SensitiveInformationTypeName, 'Count', toint(SITCount), 'Confidence', toint(Confidence)),\n    DeviceFullName = tostring(EndpointMetaData.DeviceName)\n| extend TotalMatchCount = toint(EndpointMetaData.SensitiveInfoTypeTotalCount)\n| extend RuleSplit = split(tostring(Rules.RuleName), _EndpointSeverityDelimiter)\n| extend RuleLength = array_length(RuleSplit)\n| extend RuleSeverity = iff(RuleSplit[RuleLength - 1] in (EndpointSeverities) and _EndpointSeverityInRuleName == true, RuleSplit[RuleLength - 1], iff(TotalMatchCount >= _EndpointHighSeverityMatchCountTrigger and _EndpointSeverityInRuleName == false, 'High', 'Medium'))\n| extend Exception = tostring(EndpointMetaData.Justification)\n| extend ExceptionReason = substring(Exception, indexof(Exception, '_') + 1)\n| extend ExceptionReason = substring(ExceptionReason, 0, indexof(ExceptionReason, ':'))\n| extend ExceptionJustification = substring(Exception, indexof(Exception, ':') + 1)\n| extend SensitiveInfoTypeString = iff(SensitiveInfoType.Count > 0, strcat(SensitiveInfoType.Name, ' (', SensitiveInfoType.Count, ', ', SensitiveInfoType.Confidence, '%)'), ''),\n    ActionId = toint(EndpointMetaData.EnforcementMode),\n    ClientIP = tostring(EndpointMetaData.ClientIP),\n    DeviceHostName = tostring(split(DeviceFullName, '.')[0]), \n    DeviceDNSName = tostring(substring(DeviceFullName, indexof(DeviceFullName, '.')+1)),\n    Filename = DocumentName,\n    FilePath = ObjectId,\n    FileHash = tostring(EndpointMetaData.Sha256),\n    FileHashAlgorithm = 'SHA256',\n    RMSEncrypted = tostring(EndpointMetaData.RMSEncrypted),\n    EvidenceFileUrl = tostring(EvidenceFile.FullUrl),\n    SourceLocationType = tostring(EndpointMetaData.SourceLocationType), \n    EndpointOperation = tostring(EndpointMetaData.EndpointOperation),\n    EndpointApplication = tostring(EndpointMetaData.Application),\n    EndpointClientIp = tostring(EndpointMetaData.ClientIP),\n    PolicyName = tostring(PolicyDetails.PolicyName),\n    RuleName = tostring(Rules.RuleName),\n    UserPrincipalName = tolower(UserId),\n    UserObjectId = UserKey,\n    Deeplink = strcat('https://compliance.microsoft.com/datalossprevention/alerts/eventdeeplink?eventid=', Identifier, '&creationtime=', CreationTime)\n| join kind = inner(EndpointAction) on ActionId\n| extend ActionsTaken = ActionName\n| summarize SensitiveInfoTypesArray = make_list(SensitiveInfoType, _SITMax), SensitiveInfoTypes = make_list(SensitiveInfoTypeString), arg_max(TimeGenerated, *) by Identifier;\n\n//Merge all the SharePoint/OneDrive, Exchange/Teams, and Endpoints results together.\nunion DLPSPOD, DLPEXOT, DLPEndpoint\n| extend FileDirectory = parse_path(FilePath).DirectoryPath\n| project \n//Common attributes\nTimeGenerated, CreationTime, \nCreationTimeString = strcat(format_datetime(CreationTime,'M/d/yyyy, H:mm:ss tt'), ' (UTC)'),\nIdentifier, Workload, Deeplink, usageLocation, UserPrincipalName, UserObjectId, department, manager, jobTitle, PolicyName, RuleName, ActionsTaken, SensitiveInfoTypesArray, TotalMatchCount, \nUsername = split(UserPrincipalName, '@')[0], UPNSuffix =split(UserPrincipalName, '@')[1],\nRuleSeverity,\nSensitiveInfoTypes = iff(array_length(SensitiveInfoTypes) > 1, strcat(SensitiveInfoTypes[0], ' +', array_length(SensitiveInfoTypes) - 1, ' more'), strcat_array(SensitiveInfoTypes, ', ')),\n//Endpoint specific attributes\nDeviceFullName, DeviceHostName, DeviceDNSName, Filename, FilePath, FileDirectory, FileHash, FileHashAlgorithm, RMSEncrypted, EvidenceFileUrl, SourceLocationType, EndpointOperation, EndpointApplication, EndpointClientIp, Operation,\n//Exchange and Teams specific attributes\nRecipients, InternetMessageId, EmailSubject, Sender, ExceptionReason, ExceptionJustification,\n//SharePoint and OneDrive specific attributes\nSiteUrl, TargetUserOrGroupName,\nDetectedLocations = strcat_array(DetectedLocations, ', '), SensitivityLabels = strcat_array(SensitivityLabels, ', ')\n| order by CreationTime"
+            "value": "let _DetectionsMax = 5;\nlet _SITMax = 30;\nlet _EndpointSeverityInRuleName = EndpointSeverityInRuleName;\nlet _EndpointHighSeverityMatchCountTrigger = EndpointHighSeverityMatchCountTrigger;\nlet _EndpointSeverityDelimiter = EndpointSeverityDelimiter;\nlet _WorkloadNames = WorkloadNames;\nlet _ShowDetections = ShowDetections;\n\n//Get DLP data elements that are shared across all workloads.\nlet DLPCommon = PurviewDLP_CL\n| where Workload in (_WorkloadNames) and Workload != 'Endpoint' and Operation =~ 'DLPRuleMatch'\n| summarize arg_max(TimeGenerated, *) by Identifier\n| mv-expand PolicyDetails\n| where PolicyDetails.PolicyName != ''\n| mv-expand Rules = PolicyDetails.Rules\n| summarize TotalMatchCount = toint(sum(toint(Rules.ConditionsMatched.TotalCount))), arg_max(TimeGenerated, *) by Identifier\n| join kind=leftouter (PurviewDLPSIT_CL\n    | summarize arg_max(TimeGenerated, *) by Identifier, SensitiveInformationTypeName\n    | join kind=leftouter (PurviewDLPDetections_CL\n        | summarize arg_max(TimeGenerated, *) by Identifier, Name, Value, SensitiveInfoId\n        | extend Detections = bag_pack('Name', Name, 'Value', Value)\n        | summarize Detections = make_list_if(Detections, _ShowDetections == true,_DetectionsMax), arg_max(TimeGenerated, *) by SensitiveInfoId\n        ) on SensitiveInfoId\n    ) on Identifier\n| extend SensitiveInfoType = bag_pack('Name', SensitiveInformationTypeName, 'Count', toint(SITCount), 'Confidence', toint(Confidence), 'Location', Location, 'Detections', Detections)\n| extend ActionsTaken = strcat_array(Rules.Actions, ', ')\n| extend SensitiveInfoTypeString = iff(SensitiveInfoType.Count > 0, strcat(SensitiveInfoType.Name, ' (', SensitiveInfoType.Count, ', ', SensitiveInfoType.Confidence, '%)'), '')\n| summarize SensitiveInfoTypesArray = make_list_if(SensitiveInfoType, SensitiveInfoType.Count > 0, _SITMax), SensitiveInfoTypes = make_list(SensitiveInfoTypeString, _SITMax), SensitiveInfoTypeCount = count(), arg_max(TimeGenerated, *) by Identifier\n| extend\n    PolicyName = tostring(PolicyDetails.PolicyName),\n    RuleName = tostring(Rules.RuleName),\n    RuleSeverity = tostring(Rules.Severity),\n    UserPrincipalName = tolower(UserId),\n    UserObjectId = UserKey,\n    Deeplink = strcat('https://compliance.microsoft.com/datalossprevention/alerts/eventdeeplink?eventid=', Identifier, '&creationtime=', CreationTime);\n\n//Get Sharepoint and OneDrive specific data elements from common datatable defined above.\nlet DLPSPOD = DLPCommon\n| where Workload in ('SharePoint', 'OneDrive')\n| extend SensitivityLabelIds = todynamic(iff(array_length(SharePointMetaData.SensitivityLabelIds) == 0, '', SharePointMetaData.SensitivityLabelIds))\n| mv-expand SensitivityLabelId = SensitivityLabelIds\n| extend SensitivityLabelId = tostring(SensitivityLabelId)\n| join kind = leftouter (_GetWatchlist('SensitivityLabels')\n    | extend SensitivityLabelId = tostring(column_ifexists('id', '')),\n        SensitivityLabelName = tostring(column_ifexists('name', ''))\n    | summarize arg_max(LastUpdatedTimeUTC, SensitivityLabelId, SensitivityLabelName) by SensitivityLabelId) on SensitivityLabelId\n| extend OfficeObjectId = url_decode(tostring(SharePointMetaData.FilePathUrl))\n| join kind = leftouter (OfficeActivity\n    | where TimeGenerated > ago(30m)\n    | where Operation == \"AddedToSecureLink\" or Operation == \"SecureLinkUsed\"\n    | extend UserId = tolower(UserId),\n        TargetUserOrGroupName = tolower(iff(isempty(TargetUserOrGroupName), split(UserId, \"#\")[1], TargetUserOrGroupName))\n    ) on $left.UserPrincipalName == $right.UserId, OfficeObjectId\n| extend Filename = tostring(SharePointMetaData.FileName),\n    FilePath = tostring(SharePointMetaData.FilePathUrl),\n    SiteUrl = tostring(SharePointMetaData.SiteCollectionUrl),\n    ExceptionReason = tostring(SharePointMetaData.ExceptionInfo.Reason)\n| summarize SensitivityLabels = make_list(SensitivityLabelName), arg_max(TimeGenerated, *) by Identifier;\n\n//Get Exchange and Teams specific data elements from common datatable defined above.\nlet DLPEXOT = DLPCommon\n| where Workload in ('Exchange', 'MicrosoftTeams')\n| extend Recipients = iff(Workload == 'Exchange', tostring(strcat(array_strcat(ExchangeMetaData.To, ', '), iff(array_length(ExchangeMetaData.CC) == 0, '', \", \"), array_strcat(ExchangeMetaData.CC, ', '), iff(array_length(ExchangeMetaData.BCC) == 0, '', \", \"))), tostring(strcat_array(ExchangeMetaData.To, ', '))),\n    InternetMessageId = replace_string(replace_string(tostring(ExchangeMetaData.MessageID), '<', ''), '>',''),\n    EmailSubject = tostring(ExchangeMetaData.Subject),\n    Sender = UserPrincipalName,\n    ExceptionReason = tostring(ExchangeMetaData.ExceptionInfo.Reason),\n    ExceptionJustification = tostring(ExchangeMetaData.ExceptionInfo.Justification)\n| summarize DetectedLocations = make_set(SensitiveInfoType.Location), arg_max(TimeGenerated, *) by Identifier;\n\n//Define datatable so we can lookup Endpoint DLP action names from their Id.\nlet EndpointAction = datatable(ActionName: string, ActionId: int) [\n    \"None\", \"0\",\n    \"Audit\", \"1\",\n    \"Warn\", \"2\",\n    \"WarnAndBypass\", \"3\",\n    \"Block\", \"4\",\n    \"Allow\", \"5\"\n];\n//Array to match severity as the last word in rule name if present.\nlet EndpointSeverities = dynamic(['Low', 'Medium', 'High']);\n\n//Get Endpoint specific data elements from common datatable defined above.\nlet DLPEndpoint = PurviewDLP_CL\n| where Workload in ('Endpoint') and 'Endpoint' in (_WorkloadNames) and  Operation =~ 'DLPRuleMatch'\n| summarize arg_max(TimeGenerated, *) by Identifier\n| extend IngestionTime = ingestion_time()\n| mv-expand PolicyDetails\n| where PolicyDetails.PolicyName != ''\n| mv-expand Rules = PolicyDetails.Rules\n| join kind=leftouter (PurviewDLPSIT_CL\n    | summarize arg_max(TimeGenerated, *) by Identifier, SensitiveInformationTypeName\n    | join kind=leftouter (PurviewDLPDetections_CL\n        | summarize arg_max(TimeGenerated, *) by Identifier, Name, Value\n        | extend Detections = bag_pack('Name', Name, 'Value', Value)\n        | summarize Detections = make_list_if(Detections, _ShowDetections == true, _DetectionsMax), arg_max(TimeGenerated, *) by SensitiveInfoId\n        ) on SensitiveInfoId\n    ) on Identifier\n| extend SensitiveInfoType = bag_pack('Name', SensitiveInformationTypeName, 'Count', toint(SITCount), 'Confidence', toint(Confidence), 'Location', Location, 'Detections', Detections)\n| extend SensitiveInfoType = bag_pack('Name', SensitiveInformationTypeName, 'Count', toint(SITCount), 'Confidence', toint(Confidence)),\n    DeviceFullName = tostring(EndpointMetaData.DeviceName)\n| extend TotalMatchCount = toint(EndpointMetaData.SensitiveInfoTypeTotalCount)\n| extend RuleSplit = split(tostring(Rules.RuleName), _EndpointSeverityDelimiter)\n| extend RuleLength = array_length(RuleSplit)\n| extend RuleSeverity = iff(RuleSplit[RuleLength - 1] in (EndpointSeverities) and _EndpointSeverityInRuleName == true, RuleSplit[RuleLength - 1], iff(TotalMatchCount >= _EndpointHighSeverityMatchCountTrigger and _EndpointSeverityInRuleName == false, 'High', 'Medium'))\n| extend Exception = tostring(EndpointMetaData.Justification)\n| extend ExceptionReason = substring(Exception, indexof(Exception, '_') + 1)\n| extend ExceptionReason = substring(ExceptionReason, 0, indexof(ExceptionReason, ':'))\n| extend ExceptionJustification = substring(Exception, indexof(Exception, ':') + 1)\n| extend SensitiveInfoTypeString = iff(SensitiveInfoType.Count > 0, strcat(SensitiveInfoType.Name, ' (', SensitiveInfoType.Count, ', ', SensitiveInfoType.Confidence, '%)'), ''),\n    ActionId = toint(EndpointMetaData.EnforcementMode),\n    ClientIP = tostring(EndpointMetaData.ClientIP),\n    DeviceHostName = tostring(split(DeviceFullName, '.')[0]), \n    DeviceDNSName = tostring(substring(DeviceFullName, indexof(DeviceFullName, '.')+1)),\n    Filename = DocumentName,\n    FilePath = ObjectId,\n    FileHash = tostring(EndpointMetaData.Sha256),\n    FileHashAlgorithm = 'SHA256',\n    RMSEncrypted = tostring(EndpointMetaData.RMSEncrypted),\n    EvidenceFileUrl = tostring(EvidenceFile.FullUrl),\n    SourceLocationType = tostring(EndpointMetaData.SourceLocationType), \n    EndpointOperation = tostring(EndpointMetaData.EndpointOperation),\n    EndpointApplication = tostring(EndpointMetaData.Application),\n    EndpointClientIp = tostring(EndpointMetaData.ClientIP),\n    PolicyName = tostring(PolicyDetails.PolicyName),\n    RuleName = tostring(Rules.RuleName),\n    UserPrincipalName = tolower(UserId),\n    UserObjectId = UserKey,\n    Deeplink = strcat('https://compliance.microsoft.com/datalossprevention/alerts/eventdeeplink?eventid=', Identifier, '&creationtime=', CreationTime)\n| join kind = inner(EndpointAction) on ActionId\n| extend ActionsTaken = ActionName\n| summarize SensitiveInfoTypesArray = make_list_if(SensitiveInfoType, SensitiveInfoType.Count > 0, _SITMax), SensitiveInfoTypes = make_list(SensitiveInfoTypeString, _SITMax), SensitiveInfoTypeCount = count(), arg_max(TimeGenerated, *) by Identifier;\n\n//Merge all the SharePoint/OneDrive, Exchange/Teams, and Endpoints results together.\nunion DLPSPOD, DLPEXOT, DLPEndpoint\n| extend FileDirectory = parse_path(FilePath).DirectoryPath\n| project \n//Common attributes\nTimeGenerated, CreationTime, \nCreationTimeString = strcat(format_datetime(CreationTime,'M/d/yyyy, H:mm:ss tt'), ' (UTC)'),\nIdentifier, Workload, Deeplink, usageLocation, UserPrincipalName, UserObjectId, department, manager, jobTitle, PolicyName, RuleName, ActionsTaken, SensitiveInfoTypesArray = iff(array_length(SensitiveInfoTypesArray) > 0, SensitiveInfoTypesArray, ''), TotalMatchCount, \nUsername = split(UserPrincipalName, '@')[0], UPNSuffix =split(UserPrincipalName, '@')[1],\nRuleSeverity,\nSensitiveInfoTypes = iff(array_length(SensitiveInfoTypes) > 1, strcat(SensitiveInfoTypes[0], ' +', SensitiveInfoTypeCount - 1, ' more'), strcat_array(SensitiveInfoTypes, ', ')),\n//Endpoint specific attributes\nDeviceFullName, DeviceHostName, DeviceDNSName, Filename, FilePath, FileDirectory, FileHash, FileHashAlgorithm, RMSEncrypted, EvidenceFileUrl, SourceLocationType, EndpointOperation, EndpointApplication, EndpointClientIp, Operation,\n//Exchange and Teams specific attributes\nRecipients, InternetMessageId, EmailSubject, Sender, ExceptionReason, ExceptionJustification,\n//SharePoint and OneDrive specific attributes\nSiteUrl, TargetUserOrGroupName,\nDetectedLocations = strcat_array(DetectedLocations, ', '), SensitivityLabels = strcat_array(SensitivityLabels, ', ')\n| order by CreationTime"
           }
         },
         "template": {
@@ -1261,8 +1379,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.22.6.54827",
-              "templateHash": "15060525192022243912"
+              "version": "0.23.1.45101",
+              "templateHash": "17982476474450228314"
             }
           },
           "parameters": {
@@ -1311,123 +1429,7 @@
       ]
     },
     {
-      "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2022-09-01",
-      "name": "keyVaultUpdateNetworkAcl",
-      "properties": {
-        "expressionEvaluationOptions": {
-          "scope": "inner"
-        },
-        "mode": "Incremental",
-        "parameters": {
-          "kvName": {
-            "value": "[parameters('KeyVaultName')]"
-          },
-          "location": {
-            "value": "[reference(resourceId('Microsoft.KeyVault/vaults', parameters('KeyVaultName')), '2022-07-01', 'full').location]"
-          },
-          "skuFamily": {
-            "value": "[reference(resourceId('Microsoft.KeyVault/vaults', parameters('KeyVaultName')), '2022-07-01').sku.family]"
-          },
-          "skuName": {
-            "value": "[reference(resourceId('Microsoft.KeyVault/vaults', parameters('KeyVaultName')), '2022-07-01').sku.name]"
-          },
-          "principalId": {
-            "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('uami-{0}', parameters('FunctionAppName'))), '2022-01-31-preview').principalId]"
-          },
-          "aclBypass": {
-            "value": "None"
-          },
-          "aclDefaultAction": {
-            "value": "Deny"
-          },
-          "aclIpRules": {
-            "value": "[reference(resourceId('Microsoft.Web/sites', parameters('FunctionAppName')), '2022-03-01').possibleOutboundIpAddresses]"
-          },
-          "secretPermissions": {
-            "value": "[reference(resourceId('Microsoft.KeyVault/vaults', parameters('KeyVaultName')), '2022-07-01').accessPolicies[0].permissions.secrets]"
-          }
-        },
-        "template": {
-          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
-          "contentVersion": "1.0.0.0",
-          "metadata": {
-            "_generator": {
-              "name": "bicep",
-              "version": "0.22.6.54827",
-              "templateHash": "9626944654324187760"
-            }
-          },
-          "parameters": {
-            "kvName": {
-              "type": "string"
-            },
-            "location": {
-              "type": "string"
-            },
-            "skuFamily": {
-              "type": "string"
-            },
-            "skuName": {
-              "type": "string"
-            },
-            "principalId": {
-              "type": "string"
-            },
-            "secretPermissions": {
-              "type": "array"
-            },
-            "aclIpRules": {
-              "type": "string",
-              "defaultValue": ""
-            },
-            "aclBypass": {
-              "type": "string",
-              "defaultValue": "None"
-            },
-            "aclDefaultAction": {
-              "type": "string",
-              "defaultValue": "AzureServices"
-            }
-          },
-          "resources": [
-            {
-              "type": "Microsoft.KeyVault/vaults",
-              "apiVersion": "2022-07-01",
-              "name": "[parameters('kvName')]",
-              "location": "[parameters('location')]",
-              "properties": {
-                "sku": {
-                  "family": "[parameters('skuFamily')]",
-                  "name": "[parameters('skuName')]"
-                },
-                "tenantId": "[subscription().tenantId]",
-                "accessPolicies": [
-                  {
-                    "objectId": "[parameters('principalId')]",
-                    "permissions": {
-                      "secrets": "[parameters('secretPermissions')]"
-                    },
-                    "tenantId": "[subscription().tenantId]"
-                  }
-                ],
-                "networkAcls": {
-                  "bypass": "[parameters('aclBypass')]",
-                  "defaultAction": "[parameters('aclDefaultAction')]",
-                  "ipRules": "[if(equals(parameters('aclIpRules'), ''), createArray(), json(format('{0}{1}{2}', '[{\"value\": \"', replace(parameters('aclIpRules'), ',', '\"},{\"value\": \"'), '\"}]')))]"
-                }
-              }
-            }
-          ]
-        }
-      },
-      "dependsOn": [
-        "[resourceId('Microsoft.Web/sites', parameters('FunctionAppName'))]",
-        "[resourceId('Microsoft.KeyVault/vaults', parameters('KeyVaultName'))]",
-        "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('uami-{0}', parameters('FunctionAppName')))]"
-      ]
-    },
-    {
+      "condition": "[or(equals(parameters('DLPPolicySync'), true()), equals(parameters('SensitivityLabelSync'), true()))]",
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "rbacAssignmentLaw",
@@ -1442,11 +1444,11 @@
           "principalId": {
             "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('uami-{0}', parameters('FunctionAppName'))), '2022-01-31-preview').principalId]"
           },
-          "roleDefId": {
-            "value": "/providers/Microsoft.Authorization/roleDefinitions/ab8e14d6-4a74-4a29-9ba8-549422addade"
-          },
-          "scopedResourceName": {
+          "lawName": {
             "value": "[split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[8]]"
+          },
+          "roleName": {
+            "value": "[parameters('CustomRoleName')]"
           }
         },
         "template": {
@@ -1455,29 +1457,104 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.22.6.54827",
-              "templateHash": "3474600768667580142"
+              "version": "0.23.1.45101",
+              "templateHash": "15322811740691860933"
             }
           },
           "parameters": {
-            "scopedResourceName": {
-              "type": "string"
-            },
-            "roleDefId": {
+            "lawName": {
               "type": "string"
             },
             "principalId": {
               "type": "string"
+            },
+            "roleName": {
+              "type": "string",
+              "defaultValue": "Custom Role - Sentinel DLP Contributor"
+            },
+            "actions": {
+              "type": "array",
+              "defaultValue": [
+                "Microsoft.SecurityInsights/Watchlists/*/read",
+                "Microsoft.SecurityInsights/Watchlists/*/write",
+                "Microsoft.SecurityInsights/alertRules/write",
+                "Microsoft.SecurityInsights/alertRules/read",
+                "Microsoft.OperationalInsights/workspaces/read",
+                "Microsoft.OperationalInsights/workspaces/query/read",
+                "Microsoft.OperationalInsights/workspaces/analytics/query/action",
+                "Microsoft.OperationalInsights/workspaces/search/action"
+              ],
+              "metadata": {
+                "description": "Array of actions for the roleDefinition"
+              }
+            },
+            "notActions": {
+              "type": "array",
+              "defaultValue": [
+                "Microsoft.OperationalInsights/workspaces/sharedKeys/read"
+              ],
+              "metadata": {
+                "description": "Array of notActions for the roleDefinition"
+              }
             }
+          },
+          "variables": {
+            "roleDescription": "Provides access to query Sentinel Watchlists and alert rules. Also provides limited permissions to read workspace details and run a query in the workspace, but not to read data from any tables.",
+            "roleDefName": "[guid(resourceGroup().id, string(parameters('actions')), string(parameters('notActions')))]",
+            "roleIdReader": "/providers/Microsoft.Authorization/roleDefinitions/acdd72a7-3385-48ef-bd42-f606fba81ae7"
           },
           "resources": [
             {
-              "type": "Microsoft.Authorization/roleAssignments",
-              "apiVersion": "2020-10-01-preview",
-              "scope": "[format('Microsoft.OperationalInsights/workspaces/{0}', parameters('scopedResourceName'))]",
-              "name": "[guid(resourceId('Microsoft.OperationalInsights/workspaces', parameters('scopedResourceName')), parameters('roleDefId'), parameters('principalId'))]",
+              "type": "Microsoft.Authorization/roleDefinitions",
+              "apiVersion": "2022-04-01",
+              "name": "[variables('roleDefName')]",
               "properties": {
-                "roleDefinitionId": "[parameters('roleDefId')]",
+                "roleName": "[parameters('roleName')]",
+                "description": "[variables('roleDescription')]",
+                "type": "customRole",
+                "permissions": [
+                  {
+                    "actions": "[parameters('actions')]",
+                    "notActions": "[parameters('notActions')]"
+                  }
+                ],
+                "assignableScopes": [
+                  "[resourceGroup().id]"
+                ]
+              }
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[format('Microsoft.OperationalInsights/workspaces/{0}', parameters('lawName'))]",
+              "name": "[guid(resourceId('Microsoft.OperationalInsights/workspaces', parameters('lawName')), resourceId('Microsoft.Authorization/roleDefinitions', variables('roleDefName')), parameters('principalId'))]",
+              "properties": {
+                "roleDefinitionId": "[resourceId('Microsoft.Authorization/roleDefinitions', variables('roleDefName'))]",
+                "principalId": "[parameters('principalId')]",
+                "principalType": "ServicePrincipal"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Authorization/roleDefinitions', variables('roleDefName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[format('Microsoft.OperationalInsights/workspaces/{0}/tables/{1}', parameters('lawName'), 'PurviewDLP_CL')]",
+              "name": "[guid(resourceId('Microsoft.OperationalInsights/workspaces/tables', parameters('lawName'), 'PurviewDLP_CL'), variables('roleIdReader'), parameters('principalId'))]",
+              "properties": {
+                "roleDefinitionId": "[variables('roleIdReader')]",
+                "principalId": "[parameters('principalId')]",
+                "principalType": "ServicePrincipal"
+              }
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[format('Microsoft.OperationalInsights/workspaces/{0}/tables/{1}', parameters('lawName'), 'Watchlist')]",
+              "name": "[guid(resourceId('Microsoft.OperationalInsights/workspaces/tables', parameters('lawName'), 'Watchlist'), variables('roleIdReader'), parameters('principalId'))]",
+              "properties": {
+                "roleDefinitionId": "[variables('roleIdReader')]",
                 "principalId": "[parameters('principalId')]",
                 "principalType": "ServicePrincipal"
               }
@@ -1486,10 +1563,12 @@
         }
       },
       "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'createCustomTables')]",
         "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('uami-{0}', parameters('FunctionAppName')))]"
       ]
     },
     {
+      "condition": "[or(equals(parameters('DLPPolicySync'), true()), equals(parameters('SensitivityLabelSync'), true()))]",
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "sentinelWatchlists",
@@ -1506,6 +1585,9 @@
           },
           "policySync": {
             "value": "[parameters('DLPPolicySync')]"
+          },
+          "labelSync": {
+            "value": "[parameters('SensitivityLabelSync')]"
           }
         },
         "template": {
@@ -1514,8 +1596,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.22.6.54827",
-              "templateHash": "14100457929255342079"
+              "version": "0.23.1.45101",
+              "templateHash": "17408845961877628677"
             }
           },
           "parameters": {
@@ -1525,6 +1607,10 @@
             "policySync": {
               "type": "bool",
               "defaultValue": false
+            },
+            "labelSync": {
+              "type": "bool",
+              "defaultValue": true
             }
           },
           "resources": [
@@ -1546,6 +1632,7 @@
               }
             },
             {
+              "condition": "[equals(parameters('labelSync'), true())]",
               "type": "Microsoft.SecurityInsights/watchlists",
               "apiVersion": "2023-02-01",
               "scope": "[format('Microsoft.OperationalInsights/workspaces/{0}', parameters('lawName'))]",
@@ -1566,6 +1653,7 @@
       }
     },
     {
+      "condition": "[equals(parameters('DeployAnalyticsRules'), true())]",
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "sentinelRules",
@@ -1590,8 +1678,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.22.6.54827",
-              "templateHash": "3778559098681437962"
+              "version": "0.23.1.45101",
+              "templateHash": "17134831436849044983"
             }
           },
           "parameters": {
@@ -1898,6 +1986,8 @@
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "sentinelWorkbooks",
+      "subscriptionId": "[split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[2]]",
+      "resourceGroup": "[split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[4]]",
       "properties": {
         "expressionEvaluationOptions": {
           "scope": "inner"
@@ -1906,6 +1996,9 @@
         "parameters": {
           "workbookSourceId": {
             "value": "[parameters('LogAnalyticsWorkspaceResourceID')]"
+          },
+          "location": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[2], split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[4]), 'Microsoft.OperationalInsights/workspaces', split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[8]), '2022-10-01', 'full').location]"
           }
         },
         "template": {
@@ -1914,8 +2007,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.22.6.54827",
-              "templateHash": "7771231396383689809"
+              "version": "0.23.1.45101",
+              "templateHash": "6171264958198971853"
             }
           },
           "parameters": {
@@ -2007,6 +2100,591 @@
       "dependsOn": [
         "[resourceId('Microsoft.Resources/deployments', 'createCustomTables')]",
         "[resourceId('Microsoft.Web/sites', parameters('FunctionAppName'))]"
+      ]
+    },
+    {
+      "condition": "[equals(parameters('EnablePrivateNetworking'), true())]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "privateNetwork",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "FunctionAppName": {
+            "value": "[parameters('FunctionAppName')]"
+          },
+          "KeyVaultId": {
+            "value": "[resourceId('Microsoft.KeyVault/vaults', parameters('KeyVaultName'))]"
+          },
+          "location": {
+            "value": "[variables('location')]"
+          },
+          "StorageAccountId": {
+            "value": "[resourceId('Microsoft.Storage/storageAccounts', parameters('StorageAccountName'))]"
+          },
+          "StorageAccountName": {
+            "value": "[parameters('StorageAccountName')]"
+          },
+          "KeyVaultName": {
+            "value": "[parameters('KeyVaultName')]"
+          },
+          "PrivateNetworkAddressSpace": {
+            "value": "[parameters('PrivateNetworkAddressSpace')]"
+          },
+          "FunctionAppSubnet": {
+            "value": "[parameters('FunctionAppSubnet')]"
+          },
+          "PrivateEndpointsSubnet": {
+            "value": "[parameters('PrivateEndpointsSubnet')]"
+          },
+          "PrincipalId": {
+            "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('uami-{0}', parameters('FunctionAppName'))), '2022-01-31-preview').principalId]"
+          },
+          "DeployCode": {
+            "value": "[parameters('DeployFunctionCode')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.23.1.45101",
+              "templateHash": "7545496493815252664"
+            }
+          },
+          "parameters": {
+            "PrivateNetworkAddressSpace": {
+              "type": "string"
+            },
+            "PrivateEndpointsSubnet": {
+              "type": "string"
+            },
+            "FunctionAppSubnet": {
+              "type": "string"
+            },
+            "FunctionAppName": {
+              "type": "string"
+            },
+            "StorageAccountName": {
+              "type": "string"
+            },
+            "StorageAccountId": {
+              "type": "string"
+            },
+            "KeyVaultName": {
+              "type": "string"
+            },
+            "KeyVaultId": {
+              "type": "string"
+            },
+            "location": {
+              "type": "string"
+            },
+            "PrincipalId": {
+              "type": "string"
+            },
+            "DeployCode": {
+              "type": "bool"
+            }
+          },
+          "variables": {
+            "roleIdOwner": "/providers/Microsoft.Authorization/roleDefinitions/8e3af657-a8ff-443c-a75c-2fe8c4bcb635"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Network/virtualNetworks",
+              "apiVersion": "2022-07-01",
+              "name": "[format('vnet-{0}', parameters('FunctionAppName'))]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "addressSpace": {
+                  "addressPrefixes": [
+                    "[parameters('PrivateNetworkAddressSpace')]"
+                  ]
+                },
+                "subnets": [
+                  {
+                    "name": "privateEndpoints",
+                    "properties": {
+                      "addressPrefix": "[parameters('PrivateEndpointsSubnet')]",
+                      "networkSecurityGroup": {
+                        "id": "[resourceId('Microsoft.Network/networkSecurityGroups', 'nsg-sentineldlp')]"
+                      }
+                    }
+                  },
+                  {
+                    "name": "functionAppVnetIntegration",
+                    "properties": {
+                      "addressPrefix": "[parameters('FunctionAppSubnet')]",
+                      "delegations": [
+                        {
+                          "name": "delegation",
+                          "properties": {
+                            "serviceName": "Microsoft.Web/serverFarms"
+                          }
+                        }
+                      ],
+                      "networkSecurityGroup": {
+                        "id": "[resourceId('Microsoft.Network/networkSecurityGroups', 'nsg-sentineldlp')]"
+                      }
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/networkSecurityGroups', 'nsg-sentineldlp')]"
+              ]
+            },
+            {
+              "type": "Microsoft.Network/privateEndpoints",
+              "apiVersion": "2022-07-01",
+              "name": "[format('pe-{0}', parameters('KeyVaultName'))]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "subnet": {
+                  "id": "[reference(resourceId('Microsoft.Network/virtualNetworks', format('vnet-{0}', parameters('FunctionAppName'))), '2022-07-01').subnets[0].id]"
+                },
+                "privateLinkServiceConnections": [
+                  {
+                    "name": "[format('pe-{0}', parameters('KeyVaultName'))]",
+                    "properties": {
+                      "privateLinkServiceId": "[parameters('KeyVaultId')]",
+                      "groupIds": [
+                        "vault"
+                      ]
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', format('vnet-{0}', parameters('FunctionAppName')))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Network/privateEndpoints",
+              "apiVersion": "2022-07-01",
+              "name": "[format('pe-blob-{0}', parameters('StorageAccountName'))]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "subnet": {
+                  "id": "[reference(resourceId('Microsoft.Network/virtualNetworks', format('vnet-{0}', parameters('FunctionAppName'))), '2022-07-01').subnets[0].id]"
+                },
+                "privateLinkServiceConnections": [
+                  {
+                    "name": "[format('pe-blob-{0}', parameters('StorageAccountName'))]",
+                    "properties": {
+                      "privateLinkServiceId": "[parameters('StorageAccountId')]",
+                      "groupIds": [
+                        "blob"
+                      ]
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', format('vnet-{0}', parameters('FunctionAppName')))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Network/privateEndpoints",
+              "apiVersion": "2022-07-01",
+              "name": "[format('pe-queue-{0}', parameters('StorageAccountName'))]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "subnet": {
+                  "id": "[reference(resourceId('Microsoft.Network/virtualNetworks', format('vnet-{0}', parameters('FunctionAppName'))), '2022-07-01').subnets[0].id]"
+                },
+                "privateLinkServiceConnections": [
+                  {
+                    "name": "[format('pe-queue-{0}', parameters('StorageAccountName'))]",
+                    "properties": {
+                      "privateLinkServiceId": "[parameters('StorageAccountId')]",
+                      "groupIds": [
+                        "queue"
+                      ]
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', format('vnet-{0}', parameters('FunctionAppName')))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Network/privateEndpoints",
+              "apiVersion": "2022-07-01",
+              "name": "[format('pe-file-{0}', parameters('StorageAccountName'))]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "subnet": {
+                  "id": "[reference(resourceId('Microsoft.Network/virtualNetworks', format('vnet-{0}', parameters('FunctionAppName'))), '2022-07-01').subnets[0].id]"
+                },
+                "privateLinkServiceConnections": [
+                  {
+                    "name": "[format('pe-file-{0}', parameters('StorageAccountName'))]",
+                    "properties": {
+                      "privateLinkServiceId": "[parameters('StorageAccountId')]",
+                      "groupIds": [
+                        "file"
+                      ]
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', format('vnet-{0}', parameters('FunctionAppName')))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Network/privateDnsZones",
+              "apiVersion": "2020-06-01",
+              "name": "[format('privatelink.blob.{0}', environment().suffixes.storage)]",
+              "location": "global",
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', format('vnet-{0}', parameters('FunctionAppName')))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Network/privateDnsZones",
+              "apiVersion": "2020-06-01",
+              "name": "[format('privatelink.file.{0}', environment().suffixes.storage)]",
+              "location": "global",
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', format('vnet-{0}', parameters('FunctionAppName')))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Network/privateDnsZones",
+              "apiVersion": "2020-06-01",
+              "name": "[format('privatelink.queue.{0}', environment().suffixes.storage)]",
+              "location": "global",
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', format('vnet-{0}', parameters('FunctionAppName')))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Network/privateDnsZones",
+              "apiVersion": "2020-06-01",
+              "name": "privatelink.vaultcore.azure.net",
+              "location": "global",
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', format('vnet-{0}', parameters('FunctionAppName')))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Network/privateDnsZones/virtualNetworkLinks",
+              "apiVersion": "2020-06-01",
+              "name": "[format('{0}/{1}', format('privatelink.blob.{0}', environment().suffixes.storage), format('{0}-link', format('privatelink.blob.{0}', environment().suffixes.storage)))]",
+              "location": "global",
+              "properties": {
+                "registrationEnabled": false,
+                "virtualNetwork": {
+                  "id": "[resourceId('Microsoft.Network/virtualNetworks', format('vnet-{0}', parameters('FunctionAppName')))]"
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/privateDnsZones', format('privatelink.blob.{0}', environment().suffixes.storage))]",
+                "[resourceId('Microsoft.Network/virtualNetworks', format('vnet-{0}', parameters('FunctionAppName')))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Network/privateDnsZones/virtualNetworkLinks",
+              "apiVersion": "2020-06-01",
+              "name": "[format('{0}/{1}', format('privatelink.file.{0}', environment().suffixes.storage), format('{0}-link', format('privatelink.file.{0}', environment().suffixes.storage)))]",
+              "location": "global",
+              "properties": {
+                "registrationEnabled": false,
+                "virtualNetwork": {
+                  "id": "[resourceId('Microsoft.Network/virtualNetworks', format('vnet-{0}', parameters('FunctionAppName')))]"
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/privateDnsZones', format('privatelink.file.{0}', environment().suffixes.storage))]",
+                "[resourceId('Microsoft.Network/virtualNetworks', format('vnet-{0}', parameters('FunctionAppName')))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Network/privateDnsZones/virtualNetworkLinks",
+              "apiVersion": "2020-06-01",
+              "name": "[format('{0}/{1}', format('privatelink.queue.{0}', environment().suffixes.storage), format('{0}-link', format('privatelink.queue.{0}', environment().suffixes.storage)))]",
+              "location": "global",
+              "properties": {
+                "registrationEnabled": false,
+                "virtualNetwork": {
+                  "id": "[resourceId('Microsoft.Network/virtualNetworks', format('vnet-{0}', parameters('FunctionAppName')))]"
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/privateDnsZones', format('privatelink.queue.{0}', environment().suffixes.storage))]",
+                "[resourceId('Microsoft.Network/virtualNetworks', format('vnet-{0}', parameters('FunctionAppName')))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Network/privateDnsZones/virtualNetworkLinks",
+              "apiVersion": "2020-06-01",
+              "name": "[format('{0}/{1}', 'privatelink.vaultcore.azure.net', format('{0}-link', 'privatelink.vaultcore.azure.net'))]",
+              "location": "global",
+              "properties": {
+                "registrationEnabled": false,
+                "virtualNetwork": {
+                  "id": "[resourceId('Microsoft.Network/virtualNetworks', format('vnet-{0}', parameters('FunctionAppName')))]"
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/privateDnsZones', 'privatelink.vaultcore.azure.net')]",
+                "[resourceId('Microsoft.Network/virtualNetworks', format('vnet-{0}', parameters('FunctionAppName')))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
+              "apiVersion": "2022-07-01",
+              "name": "[format('{0}/dnsGroup', format('pe-blob-{0}', parameters('StorageAccountName')))]",
+              "properties": {
+                "privateDnsZoneConfigs": [
+                  {
+                    "name": "config1",
+                    "properties": {
+                      "privateDnsZoneId": "[resourceId('Microsoft.Network/privateDnsZones', format('privatelink.blob.{0}', environment().suffixes.storage))]"
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/privateEndpoints', format('pe-blob-{0}', parameters('StorageAccountName')))]",
+                "[resourceId('Microsoft.Network/privateDnsZones', format('privatelink.blob.{0}', environment().suffixes.storage))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
+              "apiVersion": "2022-07-01",
+              "name": "[format('{0}/dnsGroup', format('pe-file-{0}', parameters('StorageAccountName')))]",
+              "properties": {
+                "privateDnsZoneConfigs": [
+                  {
+                    "name": "config1",
+                    "properties": {
+                      "privateDnsZoneId": "[resourceId('Microsoft.Network/privateDnsZones', format('privatelink.file.{0}', environment().suffixes.storage))]"
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/privateEndpoints', format('pe-file-{0}', parameters('StorageAccountName')))]",
+                "[resourceId('Microsoft.Network/privateDnsZones', format('privatelink.file.{0}', environment().suffixes.storage))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
+              "apiVersion": "2022-07-01",
+              "name": "[format('{0}/dnsGroup', format('pe-queue-{0}', parameters('StorageAccountName')))]",
+              "properties": {
+                "privateDnsZoneConfigs": [
+                  {
+                    "name": "config1",
+                    "properties": {
+                      "privateDnsZoneId": "[resourceId('Microsoft.Network/privateDnsZones', format('privatelink.queue.{0}', environment().suffixes.storage))]"
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/privateEndpoints', format('pe-queue-{0}', parameters('StorageAccountName')))]",
+                "[resourceId('Microsoft.Network/privateDnsZones', format('privatelink.queue.{0}', environment().suffixes.storage))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
+              "apiVersion": "2022-07-01",
+              "name": "[format('{0}/dnsGroup', format('pe-{0}', parameters('KeyVaultName')))]",
+              "properties": {
+                "privateDnsZoneConfigs": [
+                  {
+                    "name": "config1",
+                    "properties": {
+                      "privateDnsZoneId": "[resourceId('Microsoft.Network/privateDnsZones', 'privatelink.vaultcore.azure.net')]"
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/privateEndpoints', format('pe-{0}', parameters('KeyVaultName')))]",
+                "[resourceId('Microsoft.Network/privateDnsZones', 'privatelink.vaultcore.azure.net')]"
+              ]
+            },
+            {
+              "condition": "[equals(parameters('DeployCode'), true())]",
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[format('Microsoft.Network/virtualNetworks/{0}', format('vnet-{0}', parameters('FunctionAppName')))]",
+              "name": "[guid(subscription().id, resourceGroup().id, resourceId('Microsoft.Network/virtualNetworks', format('vnet-{0}', parameters('FunctionAppName'))))]",
+              "properties": {
+                "principalId": "[parameters('PrincipalId')]",
+                "roleDefinitionId": "[variables('roleIdOwner')]",
+                "principalType": "ServicePrincipal"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', format('vnet-{0}', parameters('FunctionAppName')))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Network/networkSecurityGroups",
+              "apiVersion": "2023-05-01",
+              "name": "nsg-sentineldlp",
+              "location": "[parameters('location')]"
+            }
+          ],
+          "outputs": {
+            "functionAppSubnetId": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Network/virtualNetworks', format('vnet-{0}', parameters('FunctionAppName'))), '2022-07-01').subnets[1].id]"
+            },
+            "privateEndpointSubnetId": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Network/virtualNetworks', format('vnet-{0}', parameters('FunctionAppName'))), '2022-07-01').subnets[0].id]"
+            },
+            "vnetId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Network/virtualNetworks', format('vnet-{0}', parameters('FunctionAppName')))]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', parameters('KeyVaultName'))]",
+        "[resourceId('Microsoft.Storage/storageAccounts', parameters('StorageAccountName'))]",
+        "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('uami-{0}', parameters('FunctionAppName')))]"
+      ]
+    },
+    {
+      "condition": "[equals(parameters('EnablePrivateNetworking'), true())]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "functionAppPe",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[variables('location')]"
+          },
+          "FunctionAppId": {
+            "value": "[resourceId('Microsoft.Web/sites', parameters('FunctionAppName'))]"
+          },
+          "FunctionAppName": {
+            "value": "[parameters('FunctionAppName')]"
+          },
+          "PrivateEndpointSubnetId": "[if(equals(parameters('EnablePrivateNetworking'), true()), createObject('value', reference(resourceId('Microsoft.Resources/deployments', 'privateNetwork'), '2022-09-01').outputs.privateEndpointSubnetId.value), createObject('value', null()))]",
+          "VnetId": "[if(equals(parameters('EnablePrivateNetworking'), true()), createObject('value', reference(resourceId('Microsoft.Resources/deployments', 'privateNetwork'), '2022-09-01').outputs.vnetId.value), createObject('value', null()))]"
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.23.1.45101",
+              "templateHash": "14827048058843371003"
+            }
+          },
+          "parameters": {
+            "FunctionAppName": {
+              "type": "string"
+            },
+            "FunctionAppId": {
+              "type": "string"
+            },
+            "PrivateEndpointSubnetId": {
+              "type": "string"
+            },
+            "location": {
+              "type": "string"
+            },
+            "VnetId": {
+              "type": "string"
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Network/privateEndpoints",
+              "apiVersion": "2022-07-01",
+              "name": "[format('pe-{0}', parameters('FunctionAppName'))]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "subnet": {
+                  "id": "[parameters('PrivateEndpointSubnetId')]"
+                },
+                "privateLinkServiceConnections": [
+                  {
+                    "name": "[format('pe-{0}', parameters('FunctionAppName'))]",
+                    "properties": {
+                      "privateLinkServiceId": "[parameters('FunctionAppId')]",
+                      "groupIds": [
+                        "sites"
+                      ]
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "type": "Microsoft.Network/privateDnsZones",
+              "apiVersion": "2020-06-01",
+              "name": "privatelink.azurewebsites.net",
+              "location": "global"
+            },
+            {
+              "type": "Microsoft.Network/privateDnsZones/virtualNetworkLinks",
+              "apiVersion": "2020-06-01",
+              "name": "[format('{0}/{1}', 'privatelink.azurewebsites.net', format('{0}-link', 'privatelink.azurewebsites.net'))]",
+              "location": "global",
+              "properties": {
+                "registrationEnabled": false,
+                "virtualNetwork": {
+                  "id": "[parameters('VnetId')]"
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/privateDnsZones', 'privatelink.azurewebsites.net')]"
+              ]
+            },
+            {
+              "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
+              "apiVersion": "2022-07-01",
+              "name": "[format('{0}/dnsGroup', format('pe-{0}', parameters('FunctionAppName')))]",
+              "properties": {
+                "privateDnsZoneConfigs": [
+                  {
+                    "name": "config1",
+                    "properties": {
+                      "privateDnsZoneId": "[resourceId('Microsoft.Network/privateDnsZones', 'privatelink.azurewebsites.net')]"
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/privateEndpoints', format('pe-{0}', parameters('FunctionAppName')))]",
+                "[resourceId('Microsoft.Network/privateDnsZones', 'privatelink.azurewebsites.net')]"
+              ]
+            }
+          ],
+          "outputs": {
+            "functionAppName": {
+              "type": "string",
+              "value": "[parameters('FunctionAppName')]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/sites', parameters('FunctionAppName'))]",
+        "[resourceId('Microsoft.Resources/deployments', 'privateNetwork')]"
       ]
     }
   ],
