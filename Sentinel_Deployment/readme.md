@@ -86,6 +86,7 @@ This a fork of the initial [Sentinel DLP Solution](https://techcommunity.microso
 ![Log Analytics workspace resource ID](./images/lawid.png)
 - Global Admin permissions on the Purview DLP Entra ID tenant to create the App Registration and grant Admin Consent as outlined in step #2 below.
 - Owner permissions on an Azure Resource Group to deploy the solution to in step #3. If Owner permissions are not granted on the subscription, the *Microsoft.ContainerInstance* resource provider must be [registered on the subscription](https://learn.microsoft.com/en-us/azure/azure-resource-manager/management/resource-providers-and-types#azure-portal) before deployment in order for the code to be automatically deployed to the Function App. If the Sentinel workspace is in a different resource group than where the solution will be deployed, Owner permissions are also required on the Resource Group in order to deploy the custom role.
+- It is recommended to deploy in the same subscription as the Sentinel workspace for the solution to function properly.
 
 ### Deployment
 Review [Important Considerations](#important-considerations) before deploying.

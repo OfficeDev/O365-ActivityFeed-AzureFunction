@@ -18,8 +18,6 @@ resource tableWatchlist 'Microsoft.OperationalInsights/workspaces/tables@2022-10
 
 @description('Array of actions for the roleDefinition')
 param actions array = [
-  'Microsoft.SecurityInsights/Watchlists/*/read'
-  'Microsoft.SecurityInsights/Watchlists/*/write'
   'Microsoft.SecurityInsights/alertRules/write'
   'Microsoft.SecurityInsights/alertRules/read'
   'Microsoft.OperationalInsights/workspaces/read'
