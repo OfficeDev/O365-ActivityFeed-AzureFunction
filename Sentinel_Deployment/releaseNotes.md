@@ -5,6 +5,7 @@
     - Configured Function timeout for 5 min.
     - Updated Az.Storage to 6.*.
     - Suppressed output when running Disable-AzContextAutosave to prevent expected warning message from getting logged.
+    - Addded error handling to sync functions to prevent duplicates.
 - Deployment
     - Set storage account to minimum TLS 1.2 and removed trusted services exception as its not needed.
     - Reduced permissions needed on Watchlists.
