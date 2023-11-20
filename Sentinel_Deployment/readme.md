@@ -109,16 +109,17 @@ Review [Important Considerations](#important-considerations) before deploying.
 ![Incident Management Workbook](./images/incident.png)
 
 ## Updates
-View the [Release Notes](releaseNotes.md) to see version details. You can also subscribe to/watch the repo for new pull requests to get notified when updates occur. 
-
-Before proceeding, if your Function App was configured for Private Network Access, you will need to make sure you are accessing from a device that has connectivity to its private endpoint or that a valid exclusion for your client's public IP address has been added. See [Set up Azure App Service access restrictions](https://learn.microsoft.com/en-us/azure/app-service/app-service-ip-restrictions?tabs=azurecli) for more information.
+View the [Release Notes](releaseNotes.md) to see version details. You can also subscribe to/watch the repo for new pull requests to get notified when updates occur.
 
 To check the current running version, perform the following:
-1. In the Azure Portal, navigate to the Function App and select **Advanced Tools**, then select **Go**. This will bring you to the Kudu portal.
-2. In the Kudu portal, select **PowerShell** from the **Debug Console** menu at the top.
-3. In the **Kudu Remote Execution Console**, type: **cat .\site\wwwroot\version.info**. The current version should be displayed.
+1. In the Azure Portal, navigate to the Function App and select **Console**, under **Development Tools**.
+2. In the console, type: 
+```
+more version.info
+``` 
+The current version should be displayed.
 
-To update the Function App with the latest version of the code, you can use the following Azure PowerShell commands:
+To update the Function App with the latest version of the code, you can use the following Azure PowerShell commands. If your Function App was configured for Private Network Access, you will need to make sure you are accessing from a device that has connectivity to its private endpoint or that a valid exclusion for your client's public IP address has been added. See [Set up Azure App Service access restrictions](https://learn.microsoft.com/en-us/azure/app-service/app-service-ip-restrictions?tabs=azurecli) for more information.
 ```Powershell
 #Download latest Function App package.
 Invoke-WebRequest -Uri "https://raw.githubusercontent.com/OfficeDev/O365-ActivityFeed-AzureFunction/master/Sentinel_Deployment/functionPackage.zip" -OutFile "functionPackage.zip"
