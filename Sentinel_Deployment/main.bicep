@@ -121,7 +121,7 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2021-08-01' = {
     minimumTlsVersion: 'TLS1_2'
     networkAcls: {
       defaultAction: EnablePrivateNetworking == true ? 'Deny' : 'Allow'
-      bypass: 'None' 
+      bypass: 'AzureServices'
     } 
   }
 }
@@ -160,7 +160,7 @@ resource keyVault 'Microsoft.KeyVault/vaults@2022-07-01' = {
     publicNetworkAccess: EnablePrivateNetworking == true ? 'Disabled' : 'Enabled'
     networkAcls: {
       defaultAction: EnablePrivateNetworking == true ? 'Deny' :'Allow'
-      bypass: 'None'  
+      bypass: EnablePrivateNetworking == true ? 'None' :  'AzureServices'
     }
   }
 }

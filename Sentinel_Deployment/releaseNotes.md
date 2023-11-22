@@ -7,7 +7,7 @@
     - Suppressed output when running Disable-AzContextAutosave.
     - Addded error handling to sync functions to prevent duplicates.
 - Deployment
-    - Set storage account to minimum TLS 1.2 and removed trusted services exception as its not needed.
+    - Set storage account to minimum TLS 1.2 and set trusted network exceptions where needed.
     - Reduced permissions needed on Watchlists.
     - Bicep Log Analytics Workspace Id reference cleanup.
     

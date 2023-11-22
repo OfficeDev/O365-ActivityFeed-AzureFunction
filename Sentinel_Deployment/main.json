@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.23.1.45101",
-      "templateHash": "6356896342675519892"
+      "templateHash": "12482225356158290048"
     }
   },
   "parameters": {
@@ -232,7 +232,7 @@
         "minimumTlsVersion": "TLS1_2",
         "networkAcls": {
           "defaultAction": "[if(equals(parameters('EnablePrivateNetworking'), true()), 'Deny', 'Allow')]",
-          "bypass": "None"
+          "bypass": "AzureServices"
         }
       },
       "dependsOn": [
@@ -283,7 +283,7 @@
         "publicNetworkAccess": "[if(equals(parameters('EnablePrivateNetworking'), true()), 'Disabled', 'Enabled')]",
         "networkAcls": {
           "defaultAction": "[if(equals(parameters('EnablePrivateNetworking'), true()), 'Deny', 'Allow')]",
-          "bypass": "None"
+          "bypass": "[if(equals(parameters('EnablePrivateNetworking'), true()), 'None', 'AzureServices')]"
         }
       },
       "dependsOn": [

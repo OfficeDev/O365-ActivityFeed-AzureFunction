@@ -55,7 +55,7 @@ foreach ($workload in $workloads) {
     #Get the Watchlist so that we don't store duplicates
     $q2 = "(_GetWatchlist('Policy') | where Workload == '$workloadAlias' | project SearchKey, Workload)"
     try { $watchlist = Invoke-AzOperationalInsightsQuery -WorkspaceId $WorkspaceID -Query $q2 }
-    catch { throw "Error getting watchlist. " + $_.Exception}
+    catch { throw ("Error getting watchlist. " + $_.Exception) }
       
     $policies = $response.results | Select-Object Name
       

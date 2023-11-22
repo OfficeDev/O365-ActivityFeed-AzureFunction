@@ -29,7 +29,7 @@ $WorkspaceID = (Get-AzOperationalInsightsWorkspace -Name $instance.Name -Resourc
 #Get the Watchlist so that we don't store duplicates
 $q2 = '(_GetWatchlist("SensitivityLabels") | project SearchKey)'
 try { $watchlist = Invoke-AzOperationalInsightsQuery -WorkspaceId $WorkspaceID -Query $q2 }
-catch {"Error getting watchlist. " + $_.Exception}
+catch { throw ("Error getting watchlist. " + $_.Exception) }
 
 #Fetch the labels and prepare for export
 try { $labels = Invoke-RestMethod -Authentication Bearer -Token $tokenG -Uri "https://graph.microsoft.com/beta/security/informationProtection/sensitivityLabels" -Method Get -ContentType "application/json" -MaximumRetryCount 5 -RetryIntervalSec 2 }
