@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.23.1.45101",
-      "templateHash": "18261917770999754426"
+      "templateHash": "12482225356158290048"
     }
   },
   "parameters": {
@@ -204,7 +204,7 @@
     }
   },
   "variables": {
-    "deploymentVersion": "1.1.0",
+    "deploymentVersion": "1.1.1",
     "location": "[resourceGroup().location]",
     "functionAppPackageUri": "[format('{0}/Sentinel_Deployment/functionPackage.zip', parameters('RepoUri'))]",
     "deploymentScriptUri": "[format('{0}/Sentinel_Deployment/deploymentScript.ps1', parameters('RepoUri'))]",
@@ -228,7 +228,12 @@
       },
       "properties": {
         "allowBlobPublicAccess": false,
-        "publicNetworkAccess": "[if(equals(parameters('EnablePrivateNetworking'), true()), 'Disabled', 'Enabled')]"
+        "publicNetworkAccess": "[if(equals(parameters('EnablePrivateNetworking'), true()), 'Disabled', 'Enabled')]",
+        "minimumTlsVersion": "TLS1_2",
+        "networkAcls": {
+          "defaultAction": "[if(equals(parameters('EnablePrivateNetworking'), true()), 'Deny', 'Allow')]",
+          "bypass": "AzureServices"
+        }
       },
       "dependsOn": [
         "[resourceId('Microsoft.Resources/deployments', 'createCustomTables')]"
@@ -275,7 +280,11 @@
             "tenantId": "[subscription().tenantId]"
           }
         ],
-        "publicNetworkAccess": "[if(equals(parameters('EnablePrivateNetworking'), true()), 'Disabled', 'Enabled')]"
+        "publicNetworkAccess": "[if(equals(parameters('EnablePrivateNetworking'), true()), 'Disabled', 'Enabled')]",
+        "networkAcls": {
+          "defaultAction": "[if(equals(parameters('EnablePrivateNetworking'), true()), 'Deny', 'Allow')]",
+          "bypass": "[if(equals(parameters('EnablePrivateNetworking'), true()), 'None', 'AzureServices')]"
+        }
       },
       "dependsOn": [
         "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('uami-{0}', parameters('FunctionAppName')))]"
@@ -424,7 +433,7 @@
             },
             {
               "name": "SentinelWorkspace",
-              "value": "[split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[8]]"
+              "value": "[split(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[2], split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[4]), 'Microsoft.OperationalInsights/workspaces', split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[8]), '/')[8]]"
             },
             {
               "name": "UamiClientId",
@@ -440,7 +449,7 @@
             },
             {
               "name": "LawResourceId",
-              "value": "[parameters('LogAnalyticsWorkspaceResourceID')]"
+              "value": "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[2], split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[4]), 'Microsoft.OperationalInsights/workspaces', split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[8])]"
             },
             {
               "name": "SensitiveDataHandling",
@@ -495,7 +504,7 @@
       "properties": {
         "Application_Type": "web",
         "Request_Source": "rest",
-        "WorkspaceResourceId": "[parameters('LogAnalyticsWorkspaceResourceID')]"
+        "WorkspaceResourceId": "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[2], split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[4]), 'Microsoft.OperationalInsights/workspaces', split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[8])]"
       }
     },
     {
@@ -570,7 +579,7 @@
             "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[2], split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[4]), 'Microsoft.OperationalInsights/workspaces', split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[8]), '2022-10-01', 'full').location]"
           },
           "LogAnalyticsWorkspaceResourceId": {
-            "value": "[parameters('LogAnalyticsWorkspaceResourceID')]"
+            "value": "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[2], split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[4]), 'Microsoft.OperationalInsights/workspaces', split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[8])]"
           },
           "DataCollectionEndpointName": {
             "value": "[parameters('DataCollectionEndpointName')]"
@@ -1343,8 +1352,8 @@
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "purviewDLPFunction",
-      "subscriptionId": "[split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[2]]",
-      "resourceGroup": "[split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[4]]",
+      "subscriptionId": "[split(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[2], split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[4]), 'Microsoft.OperationalInsights/workspaces', split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[8]), '/')[2]]",
+      "resourceGroup": "[split(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[2], split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[4]), 'Microsoft.OperationalInsights/workspaces', split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[8]), '/')[4]]",
       "properties": {
         "expressionEvaluationOptions": {
           "scope": "inner"
@@ -1361,7 +1370,7 @@
             "value": "PurviewDLP"
           },
           "lawName": {
-            "value": "[split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[8]]"
+            "value": "[split(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[2], split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[4]), 'Microsoft.OperationalInsights/workspaces', split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[8]), '/')[8]]"
           },
           "functionAlias": {
             "value": "PurviewDLP"
@@ -1433,8 +1442,8 @@
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "rbacAssignmentLaw",
-      "subscriptionId": "[split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[2]]",
-      "resourceGroup": "[split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[4]]",
+      "subscriptionId": "[split(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[2], split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[4]), 'Microsoft.OperationalInsights/workspaces', split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[8]), '/')[2]]",
+      "resourceGroup": "[split(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[2], split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[4]), 'Microsoft.OperationalInsights/workspaces', split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[8]), '/')[4]]",
       "properties": {
         "expressionEvaluationOptions": {
           "scope": "inner"
@@ -1445,7 +1454,7 @@
             "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('uami-{0}', parameters('FunctionAppName'))), '2022-01-31-preview').principalId]"
           },
           "lawName": {
-            "value": "[split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[8]]"
+            "value": "[split(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[2], split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[4]), 'Microsoft.OperationalInsights/workspaces', split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[8]), '/')[8]]"
           },
           "roleName": {
             "value": "[parameters('CustomRoleName')]"
@@ -1458,7 +1467,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.23.1.45101",
-              "templateHash": "15322811740691860933"
+              "templateHash": "17919208383268061497"
             }
           },
           "parameters": {
@@ -1475,8 +1484,6 @@
             "actions": {
               "type": "array",
               "defaultValue": [
-                "Microsoft.SecurityInsights/Watchlists/*/read",
-                "Microsoft.SecurityInsights/Watchlists/*/write",
                 "Microsoft.SecurityInsights/alertRules/write",
                 "Microsoft.SecurityInsights/alertRules/read",
                 "Microsoft.OperationalInsights/workspaces/read",
@@ -1572,8 +1579,8 @@
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "sentinelWatchlists",
-      "subscriptionId": "[split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[2]]",
-      "resourceGroup": "[split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[4]]",
+      "subscriptionId": "[split(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[2], split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[4]), 'Microsoft.OperationalInsights/workspaces', split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[8]), '/')[2]]",
+      "resourceGroup": "[split(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[2], split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[4]), 'Microsoft.OperationalInsights/workspaces', split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[8]), '/')[4]]",
       "properties": {
         "expressionEvaluationOptions": {
           "scope": "inner"
@@ -1581,13 +1588,16 @@
         "mode": "Incremental",
         "parameters": {
           "lawName": {
-            "value": "[split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[8]]"
+            "value": "[split(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[2], split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[4]), 'Microsoft.OperationalInsights/workspaces', split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[8]), '/')[8]]"
           },
           "policySync": {
             "value": "[parameters('DLPPolicySync')]"
           },
           "labelSync": {
             "value": "[parameters('SensitivityLabelSync')]"
+          },
+          "principalId": {
+            "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('uami-{0}', parameters('FunctionAppName'))), '2022-01-31-preview').principalId]"
           }
         },
         "template": {
@@ -1597,7 +1607,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.23.1.45101",
-              "templateHash": "17408845961877628677"
+              "templateHash": "5262353400852452627"
             }
           },
           "parameters": {
@@ -1611,7 +1621,13 @@
             "labelSync": {
               "type": "bool",
               "defaultValue": true
+            },
+            "principalId": {
+              "type": "string"
             }
+          },
+          "variables": {
+            "roleIdContributor": "/providers/Microsoft.Authorization/roleDefinitions/b24988ac-6180-42a0-ab88-20f7382dd24c"
           },
           "resources": [
             {
@@ -1647,18 +1663,51 @@
                 "description": "Sensitivity Labels",
                 "rawContent": "id,name,parent\r\n40489b3c-b060-4122-af94-5dbe51996729,40489b3c-b060-4122-af94-5dbe51996729,40489b3c-b060-4122-af94-5dbe51996729\r\n"
               }
+            },
+            {
+              "condition": "[equals(parameters('policySync'), true())]",
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[extensionResourceId(format('Microsoft.OperationalInsights/workspaces/{0}', parameters('lawName')), 'Microsoft.SecurityInsights/watchlists', 'Policy')]",
+              "name": "[guid(extensionResourceId(resourceId('Microsoft.OperationalInsights/workspaces', parameters('lawName')), 'Microsoft.SecurityInsights/watchlists', 'Policy'), variables('roleIdContributor'), parameters('principalId'))]",
+              "properties": {
+                "principalId": "[parameters('principalId')]",
+                "roleDefinitionId": "[variables('roleIdContributor')]",
+                "principalType": "ServicePrincipal"
+              },
+              "dependsOn": [
+                "[extensionResourceId(resourceId('Microsoft.OperationalInsights/workspaces', parameters('lawName')), 'Microsoft.SecurityInsights/watchlists', 'Policy')]"
+              ]
+            },
+            {
+              "condition": "[equals(parameters('labelSync'), true())]",
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[extensionResourceId(format('Microsoft.OperationalInsights/workspaces/{0}', parameters('lawName')), 'Microsoft.SecurityInsights/watchlists', 'SensitivityLabels')]",
+              "name": "[guid(extensionResourceId(resourceId('Microsoft.OperationalInsights/workspaces', parameters('lawName')), 'Microsoft.SecurityInsights/watchlists', 'SensitivityLabels'), variables('roleIdContributor'), parameters('principalId'))]",
+              "properties": {
+                "principalId": "[parameters('principalId')]",
+                "roleDefinitionId": "[variables('roleIdContributor')]",
+                "principalType": "ServicePrincipal"
+              },
+              "dependsOn": [
+                "[extensionResourceId(resourceId('Microsoft.OperationalInsights/workspaces', parameters('lawName')), 'Microsoft.SecurityInsights/watchlists', 'SensitivityLabels')]"
+              ]
             }
           ]
         }
-      }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('uami-{0}', parameters('FunctionAppName')))]"
+      ]
     },
     {
       "condition": "[equals(parameters('DeployAnalyticsRules'), true())]",
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "sentinelRules",
-      "subscriptionId": "[split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[2]]",
-      "resourceGroup": "[split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[4]]",
+      "subscriptionId": "[split(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[2], split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[4]), 'Microsoft.OperationalInsights/workspaces', split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[8]), '/')[2]]",
+      "resourceGroup": "[split(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[2], split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[4]), 'Microsoft.OperationalInsights/workspaces', split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[8]), '/')[4]]",
       "properties": {
         "expressionEvaluationOptions": {
           "scope": "inner"
@@ -1666,7 +1715,7 @@
         "mode": "Incremental",
         "parameters": {
           "lawId": {
-            "value": "[parameters('LogAnalyticsWorkspaceResourceID')]"
+            "value": "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[2], split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[4]), 'Microsoft.OperationalInsights/workspaces', split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[8])]"
           },
           "policySync": {
             "value": "[parameters('DLPPolicySync')]"
@@ -1978,7 +2027,7 @@
       "dependsOn": [
         "[resourceId('Microsoft.Resources/deployments', 'createCustomTables')]",
         "[resourceId('Microsoft.Web/sites', parameters('FunctionAppName'))]",
-        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[2], split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[4]), 'Microsoft.Resources/deployments', 'purviewDLPFunction')]"
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', split(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[2], split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[4]), 'Microsoft.OperationalInsights/workspaces', split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[8]), '/')[2], split(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[2], split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[4]), 'Microsoft.OperationalInsights/workspaces', split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[8]), '/')[4]), 'Microsoft.Resources/deployments', 'purviewDLPFunction')]"
       ]
     },
     {
@@ -1986,8 +2035,8 @@
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "sentinelWorkbooks",
-      "subscriptionId": "[split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[2]]",
-      "resourceGroup": "[split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[4]]",
+      "subscriptionId": "[split(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[2], split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[4]), 'Microsoft.OperationalInsights/workspaces', split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[8]), '/')[2]]",
+      "resourceGroup": "[split(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[2], split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[4]), 'Microsoft.OperationalInsights/workspaces', split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[8]), '/')[4]]",
       "properties": {
         "expressionEvaluationOptions": {
           "scope": "inner"
@@ -1995,7 +2044,7 @@
         "mode": "Incremental",
         "parameters": {
           "workbookSourceId": {
-            "value": "[parameters('LogAnalyticsWorkspaceResourceID')]"
+            "value": "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[2], split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[4]), 'Microsoft.OperationalInsights/workspaces', split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[8])]"
           },
           "location": {
             "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[2], split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[4]), 'Microsoft.OperationalInsights/workspaces', split(parameters('LogAnalyticsWorkspaceResourceID'), '/')[8]), '2022-10-01', 'full').location]"

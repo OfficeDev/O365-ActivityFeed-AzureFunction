@@ -71,15 +71,12 @@ This a fork of the initial [Sentinel DLP Solution](https://techcommunity.microso
 	- graph.microsoft.com
 	- management.azure.com
     - api.loganalytics.io
+    - api.loganalytics.azure.com
     - www.powershellgallery.com (PowerShell Gallery)
     - onegetcdn.azureedge.net (PowerShell Gallery)
     - psg-prod-centralus.azureedge.net (PowerShell Gallery)
     - psg-prod-eastus.azureedge.net (PowerShell Gallery)
     - az818661.vo.msecnd.net (PowerShell Gallery)
-	- *FunctionAppName*.azurewebsites.net
-	- *FunctionAppName*.scm.azurewebsites.net
-	- *StorageAccountName*.blob.core.windows.net
-	- *StorageAccountName*.queue.core.windows.net
 	- Data Collection Endpoint URI (e.g., *dcename*-nwyp.southcentralus-1.ingest.monitor.azure.com)
     - [Application Insights](https://learn.microsoft.com/en-us/azure/azure-monitor/app/ip-addresses#outgoing-ports)
 
@@ -89,6 +86,7 @@ This a fork of the initial [Sentinel DLP Solution](https://techcommunity.microso
 ![Log Analytics workspace resource ID](./images/lawid.png)
 - Global Admin permissions on the Purview DLP Entra ID tenant to create the App Registration and grant Admin Consent as outlined in step #2 below.
 - Owner permissions on an Azure Resource Group to deploy the solution to in step #3. If Owner permissions are not granted on the subscription, the *Microsoft.ContainerInstance* resource provider must be [registered on the subscription](https://learn.microsoft.com/en-us/azure/azure-resource-manager/management/resource-providers-and-types#azure-portal) before deployment in order for the code to be automatically deployed to the Function App. If the Sentinel workspace is in a different resource group than where the solution will be deployed, Owner permissions are also required on the Resource Group in order to deploy the custom role.
+- It is recommended to deploy in the same subscription as the Sentinel workspace for the solution to function properly.
 
 ### Deployment
 Review [Important Considerations](#important-considerations) before deploying.
@@ -111,16 +109,17 @@ Review [Important Considerations](#important-considerations) before deploying.
 ![Incident Management Workbook](./images/incident.png)
 
 ## Updates
-View the [Release Notes](releaseNotes.md) to see version details. You can also subscribe to/watch the repo for new pull requests to get notified when updates occur. 
-
-Before proceeding, if your Function App was configured for Private Network Access, you will need to make sure you are accessing from a device that has connectivity to its private endpoint or that a valid exclusion for your client's public IP address has been added. See [Set up Azure App Service access restrictions](https://learn.microsoft.com/en-us/azure/app-service/app-service-ip-restrictions?tabs=azurecli) for more information.
+View the [Release Notes](releaseNotes.md) to see version details. You can also subscribe to/watch the repo for new pull requests to get notified when updates occur.
 
 To check the current running version, perform the following:
-1. In the Azure Portal, navigate to the Function App and select **Advanced Tools**, then select **Go**. This will bring you to the Kudu portal.
-2. In the Kudu portal, select **PowerShell** from the **Debug Console** menu at the top.
-3. In the **Kudu Remote Execution Console**, type: **cat .\site\wwwroot\version.info**. The current version should be displayed.
+1. In the Azure Portal, navigate to the Function App and select **Console**, under **Development Tools**.
+2. In the console, type: 
+```
+more version.info
+``` 
+The current version should be displayed.
 
-To update the Function App with the latest version of the code, you can use the following Azure PowerShell commands:
+To update the Function App with the latest version of the code, you can use the following Azure PowerShell commands. If your Function App was configured for Private Network Access, you will need to make sure you are accessing from a device that has connectivity to its private endpoint or that a valid exclusion for your client's public IP address has been added. See [Set up Azure App Service access restrictions](https://learn.microsoft.com/en-us/azure/app-service/app-service-ip-restrictions?tabs=azurecli) for more information.
 ```Powershell
 #Download latest Function App package.
 Invoke-WebRequest -Uri "https://raw.githubusercontent.com/OfficeDev/O365-ActivityFeed-AzureFunction/master/Sentinel_Deployment/functionPackage.zip" -OutFile "functionPackage.zip"

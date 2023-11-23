@@ -49,11 +49,13 @@ foreach ($workload in $workloads) {
         | summarize by Name
         | project Name, Workload = '$workloadAlias'"
 
-    $response = Invoke-AzOperationalInsightsQuery -WorkspaceId $WorkspaceID -Query $q
+    try { $response = Invoke-AzOperationalInsightsQuery -WorkspaceId $WorkspaceID -Query $q }
+    catch { throw "Error getting policies from query. " + $_.Exception }
       
     #Get the Watchlist so that we don't store duplicates
     $q2 = "(_GetWatchlist('Policy') | where Workload == '$workloadAlias' | project SearchKey, Workload)"
-    $watchlist = Invoke-AzOperationalInsightsQuery -WorkspaceId $WorkspaceID -Query $q2
+    try { $watchlist = Invoke-AzOperationalInsightsQuery -WorkspaceId $WorkspaceID -Query $q2 }
+    catch { throw ("Error getting watchlist. " + $_.Exception) }
       
     $policies = $response.results | Select-Object Name
       

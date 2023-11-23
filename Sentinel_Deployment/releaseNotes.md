@@ -1,4 +1,16 @@
 # Release Notes
+## 1.1.1 (11/20/2023)
+### Changes/Fixes
+- Function App Code
+    - Configured Function timeout for 5 min.
+    - Updated Az.Storage to 6.*.
+    - Suppressed output when running Disable-AzContextAutosave.
+    - Addded error handling to sync functions to prevent duplicates.
+- Deployment
+    - Set storage account to minimum TLS 1.2 and set trusted network exceptions where needed.
+    - Reduced permissions needed on Watchlists.
+    - Bicep Log Analytics Workspace Id reference cleanup.
+    
 ## 1.1.0 (11/15/2023)
 ### Changes/Fixes
 - Function App Code
