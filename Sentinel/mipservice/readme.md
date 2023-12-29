@@ -1,10 +1,10 @@
 ---
 page_type: sample
 products:
-- Microsoft 365
-- Sentinel
+- m365
+- microsoft-sentinel
 languages:
-- powershellcore
+- powershell
 extensions:
   contentType: samples
   createdDate: 12/17/2021 3:00:56 PM
