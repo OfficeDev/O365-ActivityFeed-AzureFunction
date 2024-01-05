@@ -2,9 +2,9 @@
 page_type: sample
 products:
 - office-365
-- Sentinel
+- microsoft-sentinel
 languages:
-- powershellcore
+- powershell
 extensions:
   contentType: samples
   createdDate: 4/2/2020 3:00:56 AM
