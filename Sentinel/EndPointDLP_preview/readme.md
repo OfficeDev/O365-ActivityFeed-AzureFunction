@@ -1,5 +1,3 @@
-[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FOfficeDev%2FO365-ActivityFeed-AzureFunction%2Fmaster%2FSentinel%2FEndPointDLP_preview%2Fdeploysentinelfunction.json)
-
 ---
 page_type: sample
 products:
@@ -13,6 +11,7 @@ extensions:
 description: "This sample can be used to create a function that ingest DLP.All logs and Audit.General Endpoint DLP events to Sentinel. This is early preview code and contains some workarounds to solve current limitations in the system"
 ---
 
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FOfficeDev%2FO365-ActivityFeed-AzureFunction%2Fmaster%2FSentinel%2FEndPointDLP_preview%2Fdeploysentinelfunction.json)
 
 # Ingesting Office 365 and Endpoint DLP events to Sentinel
 
