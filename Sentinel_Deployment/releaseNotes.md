@@ -3,6 +3,7 @@
 ### Changes/Fixes
 - Function App Code
     - Updated .Net libraries and PowerShell modules to latest versions.
+    - Updated QueueDLPEvents Function to use QueueClient.SendMessage method as required by new PS module.
 - Deployment
     - Fixed issue where previous method to deploy Azure Files Share (required for Consumption and Elastic Premium plans) no longer worked and was causing depoyments to fail.
     - Updated Function App PowerShell to version 7.4.
