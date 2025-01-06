@@ -1,13 +1,10 @@
 param FunctionAppName string
 param Location string
 param UserAssignedMiId string
-param UserAssignedMiPrincipalId string
 param HostingPlanId string
 param EnablePrivateNetworking bool
 param FunctionAppSubnetId string = ''
 param AppSettings array
-param DeployFunctionCode bool
-param RoleIdOwner string
 param AlwaysOn bool
 
 resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
@@ -43,16 +40,6 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
         ] 
       }  
     }
-  }
-}
-
-resource roleAssignmentFa 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (DeployFunctionCode == true) {
-  name: guid(subscription().id, resourceGroup().id, UserAssignedMiId)
-  scope: functionApp
-  properties: {
-    principalId: UserAssignedMiPrincipalId
-    roleDefinitionId: RoleIdOwner
-    principalType: 'ServicePrincipal'
   }
 }
 
