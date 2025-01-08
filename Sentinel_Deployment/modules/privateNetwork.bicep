@@ -9,6 +9,7 @@ param KeyVaultId string
 param location string
 param PrincipalId string
 param DeployCode bool
+param EnableElasticPremiumPlan bool
 
 resource virtualNetwork 'Microsoft.Network/virtualNetworks@2022-07-01' = {
   name: 'vnet-${FunctionAppName}'
@@ -41,6 +42,11 @@ resource virtualNetwork 'Microsoft.Network/virtualNetworks@2022-07-01' = {
               }                
             } 
           ]
+          serviceEndpoints: EnableElasticPremiumPlan == true ? [
+            {
+              service: 'Microsoft.Storage'
+            }
+          ] : []
           networkSecurityGroup: {
            id: nsg.id
           } 

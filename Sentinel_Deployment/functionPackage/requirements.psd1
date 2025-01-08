@@ -3,8 +3,8 @@
 #
 @{
     # For latest supported version, go to 'https://www.powershellgallery.com/packages/Az'. 
-    'Az.Accounts' = '2.*'
-    'Az.Storage' = '6.*'
+    'Az.Accounts' = '4.*'
+    'Az.Storage' = '8.*'
     'Az.OperationalInsights' = '3.*'
-    'Az.Resources' = '6.*'
+    'Az.Resources' = '7.*'
  }

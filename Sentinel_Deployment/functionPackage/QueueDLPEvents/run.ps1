@@ -102,8 +102,9 @@ Foreach ($workload in $workloads) {
                     $msgarray += @($msg) 
                 }    
                 $message = $msgarray | convertto-json                
-                $queueMessage = [Microsoft.Azure.Storage.Queue.CloudQueueMessage]::new("$message")
-                $myqueue.CloudQueue.AddMessage($queuemessage)
+                $bytes = [System.Text.Encoding]::ASCII.GetBytes($message)
+                $messageBase64  =[Convert]::ToBase64String($bytes)
+                $myQueue.QueueClient.SendMessage($messageBase64)
                
                 $runs -= 1
                 $i += $messageSize + 1
