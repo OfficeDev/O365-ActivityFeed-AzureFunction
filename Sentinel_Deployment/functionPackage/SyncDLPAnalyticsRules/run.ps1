@@ -144,7 +144,10 @@ foreach ($workload in $workloads) {
     $csv = $response.Results 
 
     foreach ($item in $csv) {
-      if ($item.Name -notin $watchlist.results.SearchKey -and $item.Workload -notin $watchlist.results.Workload) {
+      <# commenting this out, this logic will only let you onboard policies from a workload one time. If you want to add policies to a workload the watchlist will not be updated and analytics rules wont fire
+      ($item.Name -notin $watchlist.results.SearchKey -and $item.Workload -notin $watchlist.results.Workload) #>
+      if ($item.Name -notin $watchlist.results.SearchKey) # this will ensure there are no duplicates while allowing inplace edits and updates. 
+      {
         $etag = New-Guid
         $a = @{
           'etag'       = $etag.guid
