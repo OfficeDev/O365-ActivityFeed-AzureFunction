@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SIT Tuning &mdash; Round-over-Round Delta</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="app-header">
+    <nav class="topnav">
+      <span class="nav-current">Delta comparison</span>
+      <a href="profile-studio.html">Profile Studio</a>
+      <a href="report-viewer.html">Report Viewer</a>
+      <a href="implementation.html">Implementation Guide &rarr;</a>
+    </nav>
+    <p class="eyebrow">SIT Tuning Studio</p>
+    <h1>Round-over-Round Delta</h1>
+    <p class="subtitle">
+      Compare a baseline run against a post-tuning run to measure how much the new
+      SIT regex suppressions reduced noise &mdash; without re-downloading from Graph.
+    </p>
+  </header>
+
+  <section class="loaders">
+    <div class="loader" id="loader-baseline">
+      <h2>Baseline run</h2>
+      <p class="hint">The run captured <em>before</em> the new regexes were deployed.</p>
+      <label class="dropzone" data-slot="baseline">
+        <input type="file" accept=".json,application/json" hidden />
+        <span class="dz-text">Drop a <code>run-*.json</code> snapshot or <code>SIT_ChunkAnalyses.json</code> here, or click to browse</span>
+      </label>
+      <div class="file-meta" data-slot="baseline"></div>
+    </div>
+
+    <div class="loader" id="loader-current">
+      <h2>New run</h2>
+      <p class="hint">The run captured <em>after</em> the new regexes were deployed.</p>
+      <label class="dropzone" data-slot="current">
+        <input type="file" accept=".json,application/json" hidden />
+        <span class="dz-text">Drop a <code>run-*.json</code> snapshot or <code>SIT_ChunkAnalyses.json</code> here, or click to browse</span>
+      </label>
+      <div class="file-meta" data-slot="current"></div>
+    </div>
+  </section>
+
+  <section class="actions">
+    <button id="compareBtn" disabled>Compare runs</button>
+    <button id="swapBtn" class="secondary" disabled>Swap</button>
+    <button id="clearBtn" class="secondary" disabled>Clear</button>
+    <button id="exportBtn" class="secondary" disabled title="Download a self-contained HTML file you can share">Export HTML</button>
+    <span id="deltaStatus" class="status-pill"></span>
+  </section>
+
+  <section id="results" class="results" hidden>
+    <h2>Headline delta</h2>
+    <div id="metricCards" class="metric-cards"></div>
+
+    <div class="grid-2">
+      <div class="panel">
+        <h3>Noise occurrences by SIT rule</h3>
+        <div id="sitRuleChart" class="bar-chart"></div>
+      </div>
+      <div class="panel">
+        <h3>Detections by workload</h3>
+        <div id="workloadChart" class="bar-chart"></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>Top suppressed / changed noise patterns</h3>
+      <table id="noiseTable" class="data-table">
+        <thead>
+          <tr>
+            <th>Pattern</th><th>SIT rule</th><th>Workload</th>
+            <th class="num">Baseline</th><th class="num">New</th><th class="num">&Delta;</th><th>Status</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="panel">
+      <h3>Validated findings (true-positive guardrail)</h3>
+      <p class="hint">Watch for unexpected <strong>drops</strong> here &mdash; tuning should cut noise, not real sensitive data.</p>
+      <table id="validatedTable" class="data-table">
+        <thead>
+          <tr>
+            <th>Finding</th><th>Type</th><th>SIT rule</th><th>Risk</th>
+            <th class="num">Baseline</th><th class="num">New</th><th class="num">&Delta;</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="emptyState" class="empty-state">
+    <p>Load a baseline and a new run to see the delta.</p>
+    <p class="hint">
+      Each <code>credpattern.ps1</code> run writes a snapshot to
+      <code>cache/runs/run-&lt;timestamp&gt;.json</code>. Use one snapshot from before the
+      regex changes and one from after.
+    </p>
+  </section>
+
+  <script src="export-html.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

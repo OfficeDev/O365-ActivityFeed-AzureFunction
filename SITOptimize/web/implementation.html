@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SIT Tuning &mdash; Implementation Guide</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="app-header">
+    <nav class="topnav">
+      <a href="index.html">Delta comparison</a>
+      <a href="profile-studio.html">Profile Studio</a>
+      <a href="report-viewer.html">Report Viewer</a>
+      <span class="nav-current">Implementation Guide</span>
+    </nav>
+    <p class="eyebrow">SIT Tuning Studio</p>
+    <h1>Implementation Guide</h1>
+    <p class="subtitle">
+      Turn a noise-reduction report into a concrete, click-by-click plan you can execute in the
+      <strong>Microsoft Purview portal</strong>. The agent maps every change to the right place
+      &mdash; <em>built-in SITs</em> are copied and the copy tuned (or handled with DLP rule
+      exceptions), while <em>custom SITs</em> are edited directly.
+    </p>
+  </header>
+
+  <!-- ================= TAILORED PLAN ================= -->
+  <section class="panel">
+    <span class="panel-eyebrow run">Tailored plan</span>
+    <h3>Generate an implementation plan from a run</h3>
+    <p class="hint">
+      Pick a completed run. The agent reads its noise-reduction report and produces an ordered,
+      copy-pasteable plan: which SIT rule to change, whether it is built-in or custom, the exact
+      regex / keyword / exception edits, how to test, and the rollout order.
+    </p>
+    <div class="field-row">
+      <label class="field grow">
+        <span>Run <small>(newest first)</small></span>
+        <select id="runSelect"></select>
+      </label>
+      <label class="field">
+        <span>&nbsp;</span>
+        <button id="genBtn">Generate plan</button>
+      </label>
+      <label class="field">
+        <span>&nbsp;</span>
+        <button id="regenBtn" class="secondary" title="Ignore the cached plan and regenerate">Regenerate</button>
+      </label>
+    </div>
+    <div id="planMeta" class="hint"></div>
+    <div class="actions inline">
+      <button id="copyMdBtn" class="secondary" disabled>Copy markdown</button>
+      <button id="exportBtn" class="secondary" disabled title="Download a self-contained HTML file you can share">Export HTML</button>
+      <span id="planStatus" class="status-pill"></span>
+    </div>
+  </section>
+
+  <section class="panel" id="planPanel" hidden>
+    <article id="planBody" class="report-body"></article>
+  </section>
+
+  <section class="empty-state" id="emptyState" hidden>
+    No runs found yet. Run a profile from the
+    <a href="profile-studio.html">Profile Studio</a> to generate a report, then come back here.
+  </section>
+
+  <!-- ================= STATIC PLAYBOOK ================= -->
+  <section class="panel sub">
+    <span class="panel-eyebrow setup">Reference</span>
+    <h3>How DLP tuning works in Purview</h3>
+    <p class="hint">
+      The agent's plan follows the two paths below. Keep this open as a reference while you apply
+      changes. Portal labels can differ slightly between <code>compliance.microsoft.com</code> and
+      the Microsoft Purview portal.
+    </p>
+
+    <div class="report-body">
+      <h4>A SIT is an entity definition</h4>
+      <p>
+        Every SIT is built from a <strong>primary element</strong> (a regex, a keyword list, a
+        dictionary, or a built-in <strong>function</strong> such as <code>Func_credit_card</code>),
+        optional <strong>supporting elements</strong> (keywords/regex that must appear within a
+        <strong>character proximity</strong> window), and <strong>confidence levels</strong>.
+        Confidence maps to an accuracy number: <strong>Low&nbsp;=&nbsp;65 or below</strong>,
+        <strong>Medium&nbsp;=&nbsp;75</strong>, <strong>High&nbsp;=&nbsp;85</strong>. There are three
+        places you can tune, plus the DLP rule itself.
+      </p>
+      <p>
+        The pattern editor gives you precise knobs &mdash; don&rsquo;t under-use them:
+      </p>
+      <ul>
+        <li><strong>Element types</strong> (primary &amp; supporting): regular expression, keyword
+          list, keyword dictionary, or function.</li>
+        <li><strong>Element groups</strong>: <code>Any of these</code> (OR), <code>All of these</code>
+          (AND), and <code>Not any of these</code> &mdash; a real <strong>negative / exclusion</strong>
+          group (&ldquo;match unless one of these noise terms is also present&rdquo;).</li>
+        <li><strong>Character proximity</strong>: detect primary + supporting within N characters
+          (tighten, e.g. 150&ndash;300), or <em>Anywhere in the document</em>.</li>
+        <li><strong>Additional checks</strong>: <code>Exclude specific values</code>,
+          <code>Starts / doesn&rsquo;t start with</code>, <code>Ends / doesn&rsquo;t end with</code>,
+          <code>Exclude duplicate characters</code>, <code>Include / exclude prefixes</code>,
+          <code>Include / exclude suffixes</code> &mdash; surgical, low-risk FP cutters.</li>
+        <li><strong>Confidence level</strong> per pattern (Low / Medium / High).</li>
+      </ul>
+
+      <hr />
+
+      <h4>First: is the SIT built-in or custom?</h4>
+      <p>
+        Well-known Microsoft names (&ldquo;Credit Card Number&rdquo;, &ldquo;U.S. Social Security
+        Number (SSN)&rdquo;, &ldquo;Azure Storage Account Key&rdquo;, bundles like &ldquo;All Full
+        Names&rdquo;) are <strong>built-in</strong>; anything created in your tenant is
+        <strong>custom</strong>. Under <em>Data classification &rarr; Classifiers &rarr; Sensitive
+        info types</em>, custom types have an <strong>Edit</strong> button &mdash; built-in types
+        open read-only but offer a <strong>Copy</strong> action.
+      </p>
+
+      <hr />
+
+      <h4>Tier 1 &mdash; Editing a built-in in place: not possible</h4>
+      <p>
+        You can&rsquo;t change a Microsoft-provided SIT as shipped. Don&rsquo;t try to edit the
+        original &mdash; use Tier&nbsp;2 (copy &amp; tune) or the DLP rule controls instead.
+      </p>
+
+      <h4>Tier 2 &mdash; Copy the built-in and tune the copy (preferred for most built-ins)</h4>
+      <p>
+        Open the built-in SIT &rarr; <strong>Copy</strong> &rarr; you now have an editable custom
+        copy. For detections like <strong>Credit Card Number</strong> this is the recommended fix.
+        On the copy you can:
+      </p>
+      <ol>
+        <li><strong>Adjust supporting elements</strong> &mdash; add corroborating keywords/
+          dictionaries (e.g. <code>credit</code>, <code>card</code>, <code>cvv</code>,
+          <code>exp</code>) or remove the ones driving noise; combine them as
+          <code>Any</code>&nbsp;/&nbsp;<code>All</code>&nbsp;/&nbsp;<code>Not&nbsp;any of these</code>.</li>
+        <li><strong>Add a &ldquo;Not any of these&rdquo; group</strong> to exclude context-specific
+          noise (test banners, sample-data markers) without weakening the primary detection.</li>
+        <li><strong>Tighten character proximity</strong> so the primary match only counts when that
+          context is nearby (e.g. 150&ndash;300 characters).</li>
+        <li><strong>Add additional checks</strong> &mdash; <code>Exclude specific values</code> (known
+          test/sample literals), <code>Exclude duplicate characters</code> (kill
+          <code>0000&hellip;</code>/<code>1111&hellip;</code>), require/forbid prefixes &amp; suffixes,
+          starts/ends-with constraints.</li>
+        <li><strong>Raise confidence / accuracy</strong> (Low&nbsp;&le;65 / Medium&nbsp;75 /
+          High&nbsp;85) and point the DLP rule at High.</li>
+        <li><strong>Function-based primaries</strong> (<code>Func_*</code>) can&rsquo;t be rewritten,
+          but everything around them is tunable. If the copy&rsquo;s primary is a plain regex you can
+          also tighten that regex.</li>
+      </ol>
+      <p class="hint">
+        Then <strong>repoint the DLP rule</strong> from the built-in to your tuned copy. The
+        original built-in stays untouched, so rollback is instant. Path: <em>Sensitive info types
+        &rarr; [built-in] &rarr; Copy &rarr; edit &rarr; Test &rarr; Save / Publish</em>.
+      </p>
+
+      <h4>Tier 3 &mdash; Custom SITs (fully editable)</h4>
+      <p>
+        Edit the definition directly. Cut false positives by <em>requiring more corroboration</em>
+        and by using the editor&rsquo;s <strong>built-in exclusions</strong> &mdash;
+        <code>Not any of these</code> groups and the Additional checks (Exclude specific values,
+        doesn&rsquo;t-start/end-with, exclude prefixes/suffixes).
+      </p>
+      <ol>
+        <li><strong>Choose the primary element</strong> (regex / keyword list / dictionary /
+          function). For a regex, tighten it &mdash; anchor it, restrict character classes, add word
+          boundaries, require structure. <strong>Keep the regex forward-matching only:</strong>
+          don&rsquo;t use lookbehind (<code>(?&lt;=&hellip;)</code>&nbsp;/&nbsp;<code>(?&lt;!&hellip;)</code>)
+          or lookahead in the primary pattern &mdash; Purview&rsquo;s engine doesn&rsquo;t reliably
+          support them and they can silently break the whole match, dropping real true positives. Do
+          all exclusion logic outside the regex (next point).</li>
+        <li><strong>Require supporting elements + groups</strong> within a character proximity window;
+          use <code>All of these</code> for more corroboration and <code>Not any of these</code> to
+          exclude noise terms near the match.</li>
+        <li><strong>Add additional checks</strong> &mdash; Exclude specific values, Exclude duplicate
+          characters, starts/ends-with, include/exclude prefixes &amp; suffixes &mdash; for surgical
+          FP removal.</li>
+        <li><strong>Use confidence levels</strong> &mdash; corroborated matches High, weak matches
+          lower.</li>
+        <li><strong>Curate keywords</strong> &mdash; add corroborating, remove over-broad, use a
+          dictionary when large.</li>
+      </ol>
+      <p class="hint">
+        Path: <em>Sensitive info types &rarr; [custom SIT] &rarr; Edit &rarr; edit pattern &rarr;
+        Test &rarr; Save / Publish</em>.
+      </p>
+
+      <hr />
+
+      <h4>Always available &mdash; DLP rule controls (any SIT type, no SIT edit)</h4>
+      <p>
+        These work whether the SIT is built-in or custom and are the fastest, most reversible wins:
+      </p>
+      <ol>
+        <li><strong>Raise the minimum instance count</strong> (e.g. require 5&ndash;10 matches
+          instead of 1).</li>
+        <li><strong>Require higher confidence</strong> on the SIT condition (Low &rarr; Medium &rarr;
+          High).</li>
+        <li><strong>Add predicate exceptions</strong> directly in the rule (<em>Add exception</em> /
+          NOT conditions) &mdash; e.g. except when content contains noise keywords
+          (<code>test</code>, <code>sample</code>, <code>example</code>, <code>dummy</code>).</li>
+      </ol>
+      <p class="hint">
+        Path: <em>Data Loss Prevention &rarr; Policies &rarr; [policy] &rarr; Edit policy &rarr;
+        [rule] &rarr; Edit &rarr; Conditions / Exceptions</em>.
+      </p>
+
+      <h4>Exceptions are workload-dependent</h4>
+      <p>
+        The predicates you can use in a rule exception <strong>depend on the workload</strong> the
+        rule covers. Match the exception to where the noise is coming from (the analysis reports a
+        <code>source_workload</code> for each pattern) &mdash; an email-only predicate won&rsquo;t
+        exist on a SharePoint or Endpoint rule:
+      </p>
+      <ul>
+        <li><strong>Exchange / email:</strong> except by sender / recipient (domain, group, member),
+          sender IP range, subject/body/header words or patterns, attachment type/size.</li>
+        <li><strong>SharePoint / OneDrive:</strong> except by document property / managed metadata,
+          site / library / path, file name or extension, sensitivity label.</li>
+        <li><strong>Teams (chat &amp; channel):</strong> except by sender / recipient (internal vs
+          external), or content contains words / patterns.</li>
+        <li><strong>Endpoint / Devices:</strong> except by file path / extension, app or browser,
+          network / domain. (Most email predicates like sender/recipient don&rsquo;t apply here.)</li>
+      </ul>
+
+      <h4>Keep exception terms specific &mdash; or you suppress real findings</h4>
+      <p>
+        A &ldquo;content contains words / phrases&rdquo; exception is a <strong>substring match over
+        the whole item</strong>. A short or fragmented term silently excludes huge volumes of
+        legitimate content &mdash; suppressing real true positives, which is worse than a false
+        positive. Guard rails:
+      </p>
+      <ul>
+        <li><strong>Never use fragments or structural snippets</strong> as exception terms &mdash;
+          e.g. <code>&amp;p=</code>, <code>?e=</code>, <code>id=</code>, <code>LinkId=</code>,
+          <code>destination=</code>, or single words like <code>link</code>, <code>token</code>,
+          <code>key</code>. They appear everywhere and gut detection.</li>
+        <li><strong>Don&rsquo;t split a noise string into pieces.</strong> Only the full, distinctive
+          string is safe &mdash; matching the parts matches almost everything.</li>
+        <li><strong>Prefer a structural predicate over a content keyword</strong> whenever one exists
+          for the workload (sender / URL domain, site, path, file extension). It&rsquo;s precise and
+          doesn&rsquo;t scan the whole body.</li>
+        <li>If you must use a keyword, make it <strong>long, unique and anchored</strong> (a full
+          FQDN like <code>safelinks.protection.outlook.com</code> or a complete unique phrase) and
+          confirm it essentially only ever appears in the noise source.</li>
+      </ul>
+
+      <hr />
+
+      <h4>Always: test, roll out safely, and measure</h4>
+      <ul>
+        <li><strong>Test the SIT</strong> with the built-in <em>Test</em> tool (paste / upload
+          sample content) before publishing.</li>
+        <li><strong>Run the policy in simulation / test mode</strong> (alerts without enforcement)
+          first, then enforce once the volume looks right.</li>
+        <li><strong>Allow propagation.</strong> SIT and rule changes can take up to ~1 hour (longer
+          for data-at-rest, which needs re-crawl) to take effect.</li>
+        <li><strong>Keep a rollback.</strong> Built-in originals are never edited; tune copies or use
+          test mode so you can revert instantly.</li>
+        <li><strong>Quantify the win.</strong> Capture a run before and after, then use the
+          <a href="index.html">Delta comparison</a> page to measure the noise reduction.</li>
+      </ul>
+    </div>
+  </section>
+
+  <script src="export-html.js"></script>
+  <script src="implementation.js"></script>
+</body>
+</html>

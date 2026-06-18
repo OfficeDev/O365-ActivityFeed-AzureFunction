@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SIT Tuning &mdash; Profile Studio</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="app-header">
+    <nav class="topnav">
+      <a href="index.html">&larr; Delta comparison</a>
+      <span class="nav-current">Profile Studio</span>
+      <a href="report-viewer.html">Report Viewer</a>
+      <a href="implementation.html">Implementation Guide &rarr;</a>
+    </nav>
+    <p class="eyebrow">SIT Tuning Studio</p>
+    <h1>Profile Studio</h1>
+    <p class="subtitle">
+      Two tracks in one place. <strong>Run &amp; compare:</strong> run any saved profile to
+      produce a run snapshot and measure noise reduction on the <a href="index.html">delta
+      page</a>. <strong>Create a new profile:</strong> describe any sensitive information type
+      and let the agent draft a <strong>noise-reduction tuning profile</strong> &mdash; the
+      prompts exist to find <strong>why the SIT is over-firing and how to suppress the false
+      positives</strong> while protecting genuine true positives. Edit the language, test it,
+      then export a ready-to-run <code>.psd1</code> for <code>credpattern.ps1</code>.
+    </p>
+  </header>
+
+  <!-- ================= CONNECTION ================= -->
+  <section class="panel">
+    <span class="panel-eyebrow setup">Setup</span>
+    <h3>Server connection</h3>
+    <p class="hint">
+      This page is served by <code>studio-server.ps1</code>, a local PowerShell web server.
+      It runs the agent, test runs, file saves and the full pipeline on your machine using
+      <code>$env:AZURE_OPENAI_API_KEY</code> &mdash; the key never reaches the browser.
+    </p>
+    <div class="callout" id="offlineCallout" hidden>
+      <strong>Not connected to the studio server.</strong>
+      Start it from the repo root and reload this page:
+      <pre class="run-cmd">$env:AZURE_OPENAI_API_KEY = '&lt;your-key&gt;'
+pwsh .\studio-server.ps1</pre>
+      Then browse to <code>http://localhost:8787/</code>.
+    </div>
+    <div class="field-row">
+      <label class="field">
+        <span>AI endpoint (Azure OpenAI responses URL)</span>
+        <input type="text" id="endpoint" placeholder="https://&lt;resource&gt;.cognitiveservices.azure.com/openai/responses?api-version=2025-04-01-preview" />
+      </label>
+      <label class="field">
+        <span>Model / deployment</span>
+        <input type="text" id="model" value="gpt-5.4" />
+      </label>
+    </div>
+    <p class="hint">
+      Leave the endpoint blank to use the server's default. Point it at your own
+      Azure OpenAI resource to use a different endpoint &mdash; the matching
+      <code>AZURE_OPENAI_API_KEY</code> must be set on the server that resource expects.
+    </p>
+    <div class="actions inline">
+      <button id="testConnBtn" class="secondary">Check server</button>
+      <span id="connStatus" class="status-pill"></span>
+    </div>
+  </section>
+
+  <!-- ================= EXISTING PROFILE ================= -->
+  <section class="panel" id="existingPanel">
+    <span class="panel-eyebrow run">Run &amp; compare</span>
+    <h3>Run an existing profile</h3>
+    <p class="hint">
+      Already have a profile under <code>profiles/</code>? Pick it and run the pipeline
+      directly to produce a fresh run snapshot &mdash; then compare a baseline run against a
+      post-tuning run on the <a href="index.html">delta page</a>. No need to regenerate the
+      language. (Use the <strong>Create a new profile</strong> track below only when building
+      or editing the tuning language itself.)
+    </p>
+    <div class="field-row">
+      <label class="field grow">
+        <span>Saved profile</span>
+        <select id="existingSelect"></select>
+      </label>
+      <label class="field">
+        <span>&nbsp;</span>
+        <button id="refreshProfilesBtn" class="secondary">Refresh</button>
+      </label>
+    </div>
+    <div id="existingMeta" class="hint"></div>
+    <div class="field-row">
+      <label class="field">
+        <span>DLP policy override <small>(optional)</small></span>
+        <input type="text" id="exPolicy" placeholder="defaults to profile's DlpPolicy" />
+      </label>
+      <label class="field">
+        <span>Tenant ID <small>(optional &mdash; pins Graph sign-in)</small></span>
+        <input type="text" id="exTenant" placeholder="defaults to your signed-in tenant" />
+      </label>
+      <label class="field">
+        <span>Days back <small>(lookback window)</small></span>
+        <input type="number" id="exDaysBack" min="1" placeholder="120" />
+      </label>
+      <label class="field">
+        <span>Max events</span>
+        <input type="number" id="exMaxEvents" placeholder="1500" />
+      </label>
+      <label class="field checkbox">
+        <span>&nbsp;</span>
+        <label><input type="checkbox" id="exFullPull" /> Full pull (rebuild cache)</label>
+      </label>
+    </div>
+    <div class="actions inline">
+      <button id="runExistingBtn">Run selected profile</button>
+      <button id="editExistingBtn" class="secondary">Edit in builder</button>
+      <span id="existingStatus" class="status-pill"></span>
+    </div>
+  </section>
+
+  <!-- ================= DESCRIBE SIT ================= -->
+  <section class="panel">
+    <span class="panel-eyebrow">Create a new profile &middot; Step 1</span>
+    <h3>Describe the sensitive information type</h3>
+    <p class="hint">
+      A profile teaches the AI how to read this SIT's DLP matches &mdash; so it can tell real
+      sensitive findings from the noise (false positives) and recommend tuning. Just say what the
+      SIT is; the agent infers the rest: the policy filter, the finding noun, the entity
+      types/formats, the likely false-positive sources and the validity signals. Add detail below
+      only if you want to steer it.
+    </p>
+    <label class="field block">
+      <span>Sensitive information type <small>(a name or one line is enough)</small></span>
+      <input type="text" id="sitDisplay" placeholder="e.g. Health records / PHI&nbsp;&nbsp;&middot;&nbsp;&nbsp;Australian tax file numbers&nbsp;&nbsp;&middot;&nbsp;&nbsp;Source code secrets" />
+    </label>
+
+    <details class="advanced">
+      <summary>Add optional detail (leave blank to let the agent infer everything)</summary>
+      <div class="field-row">
+        <label class="field">
+          <span>Profile name <small>(file id &mdash; inferred if blank)</small></span>
+          <input type="text" id="sitName" placeholder="auto" />
+        </label>
+        <label class="field">
+          <span>DLP policy filter <small>(inferred if blank)</small></span>
+          <input type="text" id="dlpPolicy" placeholder="auto" />
+        </label>
+        <label class="field">
+          <span>Finding noun <small>(inferred if blank)</small></span>
+          <input type="text" id="findingNoun" placeholder="auto" />
+        </label>
+      </div>
+      <label class="field block">
+        <span>What does it detect? <small>(entity types, formats, examples &mdash; inferred if blank)</small></span>
+        <textarea id="sitDetects" rows="3"
+          placeholder="Leave blank to let the agent infer typical entity types and formats for this SIT."></textarea>
+      </label>
+      <label class="field block">
+        <span>Known noise / false-positive sources <small>(the main thing to tune &mdash; inferred if blank)</small></span>
+        <textarea id="sitNoise" rows="2"
+          placeholder="Leave blank and the agent will infer common false-positive sources for this domain."></textarea>
+      </label>
+      <label class="field block">
+        <span>Validity / validation signals <small>(true-positive guardrail &mdash; inferred if blank)</small></span>
+        <textarea id="sitValidity" rows="2"
+          placeholder="Leave blank and the agent will infer checksums / proximity signals for this domain."></textarea>
+      </label>
+    </details>
+
+    <div class="actions inline">
+      <button id="generateBtn">Draft profile with agent</button>
+      <span id="genStatus" class="status-pill"></span>
+    </div>
+  </section>
+
+  <!-- ================= GENERATED PROFILE ================= -->
+  <section class="panel" id="editorPanel" hidden>
+    <span class="panel-eyebrow">Create a new profile &middot; Step 2</span>
+    <h3>Review &amp; edit the generated profile</h3>
+    <p class="hint">
+      The JSON container keys in the extraction prompt
+      (<code>noise_patterns</code>, <code>validated_credentials</code>, <code>credential_pairs</code>&hellip;)
+      are kept identical across every profile so the delta tool and report consolidation keep working.
+      Change the wording, examples and risk guidance freely &mdash; keep those keys.
+    </p>
+
+    <div class="field-row">
+      <label class="field"><span>Name</span><input type="text" id="outName" /></label>
+      <label class="field"><span>DlpPolicy</span><input type="text" id="outPolicy" /></label>
+      <label class="field"><span>FindingNoun</span><input type="text" id="outNoun" /></label>
+    </div>
+    <label class="field block"><span>Description</span><input type="text" id="outDesc" /></label>
+
+    <label class="field block">
+      <span>ExtractionInstruction</span>
+      <textarea id="outExtraction" rows="16" class="mono"></textarea>
+    </label>
+    <div id="keyCheck" class="key-check"></div>
+
+    <label class="field block">
+      <span>ConsolidationInstruction</span>
+      <textarea id="outConsolidation" rows="12" class="mono"></textarea>
+    </label>
+
+    <label class="field block">
+      <span>ReportMergeInstruction</span>
+      <textarea id="outMerge" rows="6" class="mono"></textarea>
+    </label>
+
+    <div class="actions inline">
+      <button id="saveBtn">Save to profiles/</button>
+      <button id="exportBtn" class="secondary">Save .psd1 as&hellip;</button>
+      <button id="copyCmdBtn" class="secondary">Copy run command</button>
+      <button id="regenBtn" class="secondary">Regenerate</button>
+      <span id="exportStatus" class="status-pill"></span>
+    </div>
+    <pre id="runCmd" class="run-cmd" hidden></pre>
+  </section>
+
+  <!-- ================= TEST RUN ================= -->
+  <section class="panel" id="testPanel" hidden>
+    <span class="panel-eyebrow">Create a new profile &middot; Step 3</span>
+    <h3>Test the extraction prompt on sample data</h3>
+    <p class="hint">
+      Paste a block of representative detection text (a few messages / lines is enough).
+      This runs only the extraction prompt so you can iterate quickly before launching the full
+      <code>credpattern.ps1</code> pipeline.
+    </p>
+    <label class="field block">
+      <span>Sample detection text</span>
+      <textarea id="sampleText" rows="6"
+        placeholder="Paste a few example lines/messages that the SIT would flag..."></textarea>
+    </label>
+    <div class="actions inline">
+      <button id="testRunBtn">Run extraction</button>
+      <span id="testStatus" class="status-pill"></span>
+    </div>
+    <div id="testResult" class="test-result" hidden>
+      <div class="grid-2">
+        <div class="panel sub">
+          <h4>Parsed JSON</h4>
+          <pre id="testJson" class="run-cmd"></pre>
+        </div>
+        <div class="panel sub">
+          <h4>Summary</h4>
+          <div id="testSummary"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= RUN PIPELINE ================= -->
+  <section class="panel" id="runPanel" hidden>
+    <span class="panel-eyebrow">Create a new profile &middot; Step 4</span>
+    <h3>Run the full pipeline</h3>
+    <p class="hint">
+      Saves the current profile into <code>profiles/</code> and then launches
+      <code>credpattern.ps1 -AnalysisProfile &lt;Name&gt;</code> in a new PowerShell
+      window on this machine. It pulls DLP alerts/events from Microsoft Graph (you'll be
+      prompted to sign in there), analyzes them with this profile, and writes a report plus
+      a run snapshot you can diff on the <a href="index.html">delta page</a>.
+    </p>
+    <p class="hint">
+      <strong>Credentials:</strong> the run window signs in to Microsoft Graph interactively
+      with <code>Connect-MgGraph</code> and prints the connected account/tenant before pulling
+      data &mdash; verify it there. Set a Tenant ID to pin the sign-in to a specific directory.
+      The Azure OpenAI key is inherited from this server's environment.
+    </p>
+    <div class="field-row">
+      <label class="field">
+        <span>DLP policy override <small>(optional)</small></span>
+        <input type="text" id="runPolicy" placeholder="defaults to profile's DlpPolicy" />
+      </label>
+      <label class="field">
+        <span>Tenant ID <small>(optional &mdash; pins Graph sign-in)</small></span>
+        <input type="text" id="runTenant" placeholder="defaults to your signed-in tenant" />
+      </label>
+      <label class="field">
+        <span>Days back <small>(lookback window)</small></span>
+        <input type="number" id="runDaysBack" min="1" placeholder="120" />
+      </label>
+      <label class="field">
+        <span>Max events</span>
+        <input type="number" id="runMaxEvents" placeholder="1500" />
+      </label>
+      <label class="field checkbox">
+        <span>&nbsp;</span>
+        <label><input type="checkbox" id="runFullPull" /> Full pull (rebuild cache)</label>
+      </label>
+    </div>
+    <div class="actions inline">
+      <button id="runBtn">Run credpattern.ps1</button>
+      <span id="runStatus" class="status-pill"></span>
+    </div>
+  </section>
+
+  <script src="profile-studio.js"></script>
+</body>
+</html>

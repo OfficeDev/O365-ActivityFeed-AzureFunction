@@ -1,0 +1,35 @@
+{
+  "label": "baseline-pretuning",
+  "generatedAt": "2026-01-15T10:00:00Z",
+  "profile": "Credentials",
+  "dlpPolicy": "Sample - Credential Leak Policy",
+  "rawDetectionCount": 812,
+  "chunkAnalyses": [
+    {
+      "analysis_result": {
+        "noise_patterns": [
+          { "pattern": "Sample AKIA-style test key checked into demo repo (AKIAEXAMPLE0000DEMO)", "triggering_sit_rule": "Amazon S3 Access Key", "source_workload": "SharePoint", "occurrence_count": 220, "estimated_fp_reduction": 0.95 },
+          { "pattern": "Placeholder password in onboarding doc template (Password=Password123!)", "triggering_sit_rule": "Generic Password", "source_workload": "Exchange", "occurrence_count": 180, "estimated_fp_reduction": 0.9 },
+          { "pattern": "Example connection string in README.md (Server=tcp:demo;Password=changeme)", "triggering_sit_rule": "Azure SQL Connection String", "source_workload": "SharePoint", "occurrence_count": 140, "estimated_fp_reduction": 0.92 }
+        ],
+        "validated_credentials": [
+          { "pattern": "Live SMTP credential pair in mailer config", "type": "Username/Password", "triggering_sit_rule": "Generic Password", "source_workload": "Exchange", "risk_level": "HIGH", "count": 4 }
+        ],
+        "credential_pairs": [ { "count": 4 } ]
+      }
+    },
+    {
+      "analysis_result": {
+        "noise_patterns": [
+          { "pattern": "Placeholder client_secret in code comments (client_secret=YOUR_SECRET_HERE)", "triggering_sit_rule": "Generic Secret", "source_workload": "Teams", "occurrence_count": 95, "estimated_fp_reduction": 0.85 },
+          { "pattern": "Base64 logo asset matched as a high-entropy key", "triggering_sit_rule": "High Entropy String", "source_workload": "OneDrive", "occurrence_count": 130, "estimated_fp_reduction": 0.97 }
+        ],
+        "validated_credentials": [
+          { "pattern": "Active API token in shared automation script", "type": "API Token", "triggering_sit_rule": "Generic Secret", "source_workload": "Teams", "risk_level": "MEDIUM", "count": 3 },
+          { "pattern": "Personal access token pasted into project wiki", "type": "PAT", "triggering_sit_rule": "GitHub Token", "source_workload": "SharePoint", "risk_level": "HIGH", "count": 2 }
+        ],
+        "credential_pairs": [ { "count": 2 } ]
+      }
+    }
+  ]
+}
