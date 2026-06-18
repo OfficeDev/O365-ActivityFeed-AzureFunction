@@ -1,0 +1,11 @@
+# Per-profile, machine/tenant-specific runtime cache (events, alerts, run snapshots)
+cache/
+
+# Generated reports in the working directory
+SIT_Report*.md
+SIT_Report*.html
+SIT_ChunkAnalyses.json
+
+# Local secrets / env
+*.env
+.env

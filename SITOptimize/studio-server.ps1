@@ -400,6 +400,63 @@ $sourceReport
 # ---------------------------------------------------------------------------
 # Azure OpenAI call (mirrors credpattern.ps1 Analyze-Data)
 # ---------------------------------------------------------------------------
+function Resolve-OpenAIKey {
+    <#
+        Single source of truth for which credential the server uses.
+        Prefers AZURE_OPENAI_API_KEY2 (matches credpattern.ps1), then falls back
+        to AZURE_OPENAI_API_KEY, so the server and pipeline use the same key.
+        Returns: @{ Key=<string|$null>; Source=<'AZURE_OPENAI_API_KEY2'|'AZURE_OPENAI_API_KEY'|$null> }
+    #>
+    if ($env:AZURE_OPENAI_API_KEY2 -and $env:AZURE_OPENAI_API_KEY2 -notlike '*REPLACE*') {
+        return @{ Key = $env:AZURE_OPENAI_API_KEY2; Source = 'AZURE_OPENAI_API_KEY2' }
+    }
+    if ($env:AZURE_OPENAI_API_KEY -and $env:AZURE_OPENAI_API_KEY -notlike '*REPLACE*') {
+        return @{ Key = $env:AZURE_OPENAI_API_KEY; Source = 'AZURE_OPENAI_API_KEY' }
+    }
+    return @{ Key = $null; Source = $null }
+}
+
+function Test-OpenAIConnection {
+    <#
+        Performs a real, minimal call against the configured endpoint to prove
+        the credential actually works (not just that an env var is set).
+        Returns: @{ ok=<bool>; status=<int|$null>; source=<string|$null>; error=<string|$null> }
+    #>
+    param([string]$ModelName, [string]$Endpoint)
+
+    $resolved = Resolve-OpenAIKey
+    if (-not $resolved.Key) {
+        return @{ ok = $false; status = $null; source = $null; error = 'No API key set (AZURE_OPENAI_API_KEY2 or AZURE_OPENAI_API_KEY).' }
+    }
+    if (-not $ModelName) { $ModelName = $Model }
+    if ([string]::IsNullOrWhiteSpace($Endpoint)) { $Endpoint = $OpenAIEndpoint }
+
+    $payload = @{
+        input             = @(@{ role = 'user'; content = @(@{ type = 'input_text'; text = 'ping' }) })
+        max_output_tokens = 16
+        model             = $ModelName
+    } | ConvertTo-Json -Depth 12
+    $headers = @{ 'Content-Type' = 'application/json'; 'api-key' = $resolved.Key }
+
+    try {
+        Invoke-RestMethod -Method POST -Uri $Endpoint -Headers $headers -Body $payload -TimeoutSec 20 | Out-Null
+        return @{ ok = $true; status = 200; source = $resolved.Source; error = $null }
+    } catch {
+        $status = $null
+        if ($_.Exception.Response -and $_.Exception.Response.StatusCode) {
+            $status = [int]$_.Exception.Response.StatusCode.value__
+        }
+        $msg = switch ($status) {
+            401     { 'Key rejected (401) - the credential is set but not valid for this endpoint.' }
+            403     { 'Forbidden (403) - the credential lacks access to this resource/model.' }
+            404     { 'Endpoint or model not found (404) - check the endpoint URL and model name.' }
+            429     { 'Rate limited (429) - the resource is reachable but throttling.' }
+            default { $_.Exception.Message }
+        }
+        return @{ ok = $false; status = $status; source = $resolved.Source; error = $msg }
+    }
+}
+
 function Invoke-OpenAI {
     param(
         [string]$SystemPrompt,
@@ -408,11 +465,10 @@ function Invoke-OpenAI {
         [string]$ModelName,
         [string]$Endpoint
     )
-    # Prefer AZURE_OPENAI_API_KEY2 (matches credpattern.ps1), then fall back to
-    # AZURE_OPENAI_API_KEY, so the server and pipeline use the same credential.
-    $apiKey = if ($env:AZURE_OPENAI_API_KEY2) { $env:AZURE_OPENAI_API_KEY2 } else { $env:AZURE_OPENAI_API_KEY }
-    if (-not $apiKey -or $apiKey -like '*REPLACE*') {
-        throw "AZURE_OPENAI_API_KEY is not set on the server."
+    $resolved = Resolve-OpenAIKey
+    $apiKey = $resolved.Key
+    if (-not $apiKey) {
+        throw "No API key set on the server (AZURE_OPENAI_API_KEY2 or AZURE_OPENAI_API_KEY)."
     }
     if (-not $ModelName) { $ModelName = $Model }
     if ([string]::IsNullOrWhiteSpace($Endpoint)) { $Endpoint = $OpenAIEndpoint }
@@ -753,8 +809,10 @@ Write-Host ""
 Write-Host "  SIT Tuning Profile Studio" -ForegroundColor Cyan
 Write-Host "  Serving $webDir" -ForegroundColor DarkGray
 Write-Host "  Listening on $prefix" -ForegroundColor Green
-if (-not $env:AZURE_OPENAI_API_KEY) {
-    Write-Host "  WARNING: AZURE_OPENAI_API_KEY is not set - agent/test calls will fail." -ForegroundColor Yellow
+if (-not (Resolve-OpenAIKey).Key) {
+    Write-Host "  WARNING: no API key set (AZURE_OPENAI_API_KEY2 or AZURE_OPENAI_API_KEY) - agent/test calls will fail." -ForegroundColor Yellow
+} else {
+    Write-Host "  Key source: $((Resolve-OpenAIKey).Source)" -ForegroundColor DarkGray
 }
 Write-Host "  Press Ctrl+C to stop." -ForegroundColor DarkGray
 Write-Host ""
@@ -781,13 +839,25 @@ try {
 
             # ---- API routes ----
             if ($path -eq '/api/health') {
-                Send-Json $ctx 200 @{
-                    ok        = [bool]$env:AZURE_OPENAI_API_KEY
-                    keySet    = [bool]$env:AZURE_OPENAI_API_KEY
+                $resolved = Resolve-OpenAIKey
+                $result = @{
+                    ok        = [bool]$resolved.Key
+                    keySet    = [bool]$resolved.Key
+                    keySource = $resolved.Source
                     model     = $Model
                     endpoint  = $OpenAIEndpoint
                     hasScript = (Test-Path $scriptPS1)
                 }
+                # ?probe=1 performs a real call so "ready" actually means reachable.
+                if ($ctx.Request.QueryString['probe'] -eq '1') {
+                    $probe = Test-OpenAIConnection -ModelName $Model -Endpoint $OpenAIEndpoint
+                    $result.probed     = $true
+                    $result.reachable  = $probe.ok
+                    $result.probeStatus = $probe.status
+                    $result.error      = $probe.error
+                    if ($probe.source) { $result.keySource = $probe.source }
+                }
+                Send-Json $ctx 200 $result
                 continue
             }
 

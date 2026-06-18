@@ -57,17 +57,25 @@ function endpoint() {
 /* ---------- connection ---------- */
 async function checkServer(silent) {
   try {
-    const h = await api('/api/health');
+    // probe=1 makes the server do a real Azure OpenAI call so "ready" is truthful.
+    const h = await api('/api/health?probe=1');
     state.connected = true;
     $('offlineCallout').hidden = true;
     // Prefill the endpoint with the server default if the user hasn't typed one.
     if (h.endpoint && !$('endpoint').value) $('endpoint').value = h.endpoint;
     if (h.model && (!$('model').value || $('model').value === 'gpt-5.4')) $('model').value = h.model;
-    if (h.keySet) {
-      setStatus($('connStatus'), `Connected \u2014 ${h.model || 'model'} ready`, 'ok');
-    } else {
-      setStatus($('connStatus'), 'Server up, but AZURE_OPENAI_API_KEY is not set', 'warn');
+
+    if (!h.keySet) {
+      setStatus($('connStatus'), 'Server up, but no API key is set (AZURE_OPENAI_API_KEY2 or AZURE_OPENAI_API_KEY)', 'warn');
+      return true;
     }
+    if (h.probed && h.reachable === false) {
+      const detail = h.error || (h.probeStatus ? `HTTP ${h.probeStatus}` : 'call failed');
+      setStatus($('connStatus'), `Key set but Azure OpenAI call failed \u2014 ${detail}`, 'bad');
+      return true;
+    }
+    const src = h.keySource ? ` (${h.keySource})` : '';
+    setStatus($('connStatus'), `Connected \u2014 ${h.model || 'model'} ready${src}`, 'ok');
     return true;
   } catch (e) {
     state.connected = false;
