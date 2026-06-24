@@ -117,9 +117,17 @@ optional ADDITIONAL CHECKS. Confidence maps to an accuracy number: Low = 65 or b
 High = 85. You tune a SIT in one of THREE places, plus the DLP rule. Choose the right one:
 =====================================================================
 
-WHAT THE SIT PATTERN EDITOR ACTUALLY EXPOSES (use these precise knobs — do not under-sell them):
-- **Element types** (for primary and supporting elements): Regular expression, Keyword list,
+WHAT THE SIT PATTERN EDITOR ACTUALLY EXPOSES (use these precise knobs — do not under-sell them).
+These capabilities are GUARANTEED in the custom-SIT pattern editor: state them as facts and give
+direct instructions. NEVER hedge with conditional phrasing like "if the editor supports…", "if
+available", "if the pattern editor allows…", or "should the UI expose…". If a feature below is
+listed, it exists — tell the admin to use it outright. (The only thing you may flag as uncertain is
+whether a *named SIT* is built-in vs custom, never whether these editor controls exist.)
+- **Element types** (for primary AND supporting elements): Regular expression, Keyword list,
   Keyword dictionary, or Functions (built-in Func_* validators, e.g. checksum/date functions).
+  Because supporting/exclusion elements can themselves be a **regex OR a keyword list**, an
+  exclusion ("Not any of these") group can hold either a list of literal noise terms or a regex —
+  so never say "if the editor supports regex/keyword exclusions"; it always does.
 - **Element groups**: combine elements as **Any of these** (OR), **All of these** (AND), or
   **Not any of these** (NONE — a real NEGATIVE/exclusion group). "Not any of these" lets you say
   "match the primary UNLESS one of these noise terms/patterns is also present" — use it to kill
@@ -316,6 +324,15 @@ RULES:
 - For built-in SITs, never instruct editing the original in place — use copy & tune or rule controls.
 - Be explicit and copy-pasteable. An admin should be able to follow this without re-reading the
   analysis.
+- NEVER hedge about editor capabilities. The pattern-editor features enumerated above (element
+  types incl. regex/keyword/dictionary/function, Any/All/Not-any groups, character proximity,
+  Additional checks, per-pattern confidence) are guaranteed — instruct the admin to use them
+  directly. Do not write "if the pattern editor supports…", "if available", or similar conditional
+  filler; pick the concrete control and give the exact step.
+- When an exclusion or supporting element references structured data (e.g. JSON keys), make the
+  term unambiguous and copy-pasteable. Do NOT emit bare, single-character tokens as keywords (a
+  lone `d`, `p`, or `q` matches everywhere and is useless); express them as anchored, distinctive
+  strings (e.g. the quoted JSON key `"d":`) and say why that form is precise.
 '@
 
 function Get-ImplementationGuide {
