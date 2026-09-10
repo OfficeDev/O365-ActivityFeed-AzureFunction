@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Validate JavaScript
+        run: npm run check
+      - name: Run tests
+        run: npm test
+      - name: Parse PowerShell workers
+        shell: pwsh
+        run: |
+          $files = Get-ChildItem workers, sit-optimize -Recurse -File -Include *.ps1
+          foreach ($file in $files) {
+            $tokens = $null
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile($file.FullName, [ref]$tokens, [ref]$errors) | Out-Null
+            if ($errors.Count) {
+              $errors | Format-List
+              throw "PowerShell parse failed: $($file.FullName)"
+            }
+          }

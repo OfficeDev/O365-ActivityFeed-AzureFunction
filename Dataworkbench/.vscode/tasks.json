@@ -1,0 +1,26 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "DLP Studio: Start",
+      "type": "shell",
+      "command": "npm start",
+      "isBackground": true,
+      "problemMatcher": [],
+      "group": "build"
+    },
+    {
+      "label": "DLP Studio: Test",
+      "type": "shell",
+      "command": "npm test",
+      "problemMatcher": [],
+      "group": "test"
+    },
+    {
+      "label": "DLP Studio: Collect DLP alerts",
+      "type": "shell",
+      "command": "pwsh -File ./workers/Collect-DlpAlerts.ps1",
+      "problemMatcher": []
+    }
+  ]
+}

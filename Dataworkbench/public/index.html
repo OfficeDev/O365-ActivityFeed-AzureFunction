@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DLP Response Studio</title>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/navigation.css">
+  <link rel="stylesheet" href="/workbench-theme.css">
+  <link rel="stylesheet" href="/sit-triage.css">
+  <link rel="stylesheet" href="/sit-patterns.css">
+  <link rel="stylesheet" href="/remediation-plan.css">
+</head>
+<body class="workbench-page dlp-page">
+  <header class="topbar">
+    <a class="brand" href="/start.html"><span class="brand-mark">◆</span><strong>Data Security Workbench</strong></a>
+    <nav class="product-nav"><a class="active" href="/index.html">DLP Response</a><a href="/sit-optimize.html">Detection Assurance</a><a href="/response-studio.html">Response Studio</a><a href="/configuration.html">Configuration</a></nav>
+    <div class="top-actions"><span id="mode-badge" class="badge safe" title="Synchronization, local saves, planning, and dry runs remain available. Microsoft Graph writes are locked.">Graph writes locked</span><button id="collect" class="button">Sync DLP alerts</button><button id="query" class="button primary">Run query</button></div>
+  </header>
+
+  <section class="page-hero"><div><span class="eyebrow">DLP investigation and response</span><h1>Understand exposure before taking action</h1><p>Query synchronized evidence, narrow the operational scope, and build a reviewable response plan without exposing detected values.</p></div><a class="button" href="/bulk-response.html">Open bulk response →</a></section>
+
+  <main class="layout">
+    <aside class="filters panel">
+      <div class="panel-head"><div><span class="kicker">Investigation scope</span><h2>Detection filters</h2></div><button id="clear" class="link-button">Clear</button></div>
+      <details class="filter-section" open>
+        <summary><span>Date range</span></summary>
+        <div class="filter-section-body date-grid"><label>From<input id="date-from" type="date"></label><label>To<input id="date-to" type="date"></label></div>
+      </details>
+      <details class="filter-section" open>
+        <summary><span>Confidence (min)</span><small>range 0–100</small></summary>
+        <div class="filter-section-body"><div class="range-row"><input id="confidence" type="range" min="0" max="100" step="5" value="0"><output id="confidence-value">0</output></div></div>
+      </details>
+      <div id="facets" class="facet-list"><div class="empty">Loading available filters…</div></div>
+      <button id="filter-query" class="button primary full">Apply filters</button>
+      <div class="scope-note"><strong>Privacy default</strong><span>Detected values are redacted before entering the browser or remediation plan.</span></div>
+    </aside>
+
+    <section class="workspace">
+      <div id="notice" class="notice hidden"></div>
+      <section class="stats" aria-label="Query summary">
+        <article class="stat panel"><span>Matched detections</span><strong id="stat-matched">—</strong><small id="stat-total">Run a query</small></article>
+        <article class="stat panel"><span>Affected users</span><strong id="stat-users">—</strong><small>Unique identities</small></article>
+        <article class="stat panel"><span>Incidents</span><strong id="stat-incidents">—</strong><small>Graph security incidents</small></article>
+        <article class="stat panel"><span>Events scanned</span><strong id="stat-events">—</strong><small>JSONL source rows</small></article>
+      </section>
+
+      <section class="panel results-panel">
+        <div class="panel-head results-head"><div><span class="kicker">Recorded evidence</span><h2>DLP detections</h2></div><div class="toolbar"><button id="enrich-departments" class="button" disabled>Enrich departments</button><button id="save-job" class="button" disabled>Save job</button><button id="plan" class="button danger" disabled>Build remediation plan</button></div></div>
+        <div class="table-wrap"><table><thead><tr><th>Date</th><th>User</th><th>Department</th><th>Sensitive type</th><th>Confidence</th><th>Workload</th><th>Policy</th><th>Incident</th><th>Assurance priority</th><th>Security comment</th></tr></thead><tbody id="rows"><tr><td colspan="10" class="empty">Run a query to load DLP alert events.</td></tr></tbody></table></div>
+      </section>
+
+      <div class="lower-grid">
+        <section class="panel"><div class="panel-head"><div><span class="kicker">Response library</span><h2>Available flows</h2></div></div><div id="flows" class="card-list"><div class="empty">Loading flows…</div></div></section>
+        <section class="panel"><div class="panel-head"><div><span class="kicker">Release queue</span><h2>Saved jobs</h2></div><button id="refresh-jobs" class="link-button">Refresh</button></div><div id="jobs" class="card-list"><div class="empty">No jobs loaded.</div></div></section>
+      </div>
+    </section>
+  </main>
+
+  <div id="overlay" class="overlay hidden"></div>
+  <aside id="drawer" class="drawer" aria-hidden="true">
+    <div class="drawer-head"><div><span class="kicker">Plan → preview → apply</span><h2>Remediation plan</h2></div><button id="close-drawer" class="icon-button" aria-label="Close">×</button></div>
+    <div id="drawer-body" class="drawer-body"></div>
+  </aside>
+
+  <div id="toast" class="toast"></div>
+  <script src="/app.js"></script>
+</body>
+</html>

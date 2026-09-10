@@ -1,0 +1,32 @@
+/* Remediation drawer uses explicit colors because the shared light workbench
+   theme intentionally redefines base tokens used by the legacy dark layout. */
+.drawer{color:#172033}
+.drawer-head{color:#172033;background:#fff;border-color:#dbe3ee}
+.drawer-head .kicker{color:#087f73}
+.drawer-body{background:#fff}
+.drawer .plan-stat{min-width:0;padding:16px;background:#102035;border-color:#26384e;color:#edf5ff}
+.drawer .plan-stat strong{color:#fff;font-size:24px}
+.drawer .plan-stat span{color:#aab9cc}
+.drawer .plan-summary,.drawer .section-intro{margin:10px 0;color:#66758a;font-size:12px;line-height:1.55}
+.drawer .section h3{color:#172033;font-size:14px}
+.drawer .chip{color:#2769c8;background:#eef5ff;border-color:#b8d2ff}
+.drawer .action-list{display:grid;gap:9px}
+.drawer .action-option{display:grid;grid-template-columns:18px minmax(0,1fr);align-items:start;gap:11px;padding:12px;border:1px solid #dbe3ee;border-radius:11px;background:#f8fafc;color:#172033;cursor:pointer}
+.drawer .action-option:hover{border-color:#8db6ee;background:#f3f7fd}
+.drawer .action-option input{width:16px;height:16px;margin:3px 0 0;accent-color:#1878dd}
+.drawer .action-option>span{min-width:0}
+.drawer .action-option strong,.drawer .action-option small{display:block}
+.drawer .action-option strong{font-size:13px}
+.drawer .action-option small{margin-top:2px;color:#65758a;font-size:11px;line-height:1.45}
+.drawer .action-option:has(input:disabled){opacity:.55;cursor:not-allowed}
+.drawer .action-message{display:block;margin-top:10px;padding:12px;border:1px solid #b8d2ff;border-radius:11px;background:#f3f7fd;color:#172033;font-weight:700}
+.drawer .action-message textarea{width:100%;margin-top:7px;padding:10px;border:1px solid #bdcadd;border-radius:8px;background:#fff;color:#172033;resize:vertical}
+.drawer .action-message small{display:block;margin-top:5px;color:#65758a;font-weight:400}
+.drawer .mini-card{border-color:#dbe3ee;background:#f8fafc;color:#172033}
+.drawer .mini-meta{color:#65758a}
+.drawer .live-box{border-color:#f2abab;background:#fff4f4;color:#172033}
+.drawer .live-box p{color:#a94d4d}
+.drawer .live-box input{border-color:#bdcadd;background:#fff;color:#172033}
+.drawer .button.danger{border-color:#e58f8f;color:#b52d2d;background:#ffe7e7}
+.drawer .button.danger:not(:disabled):hover{background:#ffdada}
+@media(max-width:560px){.drawer-body{padding:14px}.drawer .plan-stats{grid-template-columns:repeat(3,1fr)}.drawer .plan-stat{padding:11px}.drawer .plan-stat strong{font-size:20px}}

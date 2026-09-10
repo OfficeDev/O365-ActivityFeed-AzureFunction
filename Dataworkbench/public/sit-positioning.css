@@ -1,0 +1,80 @@
+.outcome-loop {
+  margin: 18px 0 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  overflow: hidden;
+  background: var(--surface);
+}
+.workflow-loop { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.outcome-step {
+  position: relative;
+  min-height: 112px;
+  padding: 15px 16px;
+  border-right: 1px solid var(--line);
+}
+.workflow-number {
+  position: absolute;
+  top: 14px;
+  right: 15px;
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.outcome-step.emphasized {
+  background: linear-gradient(180deg, #eefaf8 0, var(--surface) 74%);
+  box-shadow: inset 0 3px 0 var(--teal);
+}
+.outcome-step:last-child { border-right: 0; }
+.outcome-step::before {
+  content: attr(data-step);
+  display: block;
+  margin-bottom: 7px;
+  color: var(--teal);
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+.outcome-step strong { display: block; margin-bottom: 3px; font-size: 13px; }
+.outcome-step p { margin: 0; color: var(--muted); font-size: 11px; }
+.positioning-note {
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.positioning-note strong { color: var(--teal2); }
+.control-stage {
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-left-width: 3px;
+  border-radius: 7px;
+  background: #fbfcfd;
+}
+.control-stage.improve-stage {
+  border-left-color: var(--teal);
+  background: linear-gradient(90deg, #f0faf8 0, #fbfcfd 34%);
+}
+.control-stage.prove-stage { border-left-color: #4f6f91; }
+.control-stage + .control-stage { margin-top: 14px; }
+@media (max-width: 980px) {
+  .outcome-loop { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .outcome-step:nth-child(2) { border-right: 0; }
+  .outcome-step:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
+}
+@media (max-width: 600px) {
+  .outcome-loop { grid-template-columns: 1fr; }
+  .outcome-step { border-right: 0; border-bottom: 1px solid var(--line); }
+  .outcome-step:last-child { border-bottom: 0; }
+}
+@media (max-width: 980px) {
+  .workflow-loop { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 600px) {
+  .workflow-loop { grid-template-columns: 1fr; }
+  .workflow-loop .outcome-step { border-right: 0; border-bottom: 1px solid var(--line); }
+  .workflow-loop .outcome-step:last-child { border-bottom: 0; }
+}

@@ -1,0 +1,46 @@
+{
+  "$schemaVersion": 1,
+  "flows": [
+    {
+      "id": "tag-for-review",
+      "name": "Tag incidents for DLP review",
+      "description": "Adds review tags, moves incidents to in progress, and includes the latest privacy-safe Detection Assurance priority and security comment when available.",
+      "kind": "remediation",
+      "enabled": true,
+      "requiredScopes": ["SecurityIncident.ReadWrite.All"],
+      "parameters": [],
+      "actions": [
+        { "type": "incidentPatch", "addTags": ["DLP-Response-Studio", "Needs-Review"], "status": "inProgress", "includeSitTriageComment": true }
+      ]
+    },
+    {
+      "id": "notify-affected-users",
+      "name": "Email affected users",
+      "description": "Sends a redacted DLP awareness message to every affected user.",
+      "kind": "notification",
+      "enabled": true,
+      "requiredScopes": ["Mail.Send"],
+      "parameters": [
+        { "name": "subject", "label": "Subject", "type": "string", "required": false, "default": "Data protection alert — review requested" }
+      ],
+      "actions": [
+        { "type": "emailAffectedUsers" }
+      ]
+    },
+    {
+      "id": "notify-affected-users-teams",
+      "name": "Notify affected users in Teams",
+      "description": "Lets an administrator send a reviewed, redacted notification to affected users through one-to-one Microsoft Teams chats.",
+      "kind": "notification",
+      "enabled": true,
+      "requiredScopes": ["Chat.Create", "ChatMessage.Send", "User.ReadBasic.All"],
+      "parameters": [
+        { "name": "teamsRecipients", "label": "Teams recipients (optional)", "type": "string", "required": false, "default": "", "help": "Comma-separated Microsoft Entra user principal names. Leave blank to use affected users from the selected DLP scope." },
+        { "name": "teamsMessage", "label": "Teams notification", "type": "text", "required": true, "default": "Please review the data protection activity associated with your account. Sensitive values are not included in this notification.", "help": "Review before sending. Detected values are never inserted automatically." }
+      ],
+      "actions": [
+        { "type": "teamsNotifyAffectedUsers" }
+      ]
+    }
+  ]
+}

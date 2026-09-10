@@ -1,0 +1,5 @@
+{
+  "files.eol": "\n",
+  "editor.formatOnSave": true,
+  "powershell.codeFormatting.preset": "OTBS"
+}

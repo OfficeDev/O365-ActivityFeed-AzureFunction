@@ -1,0 +1,93 @@
+.start-page .hero { max-width: 900px; }
+.start-page h1 + p { max-width: 860px; }
+
+.start-page .products {
+  grid-template-columns: minmax(0, 1.08fr) minmax(0, .92fr);
+  gap: 18px;
+}
+.start-page .product {
+  min-height: 500px;
+  padding: 25px;
+}
+.start-page .product:hover { transform: translateY(-3px); }
+.start-page .solution-category {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+.start-page .capability-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.start-page .capability-grid section {
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfcfd;
+}
+.start-page .capability-grid span,
+.start-page .capability-grid strong { display: block; }
+.start-page .capability-grid span {
+  margin-bottom: 4px;
+  color: var(--accent);
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.start-page .capability-grid strong { margin-bottom: 3px; font-size: 12px; }
+.start-page .capability-grid p { font-size: 11px; }
+.start-page .product-actions {
+  display: grid;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+.start-page .product-actions .open {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  text-decoration: none;
+}
+.start-page .module-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  color: var(--ink);
+  background: #f8fafc;
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 650;
+}
+.start-page .module-link:hover {
+  border-color: color-mix(in srgb, var(--accent) 38%, white);
+  background: color-mix(in srgb, var(--accent) 5%, white);
+}
+.start-page .module-link span,
+.start-page .module-link small { display: block; }
+.start-page .module-link small {
+  margin-bottom: 1px;
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.start-page .module-link b { color: var(--accent); font-size: 17px; }
+
+@media (max-width: 900px) {
+  .start-page .products { grid-template-columns: 1fr; }
+  .start-page .product { min-height: auto; }
+}
+@media (max-width: 600px) {
+  .start-page .capability-grid { grid-template-columns: 1fr; }
+}

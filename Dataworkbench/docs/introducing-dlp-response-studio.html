@@ -1,0 +1,515 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Introducing DLP Response Studio, an open-source workbench for Microsoft Purview DLP investigation, Detection Assurance, and guarded response.">
+  <meta name="theme-color" content="#08111f">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="Introducing DLP Response Studio">
+  <meta property="og:description" content="Turn Microsoft Purview DLP alert volume into explainable detection assurance and controlled response.">
+  <meta property="og:image" content="assets/start-page.png">
+  <title>Introducing DLP Response Studio</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --ink: #eef6ff;
+      --muted: #a9bbcf;
+      --subtle: #74879c;
+      --page: #07101d;
+      --panel: rgba(13, 28, 46, 0.78);
+      --panel-strong: #10243a;
+      --line: rgba(161, 198, 224, 0.16);
+      --cyan: #5de4ff;
+      --blue: #7a9cff;
+      --mint: #6ee7b7;
+      --amber: #f7c66f;
+      --shadow: 0 28px 80px rgba(0, 0, 0, 0.34);
+      --content: 1120px;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 12% 8%, rgba(46, 162, 205, 0.18), transparent 30rem),
+        radial-gradient(circle at 86% 20%, rgba(92, 104, 230, 0.17), transparent 34rem),
+        linear-gradient(180deg, #081421 0%, var(--page) 48%, #060d17 100%);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.7;
+      min-height: 100vh;
+    }
+
+    a { color: var(--cyan); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    code {
+      padding: 0.12rem 0.4rem;
+      border: 1px solid var(--line);
+      border-radius: 0.4rem;
+      color: #d8f7ff;
+      background: rgba(5, 15, 27, 0.72);
+      font-family: "Cascadia Code", "SFMono-Regular", Consolas, monospace;
+      font-size: 0.88em;
+    }
+
+    .skip-link {
+      position: absolute;
+      left: -9999px;
+      top: 0.75rem;
+      z-index: 20;
+      padding: 0.65rem 0.9rem;
+      color: #04111c;
+      background: var(--cyan);
+      border-radius: 0.5rem;
+      font-weight: 800;
+    }
+    .skip-link:focus { left: 0.75rem; }
+
+    .site-header {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      border-bottom: 1px solid var(--line);
+      background: rgba(7, 16, 29, 0.8);
+      backdrop-filter: blur(18px);
+    }
+    .nav {
+      width: min(calc(100% - 2rem), var(--content));
+      margin: auto;
+      min-height: 4.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+    .brand { display: flex; align-items: center; gap: 0.75rem; color: var(--ink); font-weight: 800; }
+    .brand:hover { text-decoration: none; }
+    .brand-mark {
+      width: 2rem;
+      height: 2rem;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(93, 228, 255, 0.38);
+      border-radius: 0.65rem;
+      color: var(--cyan);
+      background: linear-gradient(145deg, rgba(93, 228, 255, 0.18), rgba(122, 156, 255, 0.12));
+      box-shadow: 0 0 28px rgba(93, 228, 255, 0.12);
+    }
+    .nav-links { display: flex; gap: 1.15rem; font-size: 0.92rem; }
+    .nav-links a { color: var(--muted); }
+
+    main { overflow: hidden; }
+    .hero {
+      width: min(calc(100% - 2rem), var(--content));
+      margin: 0 auto;
+      padding: 7rem 0 4.5rem;
+      display: grid;
+      grid-template-columns: minmax(0, 1.25fr) minmax(18rem, 0.75fr);
+      gap: 4rem;
+      align-items: center;
+    }
+    .eyebrow {
+      margin: 0 0 1rem;
+      color: var(--cyan);
+      font-size: 0.77rem;
+      font-weight: 850;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+    }
+    h1, h2, h3 { margin-top: 0; line-height: 1.13; letter-spacing: -0.035em; }
+    h1 { margin-bottom: 1.4rem; max-width: 13ch; font-size: clamp(3rem, 7vw, 6.2rem); }
+    h2 { margin-bottom: 1.25rem; font-size: clamp(2rem, 4vw, 3.25rem); }
+    h3 { margin-bottom: 0.6rem; font-size: 1.15rem; letter-spacing: -0.015em; }
+    .gradient-text {
+      color: transparent;
+      background: linear-gradient(100deg, var(--cyan), #b7c8ff 54%, var(--mint));
+      background-clip: text;
+      -webkit-background-clip: text;
+    }
+    .hero-copy { max-width: 65ch; color: var(--muted); font-size: clamp(1.05rem, 2vw, 1.25rem); }
+    .byline { margin-top: 1.5rem; color: var(--subtle); font-size: 0.91rem; }
+    .hero-actions { margin-top: 2rem; display: flex; flex-wrap: wrap; gap: 0.8rem; }
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 2.85rem;
+      padding: 0.65rem 1rem;
+      border: 1px solid var(--line);
+      border-radius: 0.65rem;
+      color: var(--ink);
+      background: rgba(13, 28, 46, 0.68);
+      font-weight: 760;
+    }
+    .button:hover { border-color: rgba(93, 228, 255, 0.55); text-decoration: none; transform: translateY(-1px); }
+    .button.primary { border-color: transparent; color: #04111c; background: linear-gradient(110deg, var(--cyan), #9eb6ff); }
+
+    .signal-panel {
+      position: relative;
+      padding: 1.4rem;
+      border: 1px solid rgba(93, 228, 255, 0.2);
+      border-radius: 1.15rem;
+      background: linear-gradient(155deg, rgba(20, 50, 76, 0.88), rgba(9, 23, 40, 0.82));
+      box-shadow: var(--shadow);
+    }
+    .signal-panel::before {
+      content: "";
+      position: absolute;
+      inset: -1px;
+      z-index: -1;
+      border-radius: inherit;
+      background: linear-gradient(130deg, rgba(93, 228, 255, 0.38), transparent 38%, rgba(122, 156, 255, 0.24));
+      filter: blur(16px);
+      opacity: 0.5;
+    }
+    .window-bar { display: flex; gap: 0.4rem; margin-bottom: 1.3rem; }
+    .window-bar span { width: 0.55rem; height: 0.55rem; border-radius: 50%; background: #35516b; }
+    .window-bar span:first-child { background: #ff867d; }
+    .window-bar span:nth-child(2) { background: var(--amber); }
+    .window-bar span:nth-child(3) { background: var(--mint); }
+    .metric {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 0.85rem;
+      align-items: center;
+      padding: 0.9rem 0;
+      border-bottom: 1px solid var(--line);
+    }
+    .metric:last-child { border: 0; }
+    .metric-icon {
+      width: 2.4rem;
+      height: 2.4rem;
+      display: grid;
+      place-items: center;
+      border-radius: 0.7rem;
+      color: var(--cyan);
+      background: rgba(93, 228, 255, 0.1);
+      font-weight: 850;
+    }
+    .metric strong, .metric span { display: block; }
+    .metric span { color: var(--subtle); font-size: 0.82rem; }
+
+    .section {
+      width: min(calc(100% - 2rem), var(--content));
+      margin: 0 auto;
+      padding: 5rem 0;
+    }
+    .section.narrow { max-width: 790px; }
+    .lede { max-width: 68ch; color: var(--muted); font-size: 1.12rem; }
+    .quote {
+      margin: 2.3rem 0 0;
+      padding: 1.2rem 1.4rem;
+      border-left: 3px solid var(--cyan);
+      color: #dcecff;
+      background: linear-gradient(90deg, rgba(93, 228, 255, 0.09), transparent);
+      font-size: 1.13rem;
+    }
+
+    .grid { display: grid; gap: 1rem; }
+    .grid.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .grid.four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .card {
+      padding: 1.45rem;
+      border: 1px solid var(--line);
+      border-radius: 0.9rem;
+      background: var(--panel);
+    }
+    .card p { margin: 0; color: var(--muted); font-size: 0.95rem; }
+    .card-number { display: block; margin-bottom: 1.6rem; color: var(--cyan); font-size: 0.75rem; font-weight: 850; letter-spacing: 0.12em; }
+
+    .product-figure {
+      margin: 2.2rem 0 0;
+      padding: 0.6rem;
+      border: 1px solid var(--line);
+      border-radius: 1rem;
+      background: rgba(5, 14, 25, 0.72);
+      box-shadow: var(--shadow);
+    }
+    .product-figure img {
+      display: block;
+      width: 100%;
+      height: auto;
+      border-radius: 0.65rem;
+      background: #f4f7fb;
+    }
+    .product-figure figcaption {
+      padding: 0.8rem 0.55rem 0.3rem;
+      color: var(--muted);
+      font-size: 0.88rem;
+    }
+    .shot-grid {
+      margin-top: 2.2rem;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1rem;
+      align-items: start;
+    }
+    .shot-grid .product-figure { margin: 0; }
+    .capture-note { margin-top: 0.8rem; color: var(--subtle); font-size: 0.82rem; }
+
+    .workflow {
+      margin-top: 2rem;
+      counter-reset: flow;
+    }
+    .flow-step { position: relative; }
+    .flow-step:not(:last-child)::after {
+      content: "";
+      position: absolute;
+      top: 2rem;
+      left: calc(100% - 0.2rem);
+      width: 1.4rem;
+      height: 1px;
+      background: linear-gradient(90deg, var(--cyan), transparent);
+    }
+
+    .split {
+      display: grid;
+      grid-template-columns: 0.8fr 1.2fr;
+      gap: 4rem;
+      align-items: start;
+    }
+    .principles { display: grid; gap: 0.9rem; }
+    .principle {
+      padding: 1.1rem 1.2rem;
+      border: 1px solid var(--line);
+      border-radius: 0.8rem;
+      background: rgba(12, 28, 46, 0.58);
+    }
+    .principle strong { display: block; margin-bottom: 0.25rem; }
+    .principle span { color: var(--muted); font-size: 0.93rem; }
+
+    .value-band {
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      background: linear-gradient(90deg, rgba(93, 228, 255, 0.045), rgba(122, 156, 255, 0.08), rgba(110, 231, 183, 0.04));
+    }
+    .audience strong { color: var(--mint); }
+
+    .permissions { width: 100%; border-collapse: collapse; margin-top: 1.8rem; font-size: 0.93rem; }
+    .permissions th, .permissions td { padding: 0.9rem; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+    .permissions th { color: var(--subtle); font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; }
+    .permissions td:nth-child(2) { color: #d6e5f5; }
+
+    .callout {
+      padding: clamp(1.5rem, 4vw, 3.2rem);
+      border: 1px solid rgba(93, 228, 255, 0.25);
+      border-radius: 1.2rem;
+      background: linear-gradient(135deg, rgba(24, 62, 86, 0.72), rgba(18, 35, 64, 0.7));
+      box-shadow: var(--shadow);
+      text-align: center;
+    }
+    .callout h2 { max-width: 17ch; margin-right: auto; margin-left: auto; }
+    .callout p { max-width: 62ch; margin: 0 auto 1.5rem; color: var(--muted); }
+
+    footer {
+      width: min(calc(100% - 2rem), var(--content));
+      margin: 0 auto;
+      padding: 2.5rem 0 3.5rem;
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      border-top: 1px solid var(--line);
+      color: var(--subtle);
+      font-size: 0.86rem;
+    }
+
+    @media (max-width: 860px) {
+      .hero, .split { grid-template-columns: 1fr; gap: 2.5rem; }
+      .hero { padding-top: 4.8rem; }
+      .signal-panel { max-width: 34rem; }
+      .grid.three, .grid.four { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .shot-grid { grid-template-columns: 1fr; }
+      .flow-step::after { display: none; }
+    }
+    @media (max-width: 590px) {
+      .nav-links { display: none; }
+      .grid.three, .grid.four { grid-template-columns: 1fr; }
+      .section { padding: 3.5rem 0; }
+      .permissions { display: block; overflow-x: auto; }
+      footer { flex-direction: column; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after { transition: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#article">Skip to article</a>
+
+  <header class="site-header">
+    <nav class="nav" aria-label="Article navigation">
+      <a class="brand" href="#top"><span class="brand-mark" aria-hidden="true">◆</span> DLP Response Studio</a>
+      <div class="nav-links">
+        <a href="#why">Why it matters</a>
+        <a href="#workflow">Workflow</a>
+        <a href="#safety">Safety</a>
+        <a href="#start">Get started</a>
+      </div>
+    </nav>
+  </header>
+
+  <main id="article">
+    <article>
+      <header class="hero" id="top">
+        <div>
+          <p class="eyebrow">Open-source security operations</p>
+          <h1>Introducing <span class="gradient-text">DLP Response Studio</span></h1>
+          <p class="hero-copy">A local-first workbench that turns Microsoft Purview DLP alert volume into explainable detection assurance, reviewable response plans, and deliberately controlled action.</p>
+          <p class="byline">By the DLP Response Studio project · August 2026 · 8 minute read</p>
+          <div class="hero-actions">
+            <a class="button primary" href="../README.md">Explore the project</a>
+            <a class="button" href="#start">See how it works</a>
+          </div>
+        </div>
+
+        <aside class="signal-panel" aria-label="Product capabilities">
+          <div class="window-bar" aria-hidden="true"><span></span><span></span><span></span></div>
+          <div class="metric"><div class="metric-icon">01</div><div><strong>Observe</strong><span>Scope alerts, events, users, SITs, and departments</span></div></div>
+          <div class="metric"><div class="metric-icon">02</div><div><strong>Explain</strong><span>Assess signal, noise, ownership, and guardrails</span></div></div>
+          <div class="metric"><div class="metric-icon">03</div><div><strong>Improve</strong><span>Create reviewable Purview tuning plans</span></div></div>
+          <div class="metric"><div class="metric-icon">04</div><div><strong>Prove</strong><span>Compare baseline and post-change outcomes</span></div></div>
+        </aside>
+      </header>
+
+      <section class="section narrow" id="why">
+        <p class="eyebrow">The problem</p>
+        <h2>DLP operations need more than another alert queue</h2>
+        <p class="lede">Microsoft Purview can surface the activity that matters, but security teams still have to connect alerts to event evidence, understand why a Sensitive Information Type fired, identify the right business owner, decide what should change, and respond without exposing the data they are trying to protect.</p>
+        <p>That work is often split across scripts, exports, spreadsheets, portals, and one-off analyst knowledge. The result is familiar: alert volume grows faster than confidence, tuning decisions are hard to defend, and remediation becomes either too cautious to help or too broad to trust.</p>
+        <blockquote class="quote">The goal is not simply to process more alerts. It is to make detection quality and response safety measurable operational controls.</blockquote>
+      </section>
+
+      <section class="section">
+        <p class="eyebrow">The tool</p>
+        <h2>One workbench, three connected jobs</h2>
+        <div class="grid three">
+          <section class="card">
+            <span class="card-number">INVESTIGATE</span>
+            <h3>Query DLP evidence locally</h3>
+            <p>Synchronize Purview DLP alerts and events into JSONL, then filter by policy, workload, SIT, confidence, user, incident, location, and Graph-resolved department.</p>
+          </section>
+          <section class="card">
+            <span class="card-number">ASSURE</span>
+            <h3>Explain detection behavior</h3>
+            <p>Run exact-SIT, period-bounded assessments that identify signal, noise, concentration, ownership, validation needs, false-negative guardrails, and measurable tuning opportunities.</p>
+          </section>
+          <section class="card">
+            <span class="card-number">RESPOND</span>
+            <h3>Move from evidence to action</h3>
+            <p>Build declarative response flows for incident updates, reviewed comments, email, and one-to-one Teams notifications—with dry runs and explicit live gates.</p>
+          </section>
+        </div>
+        <figure class="product-figure">
+          <img src="assets/start-page.png" alt="DLP Response Studio start page presenting DLP Response and Detection Assurance as two connected workspaces" loading="lazy">
+          <figcaption>The start page separates operational response from classification assurance while keeping both connected through one governed evidence plane.</figcaption>
+        </figure>
+      </section>
+
+      <section class="section" id="workflow">
+        <p class="eyebrow">The operating model</p>
+        <h2>From observation to proof</h2>
+        <p class="lede">Detection Assurance treats classification tuning as a closed-loop lifecycle rather than a one-time model opinion.</p>
+        <div class="grid four workflow">
+          <section class="card flow-step"><span class="card-number">STEP 1</span><h3>Define</h3><p>Select the exact SIT boundary, policy scope, business intent, known noise, and false-negative constraints.</p></section>
+          <section class="card flow-step"><span class="card-number">STEP 2</span><h3>Assess</h3><p>Analyze a bounded baseline period using redacted organizational context or explicitly protected sensitive evidence.</p></section>
+          <section class="card flow-step"><span class="card-number">STEP 3</span><h3>Improve</h3><p>Translate findings into a reviewable Purview change plan with validation, ownership, monitoring, and rollback steps.</p></section>
+          <section class="card flow-step"><span class="card-number">STEP 4</span><h3>Verify</h3><p>Run the same profile after implementation and compare the later period with the original baseline.</p></section>
+        </div>
+      </section>
+
+      <section class="section">
+        <p class="eyebrow">From finding to controlled response</p>
+        <h2>Keep the rationale beside the action</h2>
+        <p class="lede">Detection Assurance can return a bounded priority and privacy-safe security comment for each correlated incident. DLP Response keeps that rationale visible during investigation and can include the reviewed comment when an operator deliberately selects an incident update.</p>
+        <div class="shot-grid">
+          <figure class="product-figure">
+            <img src="assets/ai-assurance-comment.png" alt="DLP Response showing a low-priority AI-assisted assessment with a false-positive pattern and true-positive guardrails" loading="lazy">
+            <figcaption>A public-safe example of the AI-assisted comment: a concise disposition, validation caveat, and expandable false-positive pattern with guardrails.</figcaption>
+          </figure>
+          <figure class="product-figure">
+            <img src="assets/remediation-planning.png" alt="Remediation plan reviewing detection, user, and incident counts with explicitly selectable response actions" loading="lazy">
+            <figcaption>The remediation drawer binds the redacted scope to explicit actions. Planning is non-mutating; live apply remains separately gated and auditable.</figcaption>
+          </figure>
+        </div>
+        <figure class="product-figure">
+          <img src="assets/defender-incident-comment.svg" alt="Sanitized Microsoft Defender incident activity showing a Detection Assurance AI triage comment, reviewed tags, and incident status updates" loading="lazy">
+          <figcaption>After an explicitly approved incident update, the privacy-safe Detection Assurance rationale appears in the Microsoft Defender incident activity timeline alongside tags and status changes. This sanitized illustration removes tenant, customer, operator, and incident-specific details.</figcaption>
+        </figure>
+        <p class="capture-note">The Defender handoff demonstrates the complete operational path: assess evidence in DLP Response Studio, review the proposed action, write through Microsoft Graph only after confirmation, and keep the result in the analyst system of record. That makes the outcome easy to explain in customer and account-team conversations without requiring analysts to adopt a separate incident queue.</p>
+      </section>
+
+      <section class="value-band">
+        <div class="section">
+          <p class="eyebrow">Practical value</p>
+          <h2>Designed for the decisions teams actually make</h2>
+          <div class="grid three">
+            <section class="card audience"><strong>For security operations</strong><p>Connect incidents to governed evidence, prioritize review, and keep response actions consistent and auditable.</p></section>
+            <section class="card audience"><strong>For data protection teams</strong><p>Find where detections concentrate, involve the right departments, and reduce avoidable noise without weakening real coverage.</p></section>
+            <section class="card audience"><strong>For engineering and governance</strong><p>Review explicit changes, test them against evidence, retain rollback criteria, and demonstrate control improvement over time.</p></section>
+          </div>
+        </div>
+      </section>
+
+      <section class="section split" id="safety">
+        <div>
+          <p class="eyebrow">Safety by design</p>
+          <h2>Useful AI without an uncontrolled data boundary</h2>
+          <p class="lede">The default assessment mode excludes detected values, identities, recipients, content names, senders, and subjects from the AI payload.</p>
+        </div>
+        <div class="principles">
+          <div class="principle"><strong>Redacted by default</strong><span>The collector and Node projection both redact detected values. Context-only assessment preserves policy, workload, SIT, location, confidence, frequency, count, and an optional resolved department.</span></div>
+          <div class="principle"><strong>Identity-free department context</strong><span>Departments are joined locally using a UPN-keyed cache before identity redaction. The model receives the department—not the person used to resolve it.</span></div>
+          <div class="principle"><strong>Fail-closed classification scope</strong><span>Profiles require an explicit SIT allow-list. Ambiguous event ownership and unrelated SITs are excluded rather than guessed into scope.</span></div>
+          <div class="principle"><strong>Protected evidence is exceptional</strong><span>Sensitive-value analysis requires configuration enablement, a separate confirmation phrase, DPAPI CurrentUser protection, and an explicit per-run choice.</span></div>
+          <div class="principle"><strong>Dry-run before mutation</strong><span>Live Graph actions are disabled by default and require server enablement, an exact phrase, browser confirmation, bounded targets, and an execution ledger.</span></div>
+        </div>
+      </section>
+
+      <section class="section">
+        <p class="eyebrow">Microsoft Graph access</p>
+        <h2>Permission is tied to purpose</h2>
+        <p class="lede">Workers authenticate interactively as the operator and request delegated permissions for the operation being performed. The project stores no Graph access tokens or client secrets.</p>
+        <table class="permissions">
+          <thead><tr><th>Operation</th><th>Delegated permissions</th><th>Mode</th></tr></thead>
+          <tbody>
+            <tr><td>DLP evidence synchronization</td><td><code>SecurityAlert.Read.All</code>, <code>SecurityEvents.Read.All</code>, <code>CustomTags.Read.All</code></td><td>Read</td></tr>
+            <tr><td>Department enrichment</td><td><code>User.Read.All</code></td><td>Read</td></tr>
+            <tr><td>Incident updates and comments</td><td><code>SecurityIncident.ReadWrite.All</code></td><td>Read/write</td></tr>
+            <tr><td>Affected-user email</td><td><code>Mail.Send</code></td><td>Send</td></tr>
+            <tr><td>One-to-one Teams notification</td><td><code>Chat.Create</code>, <code>ChatMessage.Send</code>, <code>User.ReadBasic.All</code></td><td>Create/send/read</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="section narrow">
+        <p class="eyebrow">Why open source</p>
+        <h2>Security controls should be inspectable</h2>
+        <p class="lede">DLP Response Studio is deliberately straightforward: Node.js, static browser assets, PowerShell workers, JSONL persistence, no runtime npm dependencies, and an MIT license.</p>
+        <p>Teams can inspect every Graph request, every scope, every redaction boundary, every AI instruction, and every live-action gate. They can adapt profiles to their own classification intent without accepting opaque execution or a hosted data path.</p>
+        <p>This is a starting point for practitioners who want a transparent bridge between Purview evidence, AI-assisted assurance, and human-controlled response—not a replacement for organizational review, Microsoft Purview administration, or incident-response judgment.</p>
+      </section>
+
+      <section class="section" id="start">
+        <div class="callout">
+          <p class="eyebrow">Start locally</p>
+          <h2>Turn your next DLP review into a measurable control cycle</h2>
+          <p>Install Node.js 20, PowerShell 7, and the Microsoft Graph authentication module. Start the local workbench, synchronize DLP evidence, and begin with queries and dry runs. Live actions remain locked until deliberately enabled.</p>
+          <div class="hero-actions" style="justify-content:center">
+            <a class="button primary" href="../README.md">Read the setup guide</a>
+            <a class="button" href="../ARCHITECTURE.md">Review the architecture</a>
+            <a class="button" href="../SECURITY.md">Review security guidance</a>
+          </div>
+        </div>
+      </section>
+    </article>
+  </main>
+
+  <footer>
+    <span>DLP Response Studio · Open source under the MIT License</span>
+    <span>Microsoft Purview, Microsoft Graph, Microsoft Entra, and Microsoft Foundry are Microsoft products.</span>
+  </footer>
+</body>
+</html>

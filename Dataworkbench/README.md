@@ -6,7 +6,7 @@ New installation: follow the [Setup guide](SETUP.md) for prerequisites, a safe f
 
 Read the standalone launch article: [Introducing DLP Response Studio](docs/introducing-dlp-response-studio.html).
 
-The project has no dependency on the Security Persona Agent, council, exposure assessment, reporting blade, organization graph, regulator alignment, or crown-jewel model. JSONL remains the persistence format in this version.
+The project is standalone and uses JSONL as its persistence format.
 
 ## Safety defaults
 
@@ -137,7 +137,7 @@ The browser never accepts, reads, or persists the API key. Set `AZURE_OPENAI_REP
 
 ## AI Helper
 
-Response Studio includes an optional **AI Helper** configured like the original Envoy. It uses the Azure OpenAI Responses endpoint and defaults to `gpt-5.6-terra`. Configure one of these environment variables before starting the server:
+Response Studio includes an optional **AI Helper**. It uses the Azure OpenAI Responses endpoint and defaults to `gpt-5.6-terra`. Configure one of these environment variables before starting the server:
 
 - `AZURE_OPENAI_REPORTING_KEY`
 - `AZURE_OPENAI_API_KEY2`

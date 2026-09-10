@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Detection Assurance · Data Security Workbench</title>
+  <link rel="stylesheet" href="/sit-optimize.css">
+  <link rel="stylesheet" href="/sit-sensitive.css">
+  <link rel="stylesheet" href="/sit-reporting.css">
+  <link rel="stylesheet" href="/sit-comparison-polish.css">
+  <link rel="stylesheet" href="/sit-protected-plan.css">
+  <link rel="stylesheet" href="/sit-profile-authoring.css">
+  <link rel="stylesheet" href="/sit-positioning.css">
+  <link rel="stylesheet" href="/sit-control-layout.css">
+</head>
+<body>
+  <header class="topbar">
+    <a href="/" class="brand"><span>◆</span><strong>Data Security Workbench</strong></a>
+    <nav><a href="/index.html">DLP Response</a><a class="active" href="/sit-optimize.html">Detection Assurance</a><a href="/response-studio.html">Response Studio</a><a href="/configuration.html">Configuration</a></nav>
+    <div id="ai-status" class="status-pill">Checking AI…</div>
+  </header>
+  <main>
+    <section class="hero">
+      <div><div class="eyebrow">Sensitive data detection assurance</div><h1>Make classification accuracy an operational control</h1><p>See where Purview detections concentrate, explain signal versus noise, turn evidence into deployable policy changes, and verify the outcome against a baseline.</p></div>
+      <a href="/index.html" class="button">Manage evidence sync →</a>
+    </section>
+
+    <section class="outcome-loop workflow-loop" aria-label="Closed-loop classification control lifecycle">
+      <article class="outcome-step" data-step="Observe"><span class="workflow-number">Step 1</span><strong>Define the control boundary</strong><p>Create the exact SIT profile and preserve operator-owned signal, noise, and false-negative guardrails.</p></article>
+      <article class="outcome-step" data-step="Explain"><span class="workflow-number">Step 2</span><strong>Assess the baseline period</strong><p>Run the saved profile against an inclusive UTC evidence window and explain classification behavior.</p></article>
+      <article class="outcome-step emphasized" data-step="Improve"><span class="workflow-number">Step 3</span><strong>Build the Purview change plan</strong><p>Convert assessed evidence into reviewable, deployable control changes with validation and rollback steps.</p></article>
+      <article class="outcome-step" data-step="Prove"><span class="workflow-number">Step 4</span><strong>Observe change and compare</strong><p>Run the same profile after implementation, then compare the baseline and later evidence periods.</p></article>
+    </section>
+    <p class="positioning-note"><strong>Closed-loop by design:</strong> profile language stays constant while evidence moves from baseline assessment, to deployable change, to post-change validation.</p>
+
+    <section id="data-banner" class="data-banner loading"><div class="data-icon">▧</div><div><strong>Building the classification evidence map…</strong><p>The source remains local and no detected values are rendered here.</p></div></section>
+    <section id="protected-panel" class="protected-panel panel">
+      <div><span class="protected-icon">🔒</span></div>
+      <div class="protected-copy"><strong id="protected-title">High-fidelity validation evidence</strong><p id="protected-description">Checking DPAPI-protected evidence readiness…</p></div>
+      <label class="capture-confirm"><span>Type the capture confirmation phrase</span><input id="capture-confirmation" autocomplete="off" placeholder="CAPTURE SENSITIVE DLP CONTENT"></label>
+      <button id="capture-sensitive" class="button warn" disabled>Rebuild protected evidence</button>
+    </section>
+
+    <section class="profile-setup panel">
+      <div class="panel-head"><div><span class="eyebrow">Step 1 · Profile and tuning language</span><h2>Create the classification tuning profile</h2></div><div class="report-actions"><button id="edit-selected-profile" class="button compact">Edit selected profile</button><button id="reset-profile" class="button compact">Clear</button></div></div>
+      <p class="setup-intro">Define the business purpose, exact SIT boundary, and the language used during every assessment. AI can draft the method, but an operator reviews and saves it before any data is analyzed.</p>
+      <div class="setup-grid">
+        <label><span>Profile ID</span><input id="profile-id" maxlength="100" pattern="[A-Za-z0-9_-]+" placeholder="CreditCardNumber"></label>
+        <label><span>DLP policy wildcard</span><input id="profile-policy" maxlength="200" placeholder="*Credit*Card*"></label>
+        <label><span>Finding noun</span><input id="profile-noun" maxlength="100" placeholder="card number"></label>
+        <label class="setup-description"><span>Description</span><input id="profile-description" maxlength="500"></label>
+      </div>
+      <label class="analysis-focus"><span>Control intent — what matters for this classification</span><textarea id="analysis-focus" maxlength="12000" rows="6" placeholder="Describe known noise patterns, required validity or checksum signals, important workloads and context, business impact, acceptable tuning tradeoffs, and false-negative guardrails. Do not paste detected values or sensitive content."></textarea><small>This operator-owned intent is distinct from the description. It governs every assessment and cannot broaden the selected SIT boundary.</small></label>
+      <div class="catalog-head"><div><strong>Classification boundary</strong><p>Select the exact Sensitive Information Types this control may assess. Stable IDs and names enforce fail-closed isolation.</p></div><input id="catalog-search" type="search" placeholder="Filter classification catalog"></div>
+      <div id="sit-catalog" class="sit-catalog"><div class="empty">Loading synchronized SIT catalog…</div></div>
+      <details id="ai-draft-review" class="ai-draft-review" hidden><summary>Review AI-authored profile instructions</summary><p>The draft is not saved or run automatically. Edit any instruction before saving.</p><label><span>Extraction instruction</span><textarea id="draft-extraction" rows="12"></textarea></label><label><span>Report consolidation instruction</span><textarea id="draft-consolidation" rows="9"></textarea></label><label><span>Report merge instruction</span><textarea id="draft-merge" rows="7"></textarea></label></details>
+      <div class="setup-actions"><span id="profile-save-status" class="run-status">Start with a blank profile, or explicitly load the selected saved profile for editing.</span><button id="draft-profile" class="button" disabled>Use AI to draft profile</button><button id="save-profile" class="button primary" disabled>Save reviewed profile</button></div>
+    </section>
+
+    <div class="workspace">
+      <aside class="profiles panel">
+        <div class="panel-head"><div><span class="eyebrow">Saved tuning profiles</span><h2>Choose a profile</h2></div><button id="refresh-profiles" class="icon-button" title="Refresh">↻</button></div>
+        <div id="profile-list" class="profile-list"><div class="empty">Loading profiles…</div></div>
+      </aside>
+
+      <section class="main-column">
+        <section class="panel analysis-panel">
+          <div class="panel-head"><div><span class="eyebrow">Step 2 · Run profile against evidence</span><h2 id="selected-title">Select a profile</h2></div><span id="analysis-mode-badge" class="safe-badge">Context only</span></div>
+          <div id="selected-profile" class="selected-profile"><div class="empty">Choose a profile to review its policy scope and start an analysis.</div></div>
+          <div class="privacy-boundary"><strong id="boundary-title">Governed evidence boundary</strong><p id="boundary-description">Detected values, identities, recipients, content names, senders, and subjects are excluded. Azure OpenAI receives policy, workload, SIT, location, confidence, frequency, and count context only.</p></div>
+          <div class="privacy-boundary cross-workflow"><strong>Cross-workflow incident triage</strong><p>Every AI assessment must return a HIGH, MEDIUM, or LOW priority and a privacy-safe security comment for each correlated incident, regardless of the tuning language entered above. DLP Response can display this rationale, and Response Studio can preview it before adding it as an incident comment.</p></div>
+          <section class="analysis-period">
+            <div><strong>Assessment time period</strong><p>Dates are inclusive UTC calendar days and filter the existing synchronized evidence locally. Leave both blank only when an all-history assessment is intended.</p></div>
+            <div class="period-fields"><label><span>Start date</span><input id="analysis-start-date" type="date"></label><label><span>End date</span><input id="analysis-end-date" type="date"></label></div>
+            <div id="period-preview" class="period-preview">All synchronized evidence</div>
+          </section>
+          <div id="run-controls" class="run-controls sensitive-controls control-grid"><label class="fidelity-field"><span>Evidence fidelity</span><select id="analysis-mode"><option value="context">Redacted posture context</option><option value="sensitive">Protected validation evidence</option></select></label><label class="run-label-field"><span>Assessment label</span><input id="run-label" maxlength="120" placeholder="e.g. Credit cards baseline before control change"></label><label id="analysis-confirm-wrap" class="confirmation-field"><span>Protected assessment confirmation</span><input id="analysis-confirmation" autocomplete="off" placeholder="ANALYZE SENSITIVE DLP CONTENT"></label><label class="check thread-field"><input id="single-thread" type="checkbox"><span class="thread-copy">Sequential AI assessment</span></label><button id="run-analysis" class="button primary" disabled>Assess classification posture</button></div>
+          <div id="run-status" class="run-status"></div>
+        </section>
+
+        <section class="panel reports-panel">
+          <div class="panel-head"><div><span class="eyebrow">Measurable security outcomes</span><h2>Classification posture reports</h2></div><button id="refresh-runs" class="button compact">Refresh</button></div>
+          <div class="report-picker"><select id="run-select"><option value="">No reports loaded</option></select><button id="open-report" class="button" disabled>Open report</button><button id="copy-report" class="button" disabled>Copy Markdown</button><button id="export-report" class="button" disabled>Export HTML</button></div>
+          <div id="report-meta" class="report-meta"></div>
+          <article id="report-body" class="report-body"><div class="empty">Completed analyses appear here. Reports remain in the workbench data directory.</div></article>
+
+          <section class="report-tool implementation-tool control-stage improve-stage">
+            <div class="panel-head"><div><span class="eyebrow">Step 3 · Improve · From insight to enforcement</span><h3>Deployable Purview change plan</h3></div><span id="guide-status" class="safe-badge">Plan not generated</span></div>
+            <p>Translate the selected baseline assessment into a portal-ready control plan with implementation, validation, and rollback steps. Step 3 uses the report and structured patterns written by Step 2; it does not inspect the original events again. Plans from protected assessments automatically retain exact artifacts that Step 2 classified as false positives and are not cached by the server.</p>
+            <div class="report-actions"><button id="generate-guide" class="button primary" disabled>Generate Purview plan</button><button id="regenerate-guide" class="button" disabled>Regenerate plan</button><button id="copy-guide" class="button" disabled>Copy Markdown</button><button id="export-guide" class="button" disabled>Export HTML</button></div>
+            <article id="guide-body" class="report-body"><div class="empty">The deployable Purview change plan will appear here and be cached against this baseline run.</div></article>
+          </section>
+
+          <section class="report-tool control-stage prove-stage">
+            <div class="panel-head"><div><span class="eyebrow">Step 4 · Prove · Observe the change</span><h3>Compare baseline and post-change evidence</h3></div></div>
+            <p>After the approved Purview change has been implemented, run this same saved profile against a later period. Keep the tuning language fixed so the comparison measures evidence change rather than instruction change.</p>
+            <div class="compare-picker"><label><span>Earlier period (baseline)</span><select id="baseline-run"><option value="">Select baseline period</option></select></label><label><span>Later period (post-change)</span><select id="current-run"><option value="">Select post-change period</option></select></label><button id="compare-runs" class="button" disabled>Compare observed change</button></div>
+            <div id="comparison-body" class="comparison-body"><div class="empty">Implement the approved Purview plan, run the same profile for a later evidence period, then compare it with the baseline here.</div></div>
+          </section>
+        </section>
+      </section>
+
+      <aside class="jobs panel">
+        <div class="panel-head"><div><span class="eyebrow">Assessment activity</span><h2>Analysis runs</h2></div><button id="refresh-jobs" class="icon-button" title="Refresh">↻</button></div>
+        <div id="job-list" class="job-list"><div class="empty">No jobs loaded.</div></div>
+      </aside>
+    </div>
+  </main>
+  <div id="report-viewer" class="viewer-overlay" hidden>
+    <section class="viewer-panel" role="dialog" aria-modal="true" aria-labelledby="viewer-title">
+      <header><div><span class="eyebrow">Classification efficacy evidence</span><h2 id="viewer-title">Classification posture report</h2><p id="viewer-meta"></p></div><div class="report-actions"><button id="viewer-copy" class="button">Copy Markdown</button><button id="viewer-export" class="button">Export HTML</button><button id="close-viewer" class="button primary">Close</button></div></header>
+      <article id="viewer-body" class="report-body"></article>
+    </section>
+  </div>
+  <div id="toast" class="toast"></div>
+  <script src="/export-html.js"></script>
+  <script src="/sit-optimize.js"></script>
+</body>
+</html>

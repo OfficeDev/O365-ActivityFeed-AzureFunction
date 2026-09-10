@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bulk Response Studio · DLP</title>
+  <link rel="stylesheet" href="/bulk-response.css">
+  <link rel="stylesheet" href="/workbench-theme.css">
+</head>
+<body class="workbench-page bulk-page">
+  <header class="topbar">
+    <a class="brand" href="/start.html"><span>◆</span><strong>Data Security Workbench</strong></a>
+    <nav class="product-nav"><a class="active" href="/index.html">DLP Response</a><a href="/sit-optimize.html">Detection Assurance</a><a href="/response-studio.html">Response Studio</a><a href="/configuration.html">Configuration</a></nav>
+    <div class="top-actions"><span id="mode" class="badge safe" title="Queries, local queue changes, saves, and dry runs remain available. Microsoft Graph writes are locked.">Graph writes locked</span><button id="run-query" class="button primary">Run query</button></div>
+  </header>
+
+  <section class="page-hero"><div><span class="eyebrow">Coordinated remediation</span><h1>Build a response queue with confidence</h1><p>Filter redacted evidence, review affected users, and dry-run every response before an explicitly confirmed release.</p></div><a class="button" href="/index.html">Back to investigation →</a></section>
+
+  <main class="shell">
+    <aside class="filters panel">
+      <div class="panel-head"><div><span class="kicker">Response scope</span><h2>Detection filters</h2></div><button id="clear" class="link-button">Clear</button></div>
+      <details class="filter-section" open>
+        <summary><span>Date range</span></summary>
+        <div class="filter-section-body date-grid"><label>From<input id="date-from" type="date"></label><label>To<input id="date-to" type="date"></label></div>
+      </details>
+      <details class="filter-section" open>
+        <summary><span>Confidence (min)</span><small>range 0–100</small></summary>
+        <div class="filter-section-body"><div class="range-row"><input id="confidence" type="range" min="0" max="100" step="5" value="0"><output id="confidence-value">0</output></div></div>
+      </details>
+      <div id="facets" class="facet-list"><div class="empty">Run a query to load facets.</div></div>
+      <button id="apply-filters" class="button primary full">Apply filters</button>
+      <div class="privacy"><strong>Redacted evidence only</strong><span>Detected values never enter this page or its response queue.</span></div>
+    </aside>
+
+    <section class="content">
+      <div id="notice" class="notice">Run a query to load the current JSONL evidence store.</div>
+      <section class="stats">
+        <article class="stat panel"><span>Detections</span><strong id="stat-detections">—</strong><small id="stat-total">No query</small></article>
+        <article class="stat panel"><span>Affected users</span><strong id="stat-users">—</strong><small>Unique UPNs</small></article>
+        <article class="stat panel"><span>Incidents</span><strong id="stat-incidents">—</strong><small>Security incidents</small></article>
+        <article class="stat panel"><span>Events scanned</span><strong id="stat-events">—</strong><small>JSONL records</small></article>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><div><span class="kicker">Evidence</span><h2>Matched detections</h2></div><span id="result-meta" class="muted"></span></div>
+        <div class="table-wrap"><table><thead><tr><th>Date</th><th>User</th><th>Sensitive type</th><th>Confidence</th><th>Workload</th><th>Policy</th><th>Incident</th></tr></thead><tbody id="detection-rows"><tr><td colspan="7" class="empty">No query results.</td></tr></tbody></table></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><div><span class="kicker">Impact</span><h2>Affected users</h2></div><button id="enrich-departments" class="button" disabled>Enrich departments</button></div>
+        <div class="table-wrap compact"><table><thead><tr><th>User</th><th>Department</th><th>Detections</th><th>Incidents</th><th>Sensitive types</th></tr></thead><tbody id="user-rows"><tr><td colspan="5" class="empty">No affected users.</td></tr></tbody></table></div>
+      </section>
+
+      <div class="response-grid">
+        <section class="panel">
+          <div class="panel-head"><div><span class="kicker">Library</span><h2>Response flows</h2></div></div>
+          <div id="flow-library" class="card-list"><div class="empty">Loading response flows…</div></div>
+        </section>
+
+        <section class="panel queue-panel">
+          <div class="panel-head"><div><span class="kicker">Plan → dry-run → release</span><h2>Response queue</h2></div><button id="clear-queue" class="link-button">Clear</button></div>
+          <div id="queue" class="queue"><div class="empty">Add response flows from the library.</div></div>
+          <div class="queue-controls">
+            <label>Live confirmation phrase<input id="confirmation" placeholder="APPLY DLP REMEDIATION"></label>
+            <div class="button-row"><button id="save-job" class="button" disabled>Save queue</button><button id="dry-run" class="button primary" disabled>Dry run all</button><button id="apply-live" class="button danger" disabled>Release live</button></div>
+          </div>
+        </section>
+      </div>
+
+      <section class="panel">
+        <div class="panel-head"><div><span class="kicker">Saved work</span><h2>Saved jobs</h2></div><button id="refresh-jobs" class="link-button">Refresh</button></div>
+        <div id="jobs" class="jobs"><div class="empty">No saved jobs.</div></div>
+      </section>
+    </section>
+  </main>
+
+  <div id="toast" class="toast"></div>
+  <script src="/bulk-response.js"></script>
+</body>
+</html>

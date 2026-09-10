@@ -1,0 +1,15 @@
+node_modules/
+.env
+.env.*
+!.env.example
+config/settings.json
+config/response-flows.json
+data/**
+!data/.gitkeep
+sit-optimize/cache/
+sit-optimize/SIT_ChunkAnalyses.json
+sit-optimize/SIT_Report*.md
+sit-optimize/SIT_Report*.html
+*.log
+.DS_Store
+Thumbs.db

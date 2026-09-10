@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Configuration · Data Security Workbench</title>
+  <link rel="stylesheet" href="/workbench-theme.css">
+  <link rel="stylesheet" href="/configuration.css">
+</head>
+<body class="workbench-page configuration-page">
+  <header class="topbar">
+    <a class="brand" href="/start.html"><span>◆</span><strong>Data Security Workbench</strong></a>
+    <nav class="product-nav"><a href="/index.html">DLP Response</a><a href="/sit-optimize.html">Detection Assurance</a><a href="/response-studio.html">Response Studio</a><a class="active" href="/configuration.html">Configuration</a></nav>
+    <div class="top-actions"><span id="runtime-status" class="badge">Loading…</span></div>
+  </header>
+
+  <main class="configuration-shell">
+    <section class="configuration-hero">
+      <div><span class="eyebrow">Workbench configuration · Microsoft Foundry</span><h1>Connect the AI analysis plane</h1><p>Set the Responses endpoint and deployment routing used by Detection Assurance and Response Studio. Credentials remain outside the browser and configuration files.</p></div>
+      <span class="security-mark">Secretless UI</span>
+    </section>
+
+    <div id="notice" class="notice" hidden></div>
+
+    <section class="configuration-grid">
+      <form id="foundry-form" class="panel configuration-form">
+        <div class="panel-head"><div><span class="eyebrow">Connection and model routing</span><h2>Microsoft Foundry</h2></div><span id="save-state" class="badge">Checking</span></div>
+        <p class="section-intro">Enter the full Foundry Responses endpoint. A resource root or <span class="code">/openai/v1</span> path is completed automatically.</p>
+        <label class="field"><span>Foundry Responses endpoint</span><input id="foundry-endpoint" type="url" inputmode="url" autocomplete="off" spellcheck="false" maxlength="2048" required placeholder="https://your-resource.services.ai.azure.com/openai/v1/responses"><small>Accepted Microsoft hosts: <span class="code">services.ai.azure.com</span> and <span class="code">openai.azure.com</span>.</small></label>
+        <div class="model-grid">
+          <label class="field"><span>Reporting model deployment</span><input id="report-model" autocomplete="off" spellcheck="false" maxlength="128" required placeholder="gpt-5.6-terra"><small>Consolidation, final reports, and Purview plans.</small></label>
+          <label class="field"><span>Analysis model deployment</span><input id="analysis-model" autocomplete="off" spellcheck="false" maxlength="128" required placeholder="gpt-5.6-luna"><small>High-volume chunk extraction and incident triage.</small></label>
+        </div>
+        <div id="override-warning" class="override-warning" hidden></div>
+        <div class="form-actions"><span id="save-message" class="muted"></span><button id="save-foundry" class="button primary" type="submit">Save configuration</button></div>
+      </form>
+
+      <aside class="panel runtime-card">
+        <div class="panel-head"><div><span class="eyebrow">Active server process</span><h2>Runtime status</h2></div></div>
+        <dl class="runtime-list">
+          <div><dt>Endpoint</dt><dd id="effective-endpoint">—</dd></div>
+          <div><dt>Reporting</dt><dd id="effective-report-model">—</dd></div>
+          <div><dt>Analysis</dt><dd id="effective-analysis-model">—</dd></div>
+          <div><dt>API secret</dt><dd id="secret-status">—</dd></div>
+        </dl>
+        <div id="restart-note" class="restart-note" hidden><strong>Restart required</strong><p>The saved connection differs from the running process. Restart the server, then refresh this page.</p></div>
+      </aside>
+    </section>
+
+    <section class="panel secret-guide">
+      <div class="guide-icon">◇</div>
+      <div class="guide-content">
+        <span class="eyebrow">Credential boundary</span>
+        <h2>Add the API secret on the server</h2>
+        <p>The workbench deliberately has no secret input. Do not paste a key into this page, a JSON settings file, source control, browser storage, or chat. Make the key available to the Node.js process through <span class="code">AZURE_OPENAI_REPORTING_KEY</span>.</p>
+        <ol>
+          <li><strong>Open a PowerShell terminal on the host.</strong><span>Set the secret only for the terminal session that will start the workbench:</span><div class="command-row"><code id="session-command">$env:AZURE_OPENAI_REPORTING_KEY = Read-Host -MaskInput 'Foundry API key'</code><button class="button compact copy-command" type="button" data-copy="session-command">Copy</button></div></li>
+          <li><strong>Start or restart from that same terminal.</strong><span>The child Node.js process inherits the secret. The value is never returned to the browser.</span><div class="command-row"><code id="start-command">npm start</code><button class="button compact copy-command" type="button" data-copy="start-command">Copy</button></div></li>
+          <li><strong>Refresh and confirm.</strong><span>The runtime status should show “Configured.” For shared or hosted environments, use the platform's secret store to inject this environment variable instead of creating a user-scoped variable.</span></li>
+        </ol>
+        <div class="secret-warning"><strong>Rotation:</strong> replace the environment value and restart the server. Saving the endpoint or deployment names never changes or exposes the secret.</div>
+      </div>
+    </section>
+  </main>
+  <div id="toast" class="toast"></div>
+  <script src="/configuration.js"></script>
+</body>
+</html>

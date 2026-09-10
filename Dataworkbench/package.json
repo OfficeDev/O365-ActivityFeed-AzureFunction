@@ -1,0 +1,15 @@
+{
+  "name": "dlp-response-studio",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "description": "Standalone bulk response and remediation studio for Microsoft Purview DLP alerts and events.",
+  "type": "commonjs",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js",
+    "test": "node --test",
+    "check": "node --check server/index.js && node --check server/dlp-store.js && node --check server/services.js && node --check server/ai-helper.js && node --check server/foundry-configuration.js && node --check server/integration-generator.js && node --check server/sit-optimize.js && node --check public/app.js && node --check public/response-studio.js && node --check public/bulk-response.js && node --check public/start.js && node --check public/export-html.js && node --check public/sit-optimize.js && node --check public/configuration.js"
+  }
+}

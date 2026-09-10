@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Response Studio · DLP flows</title>
+  <link rel="stylesheet" href="/response-studio.css">
+  <link rel="stylesheet" href="/ai-helper.css">
+  <link rel="stylesheet" href="/integration-generator.css">
+  <link rel="stylesheet" href="/workbench-theme.css">
+  <link rel="stylesheet" href="/sit-triage.css">
+</head>
+<body class="workbench-page response-page">
+  <header class="topbar">
+    <a class="brand" href="/start.html"><span>◆</span><strong>Data Security Workbench</strong></a>
+    <nav class="product-nav"><a href="/index.html">DLP Response</a><a href="/sit-optimize.html">Detection Assurance</a><a class="active" href="/response-studio.html">Response Studio</a><a href="/configuration.html">Configuration</a></nav>
+    <div class="top-actions"><span id="dirty-badge" class="badge">Loading…</span><button id="integrations" class="button">Integrations</button><button id="import" class="button">Import…</button><button id="export" class="button">Export</button><button id="history" class="button">History</button><button id="save" class="button primary" disabled>Save</button></div>
+  </header>
+
+  <main class="studio-layout">
+    <section class="panel flow-column">
+      <div class="panel-head"><div><span class="eyebrow">Response library</span><h2>Flows</h2></div><button id="new-flow" class="button compact">+ New</button></div>
+      <div id="flow-list" class="flow-list"><div class="empty">Loading flows…</div></div>
+    </section>
+
+    <section class="panel editor-column">
+      <div class="panel-head"><div><span class="eyebrow">Declarative design</span><h2 id="editor-title">Editor</h2></div><button id="delete-flow" class="button danger compact" disabled>Delete flow</button></div>
+      <div id="editor" class="panel-body"><div class="empty">Select a flow or create a new one.</div></div>
+    </section>
+
+    <section class="panel test-column">
+      <div class="panel-head"><div><span class="eyebrow">Validate before release</span><h2>Test &amp; run</h2></div><span id="mode-badge" class="badge safe" title="Flow editing, local saves, incident loading, and dry runs remain available. Microsoft Graph writes are locked.">Graph writes locked</span></div>
+      <div id="runner" class="panel-body"><div class="empty">Select a flow to test it against DLP incidents.</div></div>
+    </section>
+  </main>
+
+  <button id="ai-helper-open" class="ai-fab" type="button" aria-label="Open AI Helper"><span class="ai-spark">✦</span> AI Helper</button>
+  <div id="ai-overlay" class="ai-overlay"></div>
+  <aside id="ai-drawer" class="ai-drawer" aria-hidden="true">
+    <header><div><h2>AI Helper</h2><p>Compose a safe declarative response flow</p></div><button id="ai-close" class="icon-button" aria-label="Close">×</button></header>
+    <div class="ai-body">
+      <section><h3>Describe the response</h3><p class="muted">Describe the operator outcome. Do not paste detected values, credentials, document content, API keys, or tokens.</p><textarea id="ai-prompt" rows="6" placeholder="For example: Tag matching incidents Needs-Human-Review and move them to in progress."></textarea><label id="ai-revise-wrap" class="check"><input id="ai-revise" type="checkbox"> Revise the currently selected flow</label><button id="ai-generate" class="button primary ai-full">Generate draft</button><div id="ai-status" class="muted"></div></section>
+      <section id="ai-preview" class="ai-preview"></section>
+    </div>
+  </aside>
+
+  <div id="history-modal" class="modal-backdrop" aria-hidden="true"><section class="modal"><div class="modal-head"><h3>Version history</h3><button class="icon-button" data-close-modal>×</button></div><div id="version-list" class="modal-body"><div class="empty">Loading…</div></div><div class="modal-foot"><button class="button" data-close-modal>Close</button></div></section></div>
+  <div id="import-modal" class="modal-backdrop" aria-hidden="true"><section class="modal"><div class="modal-head"><h3>Import flows</h3><button class="icon-button" data-close-modal>×</button></div><div class="modal-body"><p class="muted">Import declarative flow JSON. Unsupported actions and executable script fields are rejected or discarded.</p><label class="field"><span>Mode</span><select id="import-mode"><option value="merge">Merge by flow ID</option><option value="replace">Replace all</option></select></label><label class="field"><span>Flow JSON</span><textarea id="import-json" class="code" rows="14" placeholder="{ &quot;flows&quot;: [] }"></textarea></label><input id="import-file" type="file" accept="application/json,.json"></div><div class="modal-foot"><button class="button" data-close-modal>Cancel</button><button id="apply-import" class="button primary">Import</button></div></section></div>
+
+  <div id="integration-modal" class="modal-backdrop" aria-hidden="true">
+    <section class="modal integration-modal">
+      <div class="modal-head"><div><h3>Integration code</h3><p>Export a reviewable PowerShell synchronization script</p></div><button class="icon-button" data-close-modal aria-label="Close">×</button></div>
+      <div class="modal-body integration-body">
+        <div class="integration-intro"><span class="integration-icon">↗</span><div><strong>Connect redacted DLP summaries to another system</strong><p>Generated scripts use incremental state, environment-based credentials, and a loopback-only Response Studio connection. They are downloaded for review and are never run by the Studio.</p></div></div>
+        <div class="integration-grid">
+          <label class="field"><span>Destination</span><select id="integration-provider"><option value="slack">Slack incoming webhook</option><option value="servicenow">ServiceNow incident API</option><option value="webhook">Generic REST webhook</option></select></label>
+          <label class="field"><span>Integration name</span><input id="integration-name" value="Slack DLP notifications" maxlength="80"></label>
+          <label class="field"><span>Response Studio URL</span><input id="integration-studio-url" value="http://127.0.0.1:3100"></label>
+          <label class="field"><span>Initial lookback (hours)</span><input id="integration-lookback" type="number" min="1" max="2160" value="24"></label>
+        </div>
+        <div class="integration-boundary"><strong>Payload boundary</strong><span>Incident ID, alert ID, policy, severity, status, count, timestamp, and Defender link only.</span><span>Users, senders, recipients, document names, and detected values are excluded.</span></div>
+        <button id="generate-integration" class="button primary">Generate PowerShell</button>
+        <div id="integration-status" class="muted"></div>
+        <section id="integration-preview" class="integration-preview" hidden>
+          <div class="integration-preview-head"><div><h4 id="integration-file-name"></h4><span id="integration-description" class="muted"></span></div><span class="badge safe">Review required</span></div>
+          <div><strong>Environment variables</strong><div id="integration-environment" class="environment-list"></div></div>
+          <label class="field"><span>Generated PowerShell</span><textarea id="integration-code" class="code integration-code" rows="18" readonly spellcheck="false"></textarea></label>
+          <div id="integration-checksum" class="checksum"></div>
+          <details><summary>Safety and deployment notes</summary><ul id="integration-safety"></ul></details>
+        </section>
+      </div>
+      <div class="modal-foot"><button class="button" data-close-modal>Close</button><button id="copy-integration" class="button" disabled>Copy code</button><button id="download-integration" class="button primary" disabled>Download .ps1</button></div>
+    </section>
+  </div>
+
+  <div id="toast" class="toast"></div>
+  <script src="/response-studio.js"></script>
+</body>
+</html>

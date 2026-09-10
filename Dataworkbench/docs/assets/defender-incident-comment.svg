@@ -1,0 +1,142 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="820" viewBox="0 0 1440 820" role="img" aria-labelledby="title desc">
+  <title id="title">Sanitized Microsoft Defender incident activity with a Detection Assurance comment</title>
+  <desc id="desc">Illustrative Defender incident page showing a privacy-safe Detection Assurance AI triage comment in the activity timeline and details pane.</desc>
+  <defs>
+    <style>
+      .ui { font-family: "Segoe UI", Arial, sans-serif; fill: #242424; }
+      .small { font-size: 12px; }
+      .body { font-size: 14px; }
+      .label { font-size: 12px; fill: #5b5b5b; }
+      .heading { font-size: 25px; font-weight: 700; }
+      .subheading { font-size: 16px; font-weight: 650; }
+      .nav { font-size: 13px; }
+      .muted { fill: #666; }
+      .blue { fill: #0f6cbd; }
+      .green { fill: #107c10; }
+      .line { stroke: #e2e2e2; stroke-width: 1; }
+    </style>
+  </defs>
+
+  <rect width="1440" height="820" fill="#f5f5f5"/>
+  <rect width="1440" height="48" fill="#292827"/>
+  <g class="ui" fill="#fff">
+    <text x="18" y="31" font-size="20">⠿</text>
+    <text x="52" y="30" font-size="15" font-weight="650">Microsoft Defender</text>
+    <rect x="500" y="9" width="365" height="30" rx="3" fill="#fff"/>
+    <text x="516" y="29" class="small" fill="#555">⌕  Search</text>
+    <text x="1215" y="29" font-size="16">♧   ♧   ⚙   ?</text>
+    <circle cx="1402" cy="24" r="14" fill="#444" stroke="#aaa"/>
+    <text x="1395" y="29" class="small" fill="#fff">OP</text>
+  </g>
+
+  <rect x="0" y="48" width="56" height="772" fill="#fafafa"/>
+  <rect x="56" y="48" width="240" height="772" fill="#fff"/>
+  <g class="ui nav">
+    <text x="18" y="83" class="blue" font-size="20">◆</text>
+    <text x="74" y="78" font-size="12" fill="#666">Find Defender solutions</text>
+    <rect x="69" y="61" width="210" height="32" rx="4" fill="none" stroke="#bbb"/>
+    <text x="75" y="124">⌂  Home</text>
+    <text x="75" y="154">▣  Cases</text>
+    <line x1="69" y1="171" x2="278" y2="171" class="line"/>
+    <text x="75" y="201">◇  Exposure management</text>
+    <text x="75" y="236">⌾  Investigation &amp; response</text>
+    <text x="75" y="276">⌘  Threat intelligence</text>
+    <text x="75" y="316">◇  Assets</text>
+    <text x="75" y="356">◉  Microsoft Sentinel</text>
+    <text x="75" y="396">♙  Identities</text>
+    <text x="75" y="436">✉  Email &amp; collaboration</text>
+    <text x="75" y="476">☁  Cloud apps</text>
+    <text x="75" y="516">◉  Cloud security</text>
+    <text x="75" y="556">⌁  SOC optimization</text>
+    <text x="75" y="596">▤  Reports</text>
+    <text x="75" y="636">▱  Learning hub</text>
+    <text x="75" y="676">☷  Trials</text>
+    <text x="75" y="716">⌾  More resources</text>
+    <line x1="69" y1="741" x2="278" y2="741" class="line"/>
+    <text x="75" y="775">⚙  System</text>
+  </g>
+
+  <rect x="296" y="48" width="680" height="772" fill="#fff"/>
+  <g class="ui">
+    <text x="326" y="72" class="label">Incidents  ›  DLP policy (Credentials) matched for email activity</text>
+    <text x="326" y="116" class="heading">ID 0000: DLP policy (Credentials) matched</text>
+    <rect x="326" y="132" width="8" height="8" fill="#d68a00"/><text x="340" y="140" class="small">Low</text>
+    <circle cx="393" cy="136" r="5" fill="#107c10"/><text x="406" y="140" class="small">Resolved</text>
+    <text x="482" y="140" class="small muted">security-operator@example.com</text>
+    <text x="682" y="140" class="small muted">False alert</text>
+    <text x="765" y="140" class="small muted">Last update: 10 Aug 2026</text>
+
+    <rect x="318" y="157" width="642" height="30" fill="#fff4ce"/>
+    <text x="330" y="177" class="small">ⓘ  Incident data may contain security risks or sensitive information. Review before sharing.</text>
+
+    <text x="326" y="226" class="body">Attack story</text>
+    <text x="419" y="226" class="body">Alerts (1)</text>
+    <text x="506" y="226" class="body blue" font-weight="650">Activities (6)</text>
+    <text x="603" y="226" class="body">Assets (1)</text>
+    <text x="685" y="226" class="body">Investigations (0)</text>
+    <line x1="498" y1="240" x2="590" y2="240" stroke="#0f6cbd" stroke-width="3"/>
+
+    <text x="326" y="275" class="body blue">⟳ Refresh</text>
+    <text x="420" y="275" class="body blue">↓ Export</text>
+    <text x="496" y="275" class="body blue">▱ Add comment</text>
+    <rect x="326" y="296" width="138" height="26" rx="13" fill="#e8f3fb"/>
+    <text x="340" y="313" class="small">Origin: This incident  ×</text>
+
+    <rect x="318" y="348" width="642" height="44" fill="#edf2f7"/>
+    <rect x="332" y="363" width="15" height="15" rx="2" fill="#0f6cbd"/>
+    <text x="336" y="376" font-size="11" fill="#fff">✓</text>
+    <text x="365" y="375" class="small">10 Aug 2026 15:59</text>
+    <text x="490" y="375" class="small">Detection Assurance AI triage — human review required</text>
+    <text x="793" y="375" class="small">Comment</text>
+    <rect x="866" y="359" width="70" height="20" rx="3" fill="#e8f3fb" stroke="#8abce6"/>
+    <text x="878" y="373" class="small blue">▱ Comment</text>
+
+    <g class="small">
+      <line x1="318" y1="392" x2="960" y2="392" class="line"/>
+      <text x="365" y="420">10 Aug 2026 15:59</text><text x="490" y="420">Tags changed to “DLP-Reviewed”</text><text x="793" y="420">Tag change</text>
+      <line x1="318" y1="438" x2="960" y2="438" class="line"/>
+      <text x="365" y="466">10 Aug 2026 15:59</text><text x="490" y="466">Status changed from “In progress” to “Resolved”</text><text x="793" y="466">Status change</text>
+      <line x1="318" y1="484" x2="960" y2="484" class="line"/>
+      <text x="365" y="512">10 Aug 2026 15:59</text><text x="490" y="512">Resolved by explicitly approved DLP response</text><text x="793" y="512">Comment</text>
+      <line x1="318" y1="530" x2="960" y2="530" class="line"/>
+      <text x="365" y="558">10 Aug 2026 15:29</text><text x="490" y="558">Incident assignment updated</text><text x="793" y="558">Assignment change</text>
+      <line x1="318" y1="576" x2="960" y2="576" class="line"/>
+      <text x="365" y="604">10 Aug 2026 15:29</text><text x="490" y="604">Classification changed after review</text><text x="793" y="604">Classification</text>
+    </g>
+  </g>
+
+  <rect x="976" y="48" width="464" height="772" fill="#fff"/>
+  <line x1="976" y1="48" x2="976" y2="820" class="line"/>
+  <g class="ui">
+    <text x="1000" y="92" class="subheading">Activity Details</text>
+    <text x="1000" y="126" class="label">Activity started</text>
+    <text x="1000" y="148" class="small">10 Aug 2026 15:59</text>
+    <text x="1215" y="126" class="label">Type</text>
+    <text x="1215" y="148" class="small">Comment</text>
+
+    <text x="1000" y="184" class="label">Title</text>
+    <text x="1000" y="206" class="small">Detection Assurance AI triage — human review required</text>
+    <text x="1000" y="242" class="label">Performed by</text>
+    <text x="1000" y="264" class="small">security-operator@example.com</text>
+    <text x="1215" y="242" class="label">Trigger</text>
+    <text x="1215" y="264" class="small">Manual</text>
+
+    <text x="1000" y="305" class="label">Activity status</text>
+    <text x="1215" y="305" class="label">Comments</text>
+    <text x="1215" y="331" class="small">Detection Assurance AI triage —</text>
+    <text x="1215" y="349" class="small">human review required</text>
+    <text x="1215" y="375" class="small" font-weight="650">Priority: LOW</text>
+    <text x="1215" y="395" class="small">Disposition: NOISE</text>
+    <text x="1215" y="415" class="small">Credential validity: INDETERMINATE</text>
+    <text x="1215" y="443" class="small">Security assessment: Evidence is</text>
+    <text x="1215" y="461" class="small">consistent with an approved tracking</text>
+    <text x="1215" y="479" class="small">and forwarding pattern in email body,</text>
+    <text x="1215" y="497" class="small">not credential-bearing material.</text>
+    <text x="1215" y="525" class="small">Evidence is insufficient; protected</text>
+    <text x="1215" y="543" class="small">validation is required before tuning.</text>
+    <text x="1215" y="573" class="small">Source: profile=Credentials;</text>
+    <text x="1215" y="591" class="small">assessment=example-period</text>
+    <text x="1215" y="621" class="small">No detected values or sensitive</text>
+    <text x="1215" y="639" class="small">artifacts are included in this comment.</text>
+  </g>
+</svg>

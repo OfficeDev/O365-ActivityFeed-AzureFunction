@@ -1,0 +1,33 @@
+{
+  "port": 3100,
+  "host": "127.0.0.1",
+  "dataDir": "./data",
+  "maxScanEvents": 150000,
+  "maxResultRows": 1000,
+  "maxPlanDetections": 100000,
+  "maxIncidentsPerApply": 50,
+  "maxUsersPerApply": 200,
+  "maxDepartmentEnrichmentUsers": 500,
+  "detectedValueHandling": "redact",
+  "liveApplyEnabled": false,
+  "liveConfirmationPhrase": "APPLY DLP REMEDIATION",
+  "powershellExecutable": "pwsh",
+  "collectorLookbackDays": 90,
+  "sitOptimize": {
+    "enabled": true,
+    "root": "./sit-optimize",
+    "analysisModel": "gpt-5.6-luna",
+    "sensitiveContent": {
+      "enabled": false,
+      "retentionDays": 30,
+      "captureConfirmationPhrase": "CAPTURE SENSITIVE DLP CONTENT",
+      "analysisConfirmationPhrase": "ANALYZE SENSITIVE DLP CONTENT"
+    }
+  },
+  "ai": {
+    "enabled": true,
+    "endpoint": "",
+    "model": "gpt-5.6-terra",
+    "maxOutputTokens": 1800
+  }
+}

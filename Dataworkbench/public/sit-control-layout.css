@@ -1,0 +1,74 @@
+.run-controls.control-grid {
+  grid-template-columns: minmax(150px, .8fr) minmax(190px, 1.15fr) max-content minmax(170px, auto);
+  grid-template-areas: "fidelity label thread action";
+  align-items: end;
+}
+.control-grid > * { min-width: 0; }
+.control-grid .fidelity-field { grid-area: fidelity; }
+.control-grid .run-label-field { grid-area: label; }
+.control-grid .confirmation-field { grid-area: confirmation; }
+.control-grid .thread-field {
+  grid-area: thread;
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: fit-content;
+  min-height: 38px;
+  padding: 0;
+  gap: 8px;
+  white-space: normal;
+  cursor: pointer;
+}
+.control-grid .thread-field #single-thread {
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+}
+.run-controls.control-grid .thread-field .thread-copy {
+  display: inline;
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.3;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.control-grid #run-analysis { grid-area: action; width: 100%; min-width: 170px; }
+.control-grid input,
+.control-grid select { min-width: 0; }
+
+.run-controls.control-grid.protected {
+  grid-template-columns: minmax(150px, .75fr) minmax(190px, 1fr) minmax(240px, 1.2fr);
+  grid-template-areas:
+    "fidelity label confirmation"
+    "thread thread action";
+}
+.control-grid.protected #run-analysis { min-height: 38px; }
+
+@media (max-width: 1250px) {
+  .run-controls.control-grid,
+  .run-controls.control-grid.protected {
+    grid-template-columns: minmax(180px, .8fr) minmax(230px, 1.2fr);
+    grid-template-areas:
+      "fidelity label"
+      "confirmation confirmation"
+      "thread action";
+  }
+  .control-grid .confirmation-field[hidden] { display: none; }
+}
+
+@media (max-width: 700px) {
+  .run-controls.control-grid,
+  .run-controls.control-grid.protected {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "fidelity"
+      "label"
+      "confirmation"
+      "thread"
+      "action";
+  }
+  .control-grid #run-analysis { min-width: 0; }
+}
